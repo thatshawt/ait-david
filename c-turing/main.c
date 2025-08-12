@@ -1,15 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
-#define T_STATES 6
+//#define T_DEBUG
 
-#define T_TRUE 1
-#define T_FALSE 0
-#define T_TAPE_SIZE 13000
+#define T_MAX_STATES (6)
 
-#define T_RIGHT 0
-#define T_LEFT 1
+#define T_TRUE (1)
+#define T_FALSE (0)
+#define T_TAPE_SIZE (1<<15)
+
+#define T_RIGHT (0)
+#define T_LEFT (1)
+
+#define MAX(a,b) (a>b ? a:b)
+#define MIN(a,b) (a<b ? a:b)
 
 #define m_SET_TRANSITION(table, state, symbol, next_state, write, action) table[state][symbol] = (struct t_transition) {next_state,write,action}
 
@@ -19,32 +25,37 @@ struct t_transition{
 	int action;
 };
 
-int t_state = 0;
+int t_number_of_states = 6;
+
+int t_state = 1;
 int t_tape[T_TAPE_SIZE] = {0};
-int t_tape_i = 0;
+int t_tape_i = T_TAPE_SIZE/2;
+int t_leftmost_i = T_TAPE_SIZE/2;
+int t_rightmost_i = T_TAPE_SIZE/2;
 
-struct t_transition (*t_transitions)[T_STATES][2];
-
-//#define T_DEBUG
+struct t_transition (*t_transitions)[T_MAX_STATES][2];
 
 int t_step(){
 	// halting state
 	if(t_state == 0){
+		#ifdef T_DEBUG
+		printf("halted\n");
+		#endif
 		return T_TRUE;
 	}
 
 	#ifdef T_DEBUG
 	printf("t_tapei: %d\n", t_tape_i);
 	#endif
-	int fixed_tape_i = (t_tape_i+T_TAPE_SIZE) % T_TAPE_SIZE;
-	if(fixed_tape_i < 0 || fixed_tape_i >= T_TAPE_SIZE){
-		printf("%d tapei too small or too large\n", fixed_tape_i);
+	//int fixed_tape_i = (t_tape_i+T_TAPE_SIZE) % T_TAPE_SIZE;
+	if(t_tape_i < 0 || t_tape_i >= T_TAPE_SIZE){
+		printf("%d tapei too small or too large\n", t_tape_i);
 		return T_TRUE;
 	}
-	int tape_symbol = t_tape[fixed_tape_i];
+	int tape_symbol = t_tape[t_tape_i];
 	#ifdef T_DEBUG
-		printf("fixed_tape_i: %d, state: %d, symbol: %d\n",
-			fixed_tape_i, t_state, tape_symbol);
+		printf("t_tape_i: %d, state: %d, symbol: %d\n",
+			t_tape_i, t_state, tape_symbol);
 	#endif
 
 	struct t_transition t_entry = (*t_transitions)[t_state][tape_symbol];
@@ -53,7 +64,7 @@ int t_step(){
 			t_entry.next_state, t_entry.write, t_entry.action);
 	#endif
 
-	t_tape[fixed_tape_i] = t_entry.write;
+	t_tape[t_tape_i] = t_entry.write;
 	t_state = t_entry.next_state;
 	if(t_entry.action == T_RIGHT){
 		t_tape_i++;
@@ -61,25 +72,53 @@ int t_step(){
 		t_tape_i--;
 	}
 
+	t_leftmost_i = MIN(t_leftmost_i, t_tape_i);
+	t_rightmost_i = MAX(t_rightmost_i, t_tape_i);
+
 	#ifdef T_DEBUG
 	printf("hi\n\n");
 	#endif
 
 	if(t_state == 0){
+		#ifdef T_DEBUG
+		printf("halted\n");
+		#endif
 		return T_TRUE;
 	}else{
 		return T_FALSE;
 	}
 }
 
-struct t_transition bb5_transition_table[T_STATES][2];
+void turing_reset(){
+	t_state = 1;
+	t_tape_i = T_TAPE_SIZE/2;
+	t_leftmost_i = T_TAPE_SIZE/2;
+	t_rightmost_i = T_TAPE_SIZE/2;
+
+	memset(t_tape, 0, sizeof(t_tape));
+	memset(t_transitions, 0, sizeof(t_transitions)*2*T_MAX_STATES);
+}
+
+int* turing_output_start(){
+	return t_tape+t_leftmost_i;
+}
+
+int* turing_output_end(){
+	return t_tape+t_rightmost_i;
+}
+
+int turing_output_size(){
+	return t_rightmost_i - t_leftmost_i;
+}
+
+struct t_transition bb5_transition_table[T_MAX_STATES][2];
 
 //typedef struct t_transition_string { int x[5]; }
 //	t_transition_string;
-//typedef struct t_transition_func_string { t_transition_string x[T_STATES*2]; }
+//typedef struct t_transition_func_string { t_transition_string x[t_number_of_states*2]; }
 //	t_transition_func_string;
-typedef struct t_transition t_trans_func_table[T_STATES][2];
-#define T_TRANS_MAX_FUNC_STR_SIZE (T_STATES-1)*2*5 + 1
+typedef struct t_transition t_trans_func_table[T_MAX_STATES][2];
+#define T_TRANS_MAX_FUNC_STR_SIZE ((T_MAX_STATES-1)*2*5 + 1)
 typedef int t_trans_func_str[T_TRANS_MAX_FUNC_STR_SIZE];
 // 5,1, 1,0,0
 // (state,symbol, next_state,write,action)+
@@ -116,9 +155,8 @@ void t_load_trans_func_str(
 	}
 }
 
-
-
 void init_bb5_new(){
+	printf("BB(5)\n");
 	t_trans_func_str bb5_func_str1 = {
         T_STR_OPT_EXPLICIT_STATE_SYMBOL,
         1,1, 3,1,T_LEFT,
@@ -152,9 +190,9 @@ void init_bb5_new(){
 	t_state = 1;
 }
 
-int triple_maxes[3] = {T_STATES-1,1,1};
-int triple[3] = {0,0,0};
-int next_triple(){
+int t_turing_triplet_str_size = 0;
+
+int next_triple(int triple[], int triple_maxes[]){
 	if(++triple[2] > triple_maxes[2]){
 		triple[2] = 0;
 		if(++triple[1] > triple_maxes[1]){
@@ -169,24 +207,78 @@ int next_triple(){
 	}
 	return T_FALSE;
 }
-void reset_triple(){
-	triple[0] = 0;
-	triple[1] = 0;
-	triple[2] = 0;
+
+int zero_triple(int triple[]){
+    triple[0] = 0;
+    triple[1] = 0;
+    triple[2] = 0;
+}
+
+int last_triple_i = 0;
+int first_triple_i = 0;
+int next_turing_triple_str(int the_str[], int triple_maxes[]){
+	
+    	int triple_i = last_triple_i;
+    	int* current_triple = &the_str[triple_i];
+	
+    	while(next_triple(current_triple, triple_maxes) == T_TRUE){
+        	zero_triple(current_triple);
+        	triple_i -= 3;
+        	current_triple = &the_str[triple_i];
+        	if(triple_i < 0)return T_TRUE;
+    	}
+    	triple_i = last_triple_i;
+    	current_triple = &the_str[triple_i];
+    	return T_FALSE;
+}
+
+int actual_turing_str[T_TRANS_MAX_FUNC_STR_SIZE] = {0};
+int* turing_str = &actual_turing_str[1];
+void printturing(uint64_t count){
+    for(int i = 0 ; i<t_turing_triplet_str_size;i++){
+        printf("%d ", turing_str[i]);
+    }
+    printf(",%ld\n", count);
+}
+
+void print_turing_shart(){
+    	uint64_t count = 1;
+    	int triple_maxes[3] = {t_number_of_states-1,1,1};
+	//reset_turing_triplet_stuff();
+    	do{
+        	if(count % 1 == 0)
+            		printturing(count);
+        	count++;
+    	}while(next_turing_triple_str(turing_str, triple_maxes) == T_FALSE);
+}
+
+int BB_steps[] = {0,2,6,21,107,47176870};
+
+uint64_t run_until_halt_or_bb(){
+	uint64_t counter = 1;
+	while(t_step() == T_FALSE && counter++ != BB_steps[t_number_of_states-1]){}
+	return counter;
+}
+
+uint64_t run_until_halt(){
+	uint64_t counter = 1;
+	while(t_step() == T_FALSE){counter++;}
+	return counter;
+}
+
+void change_state_number(int n){
+	t_number_of_states = n+1;
+	t_turing_triplet_str_size = 3*2*(t_number_of_states-1);
+	last_triple_i = t_turing_triplet_str_size-3;
 }
 
 int main(){
-	printf("BB5\n");
-
-	//init_bb5();
+	change_state_number(2);
+	print_turing_shart();
+	
+	change_state_number(5);
 	init_bb5_new();
-
-	int counter=1;
-	while(t_step() != T_TRUE){
-		counter++;
-		//keep doing step until HALT
-	}
-	printf("%d steps\n", counter);
+	printf("%ld steps\n", run_until_halt_or_bb());
 
 	return 0;
 
