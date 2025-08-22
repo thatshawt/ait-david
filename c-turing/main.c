@@ -33,8 +33,8 @@ int t_tape_i = T_TAPE_SIZE/2;
 int t_leftmost_i = T_TAPE_SIZE/2;
 int t_rightmost_i = T_TAPE_SIZE/2;
 
-struct t_transition (*t_transitions)[T_MAX_STATES][2];
 struct t_transition t_transitions_table[T_MAX_STATES][2] = {0};
+struct t_transition (*t_transitions)[T_MAX_STATES][2] = &t_transitions_table;
 
 int t_step(){
 	// halting state
@@ -98,6 +98,8 @@ void turing_reset(){
 
 	memset(t_tape, 0, sizeof(t_tape));
 	memset(t_transitions, 0, sizeof(t_transitions)*2*T_MAX_STATES);
+
+	t_transitions = &t_transitions_table;
 }
 
 int* turing_output_start(){
@@ -261,6 +263,10 @@ void printturing(uint64_t count){
     printf(",%ld\n", count);
 }
 
+void reset_turing_str(){
+	memset(actual_turing_str, 0, sizeof(int)*T_TRANS_MAX_FUNC_STR_SIZE);
+}
+
 void print_all_turing_strings(){
     	uint64_t count = 1;
     	do{
@@ -277,8 +283,7 @@ void load_machine_from_triples_str(){
 	t_transitions = &t_transitions_table;
 }
 
-//TODO is this exactly right?
-int BB_steps[] = {0,2,6,21,107,47176870};
+int BB_steps[] = {0,3,6,21,107,47176870};
 
 uint64_t run_until_halt_or_bb(){
 	uint64_t counter = 1;
@@ -305,16 +310,40 @@ void bb5_load_from_str_triples(){
 	load_machine_from_triples_str();
 }
 
+int total = 0;
+int halters = 0;
+
+int load_run_halt_or_bb_next_machine(){
+	turing_reset();
+	load_machine_from_triples_str();
+	uint64_t steps = run_until_halt_or_bb();
+	if(steps != BB_steps[t_number_of_states-1]+1){
+		halters++;
+		//print_turing_transition_table();
+		//printf("%ld steps\n", steps);
+	}
+	total++;
+	return next_turing_triple_str(turing_str);
+}
+
+void load_run_halt_bb_all_turing_strs(){
+	while(load_run_halt_or_bb_next_machine() == T_FALSE){}
+}
+
 int main(){
 	change_state_number(2);
 	//print_all_turing_strings();
-	
-	change_state_number(5);
+	//load_machine_from_triples_str();
+	//printf("%ld steps\n", run_until_halt_or_bb());
+	load_run_halt_bb_all_turing_strs();
+	printf("2 states, %d halters, %d total, %f percent halted\n", halters, total,
+		(float)halters/(float)total);
+	//change_state_number(5);
 	//init_bb5_new();
-	bb5_load_from_str_triples();
+	//bb5_load_from_str_triples();
 	//print_turing_transition_table();
 	//printf("%d\n", t_trans_func_str_size(T_STR_OPT_IMPLICIT_STATE_SYMBOL));
-	printf("%ld steps\n", run_until_halt_or_bb());
+	//printf("%ld steps\n", run_until_halt_or_bb());
 	return 0;
 
 }
