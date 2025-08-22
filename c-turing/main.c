@@ -34,6 +34,7 @@ int t_leftmost_i = T_TAPE_SIZE/2;
 int t_rightmost_i = T_TAPE_SIZE/2;
 
 struct t_transition (*t_transitions)[T_MAX_STATES][2];
+struct t_transition t_transitions_table[T_MAX_STATES][2] = {0};
 
 int t_step(){
 	// halting state
@@ -111,12 +112,22 @@ int turing_output_size(){
 	return t_rightmost_i - t_leftmost_i;
 }
 
+char action_pp[2] = {'R','L'};
+void print_turing_transition_table(){
+	printf("state symbol: (next_state, write, action)\n");
+	for(int i=0;i<t_number_of_states;i++){
+		struct t_transition te = (*t_transitions)[i][0];
+		printf("%d 0: (%d,%d,%c) \n",
+			i, te.next_state, te.write, action_pp[te.action]);
+		te = (*t_transitions)[i][1];
+		printf("%d 1: (%d,%d,%c) \n",
+			i, te.next_state, te.write, action_pp[te.action]);
+	}
+}
+
 struct t_transition bb5_transition_table[T_MAX_STATES][2];
 
-//typedef struct t_transition_string { int x[5]; }
-//	t_transition_string;
-//typedef struct t_transition_func_string { t_transition_string x[t_number_of_states*2]; }
-//	t_transition_func_string;
+
 typedef struct t_transition t_trans_func_table[T_MAX_STATES][2];
 #define T_TRANS_MAX_FUNC_STR_SIZE ((T_MAX_STATES-1)*2*5 + 1)
 typedef int t_trans_func_str[T_TRANS_MAX_FUNC_STR_SIZE];
@@ -129,11 +140,20 @@ enum t_trans_func_str_options{
 	T_STR_OPT_IMPLICIT_STATE_SYMBOL
 };
 
+int t_trans_func_str_size(int enum_options){
+	if(enum_options == T_STR_OPT_EXPLICIT_STATE_SYMBOL){
+		return 10*(t_number_of_states-1) + 1;
+	}else if(enum_options == T_STR_OPT_IMPLICIT_STATE_SYMBOL){
+		return 6*(t_number_of_states-1) + 1;
+	}
+}
+
 void t_load_trans_func_str(
 		t_trans_func_table func_table,
 		t_trans_func_str func_str){
-	if(func_str[0] == T_STR_OPT_EXPLICIT_STATE_SYMBOL){
-	for(int i=1;i<T_TRANS_MAX_FUNC_STR_SIZE;i+=5){
+	int const enum_options = func_str[0];
+	if(enum_options == T_STR_OPT_EXPLICIT_STATE_SYMBOL){
+	for(int i=1;i<t_trans_func_str_size(enum_options)-1;i+=5){
 		int state = func_str[i];
 		int symbol = func_str[i+1];
 		int next_state = func_str[i+2];
@@ -141,10 +161,10 @@ void t_load_trans_func_str(
 		int action = func_str[i+4];
 		m_SET_TRANSITION(func_table, state,symbol, next_state,write,action);
 	}
-	}else if(func_str[0] == T_STR_OPT_IMPLICIT_STATE_SYMBOL){
+	}else if(enum_options == T_STR_OPT_IMPLICIT_STATE_SYMBOL){
 	int state = 0;
 	int symbol = 0;
-	for(int i=1;i<T_TRANS_MAX_FUNC_STR_SIZE;i+=3){
+	for(int i=1;i<t_trans_func_str_size(enum_options)-1;i+=3){
 		if(((i-1)/3)%2 == 0)state++;
 		if(symbol == 2)symbol = 0;
                 int next_state = func_str[i+0];
@@ -155,9 +175,7 @@ void t_load_trans_func_str(
 	}
 }
 
-void init_bb5_new(){
-	printf("BB(5)\n");
-	t_trans_func_str bb5_func_str1 = {
+t_trans_func_str bb5_func_str1 = {
         T_STR_OPT_EXPLICIT_STATE_SYMBOL,
         1,1, 3,1,T_LEFT,
         1,0, 2,1,T_RIGHT,
@@ -169,9 +187,9 @@ void init_bb5_new(){
         4,1, 4,1,T_LEFT,
         5,0, 0,1,T_RIGHT,
         5,1, 1,0,T_LEFT
-	};
+};
 
-	t_trans_func_str bb5_func_str2 = {
+t_trans_func_str bb5_func_str2 = {
 	T_STR_OPT_IMPLICIT_STATE_SYMBOL,
         2,1,T_RIGHT,
         3,1,T_LEFT,
@@ -183,8 +201,10 @@ void init_bb5_new(){
         4,1,T_LEFT,
         0,1,T_RIGHT,
         1,0,T_LEFT
-        };
+};
 
+void init_bb5_new(){
+	printf("BB(5)\n");
 	t_load_trans_func_str(bb5_transition_table, bb5_func_str2);
 	t_transitions = &bb5_transition_table;
 	t_state = 1;
@@ -216,8 +236,8 @@ int zero_triple(int triple[]){
 
 int last_triple_i = 0;
 int first_triple_i = 0;
-int next_turing_triple_str(int the_str[], int triple_maxes[]){
-	
+int next_turing_triple_str(int the_str[]){
+	int triple_maxes[3] = {t_number_of_states-1, 1, 1};
     	int triple_i = last_triple_i;
     	int* current_triple = &the_str[triple_i];
 	
@@ -241,17 +261,23 @@ void printturing(uint64_t count){
     printf(",%ld\n", count);
 }
 
-void print_turing_shart(){
+void print_all_turing_strings(){
     	uint64_t count = 1;
-    	int triple_maxes[3] = {t_number_of_states-1,1,1};
-	//reset_turing_triplet_stuff();
     	do{
         	if(count % 1 == 0)
             		printturing(count);
         	count++;
-    	}while(next_turing_triple_str(turing_str, triple_maxes) == T_FALSE);
+    	}while(next_turing_triple_str(turing_str) == T_FALSE);
 }
 
+void load_machine_from_triples_str(){
+	actual_turing_str[0] = T_STR_OPT_IMPLICIT_STATE_SYMBOL;
+	
+	t_load_trans_func_str(t_transitions_table, actual_turing_str);
+	t_transitions = &t_transitions_table;
+}
+
+//TODO is this exactly right?
 int BB_steps[] = {0,2,6,21,107,47176870};
 
 uint64_t run_until_halt_or_bb(){
@@ -268,18 +294,27 @@ uint64_t run_until_halt(){
 
 void change_state_number(int n){
 	t_number_of_states = n+1;
-	t_turing_triplet_str_size = 3*2*(t_number_of_states-1);
+	t_turing_triplet_str_size = 6*(t_number_of_states-1);
 	last_triple_i = t_turing_triplet_str_size-3;
+}
+
+void bb5_load_from_str_triples(){
+	printf("BB5 from str triple test\n");
+	memcpy(actual_turing_str, bb5_func_str2,
+		sizeof(int)*t_trans_func_str_size(T_STR_OPT_IMPLICIT_STATE_SYMBOL));
+	load_machine_from_triples_str();
 }
 
 int main(){
 	change_state_number(2);
-	print_turing_shart();
+	//print_all_turing_strings();
 	
 	change_state_number(5);
-	init_bb5_new();
+	//init_bb5_new();
+	bb5_load_from_str_triples();
+	//print_turing_transition_table();
+	//printf("%d\n", t_trans_func_str_size(T_STR_OPT_IMPLICIT_STATE_SYMBOL));
 	printf("%ld steps\n", run_until_halt_or_bb());
-
 	return 0;
 
 }
