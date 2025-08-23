@@ -14,8 +14,8 @@
 #define T_RIGHT (0)
 #define T_LEFT (1)
 
-#define MAX(a,b) (a>b ? a:b)
-#define MIN(a,b) (a<b ? a:b)
+#define MAX(a,b) (a>=b ? a:b)
+#define MIN(a,b) (a<=b ? a:b)
 
 #define m_SET_TRANSITION(table, state, symbol, next_state, write, action) table[state][symbol] = (struct t_transition) {next_state,write,action}
 
@@ -31,7 +31,7 @@ int t_state = 1;
 int t_tape[T_TAPE_SIZE] = {0};
 int t_tape_i = T_TAPE_SIZE/2;
 int t_leftmost_i = T_TAPE_SIZE/2;
-int t_rightmost_i = T_TAPE_SIZE/2;
+int t_rightmost_i = T_TAPE_SIZE/2 + 1;
 
 struct t_transition t_transitions_table[T_MAX_STATES][2] = {0};
 struct t_transition (*t_transitions)[T_MAX_STATES][2] = &t_transitions_table;
@@ -55,27 +55,31 @@ int t_step(){
 	}
 	int tape_symbol = t_tape[t_tape_i];
 	#ifdef T_DEBUG
-		printf("t_tape_i: %d, state: %d, symbol: %d\n",
-			t_tape_i, t_state, tape_symbol);
+	printf("t_tape_i: %d, state: %d, symbol: %d\n",
+		t_tape_i, t_state, tape_symbol);
 	#endif
 
 	struct t_transition t_entry = (*t_transitions)[t_state][tape_symbol];
 	#ifdef T_DEBUG
-		printf("next_state: %d, write: %d, action: %d\n",
-			t_entry.next_state, t_entry.write, t_entry.action);
+	printf("next_state: %d, write: %d, action: %d\n",
+		t_entry.next_state, t_entry.write, t_entry.action);
 	#endif
 
+	// printf("wrote %d at %d\n", t_entry.write, t_tape_i);
 	t_tape[t_tape_i] = t_entry.write;
 	t_state = t_entry.next_state;
+
 	if(t_entry.action == T_RIGHT){
+		// printf("moved right to %d\n", t_tape_i+1);
 		t_tape_i++;
+		t_rightmost_i = MAX(t_rightmost_i, t_tape_i+1);
 	}else if(t_entry.action == T_LEFT){
+		// printf("moved left to %d\n", t_tape_i-1);
 		t_tape_i--;
+		t_leftmost_i = MIN(t_leftmost_i, t_tape_i);
 	}
 
-	t_leftmost_i = MIN(t_leftmost_i, t_tape_i);
-	t_rightmost_i = MAX(t_rightmost_i, t_tape_i);
-
+	
 	#ifdef T_DEBUG
 	printf("hi\n\n");
 	#endif
@@ -94,7 +98,7 @@ void turing_reset(){
 	t_state = 1;
 	t_tape_i = T_TAPE_SIZE/2;
 	t_leftmost_i = T_TAPE_SIZE/2;
-	t_rightmost_i = T_TAPE_SIZE/2;
+	t_rightmost_i = T_TAPE_SIZE/2 + 1;
 
 	memset(t_tape, 0, sizeof(t_tape));
 	memset(t_transitions, 0, sizeof(t_transitions)*2*T_MAX_STATES);
@@ -111,7 +115,9 @@ int* turing_output_end(){
 }
 
 int turing_output_size(){
-	return t_rightmost_i - t_leftmost_i;
+	int diff = t_rightmost_i - t_leftmost_i;
+	if(diff == 0)return 1;
+	return diff;
 }
 
 char action_pp[2] = {'R','L'};
@@ -132,7 +138,7 @@ struct t_transition bb5_transition_table[T_MAX_STATES][2];
 
 typedef struct t_transition t_trans_func_table[T_MAX_STATES][2];
 #define T_TRANS_MAX_FUNC_STR_SIZE ((T_MAX_STATES-1)*2*5 + 1)
-typedef int t_trans_func_str[T_TRANS_MAX_FUNC_STR_SIZE];
+// typedef int t_trans_func_str[T_TRANS_MAX_FUNC_STR_SIZE];
 // 5,1, 1,0,0
 // (state,symbol, next_state,write,action)+
 // 
@@ -152,7 +158,7 @@ int t_trans_func_str_size(int enum_options){
 
 void t_load_trans_func_str(
 		t_trans_func_table func_table,
-		t_trans_func_str func_str){
+		int func_str[]){
 	int const enum_options = func_str[0];
 	if(enum_options == T_STR_OPT_EXPLICIT_STATE_SYMBOL){
 	for(int i=1;i<t_trans_func_str_size(enum_options)-1;i+=5){
@@ -177,7 +183,7 @@ void t_load_trans_func_str(
 	}
 }
 
-t_trans_func_str bb5_func_str1 = {
+int bb5_func_str1[] = {
         T_STR_OPT_EXPLICIT_STATE_SYMBOL,
         1,1, 3,1,T_LEFT,
         1,0, 2,1,T_RIGHT,
@@ -191,7 +197,7 @@ t_trans_func_str bb5_func_str1 = {
         5,1, 1,0,T_LEFT
 };
 
-t_trans_func_str bb5_func_str2 = {
+int bb5_func_str2[] = {
 	T_STR_OPT_IMPLICIT_STATE_SYMBOL,
         2,1,T_RIGHT,
         3,1,T_LEFT,
@@ -270,7 +276,7 @@ void reset_turing_str(){
 void print_all_turing_strings(){
     	uint64_t count = 1;
     	do{
-        	if(count % 1 == 0)
+        	if(count > 20636)
             		printturing(count);
         	count++;
     	}while(next_turing_triple_str(turing_str) == T_FALSE);
@@ -285,15 +291,33 @@ void load_machine_from_triples_str(){
 
 int BB_steps[] = {0,3,6,21,107,47176870};
 
+int run_halted = T_TRUE;
+
 uint64_t run_until_halt_or_bb(){
 	uint64_t counter = 1;
-	while(t_step() == T_FALSE && counter++ != BB_steps[t_number_of_states-1]){}
+	run_halted = T_TRUE;
+	while(t_step() == T_FALSE ){
+		if(++counter > BB_steps[t_number_of_states-1]){
+			run_halted = T_FALSE;
+			break;
+		}
+	}
 	return counter;
 }
 
-uint64_t run_until_halt(){
+uint64_t run_until_halt(uint64_t last_step){
 	uint64_t counter = 1;
-	while(t_step() == T_FALSE){counter++;}
+	if(last_step == 0){
+		run_halted = T_FALSE;
+		return counter;
+	}
+	while(t_step() == T_FALSE){
+		if(counter++ == last_step){
+			run_halted = T_FALSE;
+			return counter;
+		}
+	}
+	run_halted = T_TRUE;
 	return counter;
 }
 
@@ -317,7 +341,7 @@ int load_run_halt_or_bb_next_machine(){
 	turing_reset();
 	load_machine_from_triples_str();
 	uint64_t steps = run_until_halt_or_bb();
-	if(steps != BB_steps[t_number_of_states-1]+1){
+	if(run_halted == T_TRUE){
 		halters++;
 		//print_turing_transition_table();
 		//printf("%ld steps\n", steps);
@@ -330,20 +354,62 @@ void load_run_halt_bb_all_turing_strs(){
 	while(load_run_halt_or_bb_next_machine() == T_FALSE){}
 }
 
+// 1RB0LA_1RC1RA_0LD0RD_0RB1LA
+int random_tm1[] = {
+	T_STR_OPT_IMPLICIT_STATE_SYMBOL,
+		//A1, B2, C3, D4
+        2,1,T_RIGHT,	//1RB
+        1,0,T_LEFT,		//0LA
+        3,1,T_RIGHT,	//1RC
+        1,1,T_RIGHT,	//1RA
+        4,0,T_LEFT,		//0LD	
+        4,0,T_RIGHT,	//0RD
+        2,0,T_RIGHT,	//0RB
+        1,1,T_LEFT,		//1LA
+};
+
+void load_random_tm(){
+	// printf("Random TM test\n");
+	change_state_number(4);
+	t_load_trans_func_str(t_transitions_table, random_tm1);
+}
+
+void do_test(int n){
+	run_until_halt(n);
+	printf("step %d: ", n);
+	// for(int i = 0; i < turing_output_size(); i++){
+	// 	printf("%d", *(turing_output_start()+i));
+	// }
+	// for(int* p = turing_output_start(); p < turing_output_end(); p++){
+	// 	printf("%d", *p);
+	// }
+	printf("\n");
+}
+
+
 int main(){
-	change_state_number(2);
-	//print_all_turing_strings();
+	for(int i=0;i<100;i++){
+		turing_reset();
+		load_random_tm();
+		do_test(i);
+	}
+
+	// int states_to_test = 2;
+	// change_state_number(states_to_test);
+	// print_all_turing_strings();
 	//load_machine_from_triples_str();
 	//printf("%ld steps\n", run_until_halt_or_bb());
-	load_run_halt_bb_all_turing_strs();
-	printf("2 states, %d halters, %d total, %f percent halted\n", halters, total,
-		(float)halters/(float)total);
-	//change_state_number(5);
-	//init_bb5_new();
-	//bb5_load_from_str_triples();
+
+	// load_run_halt_bb_all_turing_strs();
+	// printf("%d states, %d halters, %d total, %f percent halted\n",states_to_test, halters, total,
+	// 	(float)halters/(float)total);
+
+	// change_state_number(5);
+	// init_bb5_new();
+	// bb5_load_from_str_triples();
 	//print_turing_transition_table();
 	//printf("%d\n", t_trans_func_str_size(T_STR_OPT_IMPLICIT_STATE_SYMBOL));
-	//printf("%ld steps\n", run_until_halt_or_bb());
+	// printf("%ld steps\n", run_until_halt_or_bb());
 	return 0;
 
 }
