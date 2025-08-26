@@ -1,0 +1,167 @@
+checking all 1 state TMs...
+checking all 2 state TMs...
+checking all 3 state TMs...
+max_output_length: 14, strings_greater_than_max: 0, total_strings: 7581656 
+
+length 1 strings
+
+length 2 strings
+00, percent: 0.3247791775, freq: 2462364
+01, percent: 0.1850677477, freq: 1403120
+10, percent: 0.1850677477, freq: 1403120
+11, percent: 0.0453563179, freq: 343876
+
+length 3 strings
+000, percent: 0.0526365216, freq: 399072
+001, percent: 0.0276599202, freq: 209708
+010, percent: 0.0522933248, freq: 396470
+011, percent: 0.0277609535, freq: 210474
+100, percent: 0.0276599202, freq: 209708
+101, percent: 0.0047741549, freq: 36196
+110, percent: 0.0277609535, freq: 210474
+111, percent: 0.0053194183, freq: 40330
+
+length 4 strings
+0000, percent: 0.0037258351, freq: 28248
+0001, percent: 0.0016814269, freq: 12748
+0010, percent: 0.0035022692, freq: 26553
+0011, percent: 0.0019113239, freq: 14491
+0100, percent: 0.0035022692, freq: 26553
+0101, percent: 0.0017618842, freq: 13358
+0110, percent: 0.0033040275, freq: 25050
+0111, percent: 0.0020173693, freq: 15295
+1000, percent: 0.0016814269, freq: 12748
+1001, percent: 0.0005096512, freq: 3864
+1010, percent: 0.0017618842, freq: 13358
+1011, percent: 0.0006267760, freq: 4752
+1100, percent: 0.0019113239, freq: 14491
+1101, percent: 0.0006267760, freq: 4752
+1110, percent: 0.0020173693, freq: 15295
+1111, percent: 0.0007697527, freq: 5836
+
+length 5 strings
+00000, percent: 0.0001836010, freq: 1392
+00001, percent: 0.0000361399, freq: 274
+00010, percent: 0.0001669820, freq: 1266
+00011, percent: 0.0000395692, freq: 300
+00100, percent: 0.0000247967, freq: 188
+00101, percent: 0.0000873160, freq: 662
+00110, percent: 0.0000345571, freq: 262
+00111, percent: 0.0001094748, freq: 830
+01000, percent: 0.0001669820, freq: 1266
+01001, percent: 0.0000385140, freq: 292
+01010, percent: 0.0001582768, freq: 1200
+01011, percent: 0.0000437899, freq: 332
+01100, percent: 0.0000345571, freq: 262
+01101, percent: 0.0000965488, freq: 732
+01110, percent: 0.0000348209, freq: 264
+01111, percent: 0.0001247749, freq: 946
+10000, percent: 0.0000361399, freq: 274
+10001, percent: 0.0000279622, freq: 212
+10010, percent: 0.0000385140, freq: 292
+10011, percent: 0.0000437899, freq: 332
+10100, percent: 0.0000873160, freq: 662
+10101, percent: 0.0000443175, freq: 336
+10110, percent: 0.0000965488, freq: 732
+10111, percent: 0.0000527589, freq: 400
+11000, percent: 0.0000395692, freq: 300
+11001, percent: 0.0000437899, freq: 332
+11010, percent: 0.0000437899, freq: 332
+11011, percent: 0.0000522313, freq: 396
+11100, percent: 0.0001094748, freq: 830
+11101, percent: 0.0000527589, freq: 400
+11110, percent: 0.0001247749, freq: 946
+11111, percent: 0.0000796660, freq: 604
+
+length 6 strings
+000000, percent: 0.0000100242, freq: 76
+000001, percent: 0.0000018466, freq: 14
+000010, percent: 0.0000058035, freq: 44
+000011, percent: 0.0000015828, freq: 12
+000100, percent: 0.0000013190, freq: 10
+000101, percent: 0.0000015828, freq: 12
+000110, percent: 0.0000058035, freq: 44
+000111, percent: 0.0000010552, freq: 8
+001000, percent: 0.0000013190, freq: 10
+001001, percent: 0.0000063311, freq: 48
+001010, percent: 0.0000010552, freq: 8
+001011, percent: 0.0000013190, freq: 10
+001100, percent: 0.0000005276, freq: 4
+001101, percent: 0.0000015828, freq: 12
+001110, percent: 0.0000002638, freq: 2
+001111, percent: 0.0000100242, freq: 76
+010000, percent: 0.0000058035, freq: 44
+010001, percent: 0.0000029017, freq: 22
+010010, percent: 0.0000015828, freq: 12
+010011, percent: 0.0000026379, freq: 20
+010100, percent: 0.0000010552, freq: 8
+010101, percent: 0.0000015828, freq: 12
+010110, percent: 0.0000055397, freq: 42
+010111, percent: 0.0000010552, freq: 8
+011000, percent: 0.0000058035, freq: 44
+011001, percent: 0.0000063311, freq: 48
+011010, percent: 0.0000055397, freq: 42
+011011, percent: 0.0000034293, freq: 26
+011100, percent: 0.0000002638, freq: 2
+011101, percent: 0.0000015828, freq: 12
+011110, percent: 0.0000005276, freq: 4
+011111, percent: 0.0000121346, freq: 92
+100000, percent: 0.0000018466, freq: 14
+100010, percent: 0.0000029017, freq: 22
+100011, percent: 0.0000005276, freq: 4
+100100, percent: 0.0000063311, freq: 48
+100101, percent: 0.0000015828, freq: 12
+100110, percent: 0.0000063311, freq: 48
+100111, percent: 0.0000010552, freq: 8
+101000, percent: 0.0000015828, freq: 12
+101001, percent: 0.0000015828, freq: 12
+101010, percent: 0.0000015828, freq: 12
+101011, percent: 0.0000021104, freq: 16
+101100, percent: 0.0000015828, freq: 12
+101101, percent: 0.0000010552, freq: 8
+101110, percent: 0.0000015828, freq: 12
+101111, percent: 0.0000018466, freq: 14
+110000, percent: 0.0000015828, freq: 12
+110001, percent: 0.0000005276, freq: 4
+110010, percent: 0.0000026379, freq: 20
+110011, percent: 0.0000010552, freq: 8
+110100, percent: 0.0000013190, freq: 10
+110101, percent: 0.0000021104, freq: 16
+110110, percent: 0.0000034293, freq: 26
+110111, percent: 0.0000026379, freq: 20
+111000, percent: 0.0000010552, freq: 8
+111001, percent: 0.0000010552, freq: 8
+111010, percent: 0.0000010552, freq: 8
+111011, percent: 0.0000026379, freq: 20
+111100, percent: 0.0000100242, freq: 76
+111101, percent: 0.0000018466, freq: 14
+111110, percent: 0.0000121346, freq: 92
+111111, percent: 0.0000042207, freq: 32
+
+length 7 strings
+0001111, percent: 0.0000002638, freq: 2
+0011110, percent: 0.0000002638, freq: 2
+0101111, percent: 0.0000002638, freq: 2
+0111100, percent: 0.0000002638, freq: 2
+0111110, percent: 0.0000005276, freq: 4
+1000101, percent: 0.0000005276, freq: 4
+1001111, percent: 0.0000005276, freq: 4
+1010001, percent: 0.0000005276, freq: 4
+1010101, percent: 0.0000010552, freq: 8
+1011111, percent: 0.0000005276, freq: 4
+1111000, percent: 0.0000002638, freq: 2
+1111001, percent: 0.0000005276, freq: 4
+1111010, percent: 0.0000002638, freq: 2
+1111101, percent: 0.0000005276, freq: 4
+
+length 8 strings
+
+length 9 strings
+
+length 10 strings
+
+length 11 strings
+
+length 12 strings
+
+length 13 strings

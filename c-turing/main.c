@@ -27,6 +27,8 @@ struct t_transition{
 
 int t_number_of_states = 6;
 
+int t_blank_symbol = 0;
+
 int t_state = 1;
 char t_tape[T_TAPE_SIZE] = {0};
 int t_tape_i = T_TAPE_SIZE/2;
@@ -38,12 +40,7 @@ struct t_transition (*t_transitions)[T_MAX_STATES][2] = &t_transitions_table;
 
 int t_step(){
 	// halting state
-	if(t_state == 0){
-		#ifdef T_DEBUG
-		printf("halted\n");
-		#endif
-		return T_TRUE;
-	}
+	// if(t_state == 0)return T_TRUE;
 
 	#ifdef T_DEBUG
 	printf("t_tapei: %d\n", t_tape_i);
@@ -54,6 +51,7 @@ int t_step(){
 		return T_TRUE;
 	}
 	int tape_symbol = t_tape[t_tape_i];
+
 	#ifdef T_DEBUG
 	printf("t_tape_i: %d, state: %d, symbol: %d\n",
 		t_tape_i, t_state, tape_symbol);
@@ -66,9 +64,20 @@ int t_step(){
 	#endif
 
 	// printf("wrote %d at %d\n", t_entry.write, t_tape_i);
-	t_tape[t_tape_i] = t_entry.write;
+	if(t_entry.write == t_blank_symbol){
+		t_tape[t_tape_i] = 0;
+	}else{
+		t_tape[t_tape_i] = 1;
+	}
+	// t_tape[t_tape_i] = if(t_entry.write == t_blank_symbol);
 	t_state = t_entry.next_state;
 
+	if(t_state == 0)return T_TRUE;
+
+	#ifdef T_DEBUG
+	printf("hi\n\n");
+	#endif
+	
 	if(t_entry.action == T_RIGHT){
 		// printf("moved right to %d\n", t_tape_i+1);
 		t_tape_i++;
@@ -78,29 +87,28 @@ int t_step(){
 		t_tape_i--;
 		t_leftmost_i = MIN(t_leftmost_i, t_tape_i);
 	}
-
 	
-	#ifdef T_DEBUG
-	printf("hi\n\n");
-	#endif
+	// if(t_state == 0)return T_TRUE;
 
-	if(t_state == 0){
-		#ifdef T_DEBUG
-		printf("halted\n");
-		#endif
-		return T_TRUE;
-	}else{
-		return T_FALSE;
-	}
+	return T_FALSE;
+}
+
+void turing_tape_zeros(){
+	memset(t_tape, 0, sizeof(t_tape));
+}
+
+void turing_tape_ones(){
+	memset(t_tape, 1, sizeof(t_tape));
 }
 
 void turing_reset(){
+	t_blank_symbol = 0;
 	t_state = 1;
 	t_tape_i = T_TAPE_SIZE/2;
 	t_leftmost_i = T_TAPE_SIZE/2;
 	t_rightmost_i = T_TAPE_SIZE/2 + 1;
 
-	memset(t_tape, 0, sizeof(t_tape));
+	turing_tape_zeros();
 	memset(t_transitions, 0, sizeof(t_transitions)*2*T_MAX_STATES);
 
 	t_transitions = &t_transitions_table;
@@ -118,6 +126,21 @@ int turing_output_size(){
 	int diff = t_rightmost_i - t_leftmost_i;
 	if(diff == 0)return 1;
 	return diff;
+}
+
+/*
+right being the lowest bit
+*/
+int convert_binary_array_to_num(char* str, int length){
+	int num = 0;
+	for(int i=length-1,j=0; i>=0; i--,j++){
+		if(str[i] == 1)num += 1<<j;
+	}
+	return num;
+}
+
+int convert_turing_output_to_num(){
+	return convert_binary_array_to_num(turing_output_start(), turing_output_size());
 }
 
 char action_pp[2] = {'R','L'};
@@ -276,7 +299,7 @@ void reset_turing_str(){
 void print_all_turing_strings(){
 	uint64_t count = 1;
 	do{
-		if(count > 20636)
+		if(1 == 1)
 				printturing(count);
 		count++;
 	}while(next_turing_triple_str(turing_str) == T_FALSE);
@@ -289,7 +312,8 @@ void load_machine_from_triples_str(){
 	t_transitions = &t_transitions_table;
 }
 
-int BB_steps[] = {0,3,6,21,107,47176870};
+// not accurate for lower values 
+int BB_steps[] = {0,10,50,50,107,47176870};
 
 int run_halted = T_TRUE;
 
@@ -337,7 +361,7 @@ void bb5_load_from_str_triples(){
 int total = 0;
 int halters = 0;
 
-int load_run_halt_or_bb_next_machine(){
+int load_run_halt_or_bb_next_machine_zeros_tape(){
 	turing_reset();
 	load_machine_from_triples_str();
 	uint64_t steps = run_until_halt_or_bb();
@@ -350,10 +374,59 @@ int load_run_halt_or_bb_next_machine(){
 	return next_turing_triple_str(turing_str);
 }
 
-void load_run_halt_bb_all_turing_strs(){
-	while(load_run_halt_or_bb_next_machine() == T_FALSE){}
+int run_halted_zeros = T_FALSE;
+int run_halted_ones = T_FALSE;
+int ones_output_num = 0;
+int zeros_output_num = 0;
+int ones_output_length = 0;
+int zeros_output_length = 0;
+int load_run_halt_or_bb_next_machine_ones_and_zeros_tape(){
+	turing_reset();
+	// turing_tape_zeros();
+	turing_tape_ones();
+	load_machine_from_triples_str();
+	uint64_t steps = run_until_halt_or_bb();
+	if(run_halted == T_TRUE){
+		halters++;
+		run_halted_zeros = T_TRUE;
+		zeros_output_length = turing_output_size();
+		zeros_output_num = convert_turing_output_to_num();
+		//print_turing_transition_table();
+		//printf("%ld steps\n", steps);
+	}
+	total++;
+
+	turing_reset();
+	turing_tape_zeros();
+	// turing_tape_ones();
+	t_blank_symbol = 1;
+	load_machine_from_triples_str();
+	steps = run_until_halt_or_bb();
+	if(run_halted == T_TRUE){
+		halters++;
+		run_halted_ones = T_TRUE;
+		ones_output_length = turing_output_size();
+		ones_output_num = convert_turing_output_to_num();
+		//print_turing_transition_table();
+		//printf("%ld steps\n", steps);
+	}
+	total++;
+
+	return next_turing_triple_str(turing_str);
 }
 
+void load_run_halt_bb_all_turing_strs(){
+	while(load_run_halt_or_bb_next_machine_zeros_tape() == T_FALSE){
+		if(run_halted == T_FALSE)continue;
+		printf("output: ");
+		for(int i = 0; i < turing_output_size(); i++){
+			printf("%d", *(turing_output_start()+i));
+		}
+		printf("\n");
+	}
+}
+
+//https://fiery.pages.dev/turing/explore/1RB0LA_1RC1RA_0LD0RD_0RB1LA
 // 1RB0LA_1RC1RA_0LD0RD_0RB1LA
 int random_tm1[] = {
 	T_STR_OPT_IMPLICIT_STATE_SYMBOL,
@@ -377,6 +450,7 @@ void load_random_tm(){
 void do_test(int n){
 	run_until_halt(n);
 	printf("step %d: ", n);
+
 	for(int i = 0; i < turing_output_size(); i++){
 		printf("%d", *(turing_output_start()+i));
 	}
@@ -403,7 +477,7 @@ int find_shortest_tm_test(char* string, int length, int max_states){
 	while(state_i++ <= max_states){
 		printf("checking all %d state TMs...\n", state_i);
 		change_state_number(state_i);
-		while(load_run_halt_or_bb_next_machine() == T_FALSE){
+		while(load_run_halt_or_bb_next_machine_zeros_tape() == T_FALSE){
 			if(run_halted == T_TRUE && length == turing_output_size()){
 				if(array_compare(string, turing_output_start(), length) == T_TRUE){
 					printf("found shortest str\n");
@@ -418,11 +492,13 @@ int find_shortest_tm_test(char* string, int length, int max_states){
 	}
 }
 
-#define MAX_STRING_SIZE (14)
+#define MAX_STRING_SIZE (7)
 #define STRING_FREQUENCIES_SIZE (1<<MAX_STRING_SIZE+1)
 int string_frequencies[STRING_FREQUENCIES_SIZE] = {0};
 int strings_greater_than_max = 0;
 int total_strings = 0;
+
+int max_string_length_found = 0;
 
 /*
 length >= 1
@@ -436,32 +512,52 @@ int string_start_index(int length){
 }
 
 /*
-right being the lowest bit
+rightmost bit is lowest.
+num = 3
+max_bits = 6
+buffer = {0,0,0,0,1,1,...};
 */
-int convert_binary_array_to_num(char* str, int length){
-	int num = 0;
-	for(int i=length-1,j=0; i>=0; i--,j++){
-		if(str[i] == 1)num += 1<<j;
+int convert_num_to_binary_array(int num, char* buffer, int max_bits){
+	if(num > (1<<max_bits))return T_FALSE;
+	memset(buffer, 0, sizeof(char)*max_bits);
+	for(int i=0; i<max_bits; i++){
+		buffer[i] = (num & (1<<max_bits-1)>>i)>>(max_bits-1-i);
 	}
-	return num;
+	return T_TRUE;
+}
+
+void print_binary_array(char* buff, int bits){
+    for(int i=0;i<bits;i++){
+        printf("%d", buff[i]);
+    }
+}
+
+void inc_output_num_in_freq_table(int output_length, int num_value){
+	max_string_length_found = MAX(max_string_length_found, output_length);
+	// const int output_length = turing_output_size();
+	if(output_length <= MAX_STRING_SIZE){
+		// int num_value = convert_binary_array_to_num(turing_output_start(), output_length);
+		// int num_value = convert_turing_output_to_num();
+		string_frequencies[string_start_index(output_length)+num_value]++;
+	}else{
+		strings_greater_than_max++;
+	}
+	total_strings++;
 }
 
 void enumerate_turing_strings_test(int max_states){
-	int state_i = 1;
-	while(state_i <= max_states){
+	int state_i = max_states;
+	while(state_i == max_states){
 		printf("checking all %d state TMs...\n", state_i);
 		change_state_number(state_i);
-		while(load_run_halt_or_bb_next_machine() == T_FALSE){
-			if(run_halted == T_TRUE){
-				const int output_length = turing_output_size();
-				if(output_length <= MAX_STRING_SIZE){
-					int num_value = convert_binary_array_to_num(turing_output_start(), output_length);
-					string_frequencies[string_start_index(output_length)+num_value]++;
-				}else{
-					strings_greater_than_max++;
-				}
-				total_strings++;
+		while(load_run_halt_or_bb_next_machine_ones_and_zeros_tape() == T_FALSE){
+			if(run_halted_ones == T_TRUE){
+				inc_output_num_in_freq_table(ones_output_length, ones_output_num);
 			}
+			if(run_halted_zeros == T_TRUE){
+				inc_output_num_in_freq_table(zeros_output_length, zeros_output_num);
+			}
+			// total_strings++;
 		}
 		state_i++;
 	}
@@ -474,19 +570,50 @@ int main(){
 	// 	do_test(i);
 	// }
 
-	// char test_str[] = {1,0,1};
+	// char test_str[] = {0,1,0,1,0,1,0};
 	// int length = sizeof(test_str)/sizeof(char);
 	int max_states = 3;
 	// find_shortest_tm_test(test_str, length, max_states);
+	max_string_length_found = 0;
 	enumerate_turing_strings_test(max_states);
-	printf("strings_greater_than_max: %d, total_strings: %d \n",
-		strings_greater_than_max, total_strings);
+	printf("max string length: %d, #strings found longer than %d: %d, total_strings: %d \n",
+		MAX_STRING_SIZE, MAX_STRING_SIZE, strings_greater_than_max, total_strings);
 
-	// int states_to_test = 3;
+	char buff[10];
+	int strings_greater_than_zero_freq = 0;
+	for(int str_len=1; str_len<=MAX_STRING_SIZE; str_len++){
+		int max_num_thing = (1<<str_len);
+		printf("\nlength %d strings, max_num_thing: %d\n", str_len, max_num_thing);
+		int zeros_within_the_length = 0;
+		int not_zeros_in_the_length = 0;
+		for(int num_str=0; num_str<(1<<str_len); num_str++){
+			int frequency = string_frequencies[string_start_index(str_len)+num_str];
+			if(frequency > 0){
+				strings_greater_than_zero_freq++;
+				not_zeros_in_the_length++;
+			}else if(frequency == 0){
+				zeros_within_the_length++;
+			}
+			
+			if(frequency != 0){
+				convert_num_to_binary_array(num_str, buff, str_len);
+				print_binary_array(buff, str_len);
+				printf(", percent: %.10f, freq: %d\n",
+					(double)frequency/(double)total_strings,
+					frequency);
+			}
+		}
+		printf("zero strings found in length %d: %d\n", str_len, zeros_within_the_length);
+		printf("nonzero strings found in length %d: %d\n", str_len, not_zeros_in_the_length);
+	}
+	printf("\ntotal nonzero strings found: %d\n", strings_greater_than_zero_freq);
+	printf("largest length string found: %d\n", max_string_length_found);
+
+	// int states_to_test = 1;
 	// change_state_number(states_to_test);
 	// print_all_turing_strings();
-	//load_machine_from_triples_str();
-	//printf("%ld steps\n", run_until_halt_or_bb());
+	// load_machine_from_triples_str();
+	// printf("%ld steps\n", run_until_halt_or_bb());
 
 	// load_run_halt_bb_all_turing_strs();
 	// printf("%d states, %d halters, %d total, %f percent halted\n",states_to_test, halters, total,

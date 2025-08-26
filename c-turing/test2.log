@@ -1,0 +1,30 @@
+checking all 1 state TMs...
+checking all 2 state TMs...
+max_output_length: 6, strings_greater_than_max: 0, total_strings: 9816 
+
+length 1 strings, max_num_thing: 2
+0, percent: 0.3537082315, freq: 3472
+1, percent: 0.3537082315, freq: 3472
+
+length 2 strings, max_num_thing: 4
+00, percent: 0.0741646292, freq: 728
+01, percent: 0.0717196414, freq: 704
+10, percent: 0.0717196414, freq: 704
+11, percent: 0.0692746536, freq: 680
+
+length 3 strings, max_num_thing: 8
+001, percent: 0.0004074980, freq: 4
+010, percent: 0.0004074980, freq: 4
+011, percent: 0.0008149959, freq: 8
+100, percent: 0.0004074980, freq: 4
+101, percent: 0.0004074980, freq: 4
+110, percent: 0.0008149959, freq: 8
+111, percent: 0.0008149959, freq: 8
+
+length 4 strings, max_num_thing: 16
+1001, percent: 0.0004074980, freq: 4
+1011, percent: 0.0004074980, freq: 4
+1101, percent: 0.0004074980, freq: 4
+1111, percent: 0.0004074980, freq: 4
+
+length 5 strings, max_num_thing: 32
