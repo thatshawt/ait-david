@@ -1,1 +1,1 @@
-nix-shell -p mpich netcat-gnu file
+sudo su -c "nix-shell -p mpich netcat-gnu file" mastermpich
