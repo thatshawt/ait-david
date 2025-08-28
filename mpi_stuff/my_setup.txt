@@ -1,0 +1,22 @@
+ETH0_ADDRESS_HERE = ip of eth0 inside wsl(do ifconfig).
+DESKTOP_IPCONFIG_IP_HERE = ip on desktop host(do ipconfig).
+
+1. dummy interface with the ip of the desktop host.
+    then we add some nat stuff so packets from wsl with the desktop ip get routed to the outside.
+    and vice verca.
+
+    commands inside desktop wsl:
+    ip link add name dummy0 type dummy
+    ip addr add DESKTOP_IPCONFIG_IP_HERE/32 dev dummy0 
+    ip link set dev dummy0 up
+
+    iptables -t nat -A PREROUTING -d ETH0_ADDRESS_HERE/32 -i eth0 -j DNAT --to-destination DESKTOP_IPCONFIG_IP_HERE
+    iptables -t nat -A POSTROUTING -s DESKTOP_IPCONFIG_IP_HERE/32 -o eth0 -j SNAT --to-source ETH0_ADDRESS_HERE
+
+2. port forward certain port ranges from desktop to wsl.
+    have to do this cus im on windows bruv idk.
+    I did this because the worker nodes use these ports to communicate to the desktop-wsl.
+
+    run this in powershell on desktop.
+    netsh interface portproxy set v4tov4 listenaddress=0.0.0.0 connectaddress=ETH0_ADDRESS_HERE listenport=30000-65535
+    netsh interface portproxy set v4tov4 listenaddress=0.0.0.0 connectaddress=ETH0_ADDRESS_HERE listenport=10000-10100

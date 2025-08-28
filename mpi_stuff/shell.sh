@@ -1,1 +1,1 @@
-sudo su -c "nix-shell -p mpich netcat-gnu file" mastermpich
+sudo su -c "nix-shell -p mpich nmap file" mastermpich

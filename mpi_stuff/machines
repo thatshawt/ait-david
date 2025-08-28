@@ -1,2 +1,2 @@
-desktop:1
-mpich@thinkpad:1
+desktop user=nixos
+thinkpad user=mpich

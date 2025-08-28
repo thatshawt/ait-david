@@ -8,7 +8,7 @@ double f( double a )
     return (4.0 / (1.0 + a*a));
 }
 
-int main( int argc, char *argv[])
+int main( int argc, char *argv[] )
 {
    int n_intervals = 16384;
 
