@@ -1,12 +1,9 @@
 #ifndef TURING_SIM_H
 #define TURING_SIM_H
 
-//47176870
-//47176869
-
 #include <stdint.h>
 
-#define MAX_TRANSITIONS 256
+#define MAX_TRANSITIONS 10
 #define TAPE_SIZE 40000
 #define SYMBOLS 2
 
@@ -36,16 +33,25 @@ typedef struct {
 } tm_t;
 
 void tm_init(tm_t* tm);
-void tm_load_table(tm_t* tm, int states, char* table_str);
+void tm_load_table(tm_t* tm, int states, char* table_string);
+
 void tm_step(tm_t* tm);
 uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps);
+
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol);
+void tm_fill_tape_with_random(tm_t* tm, int seed);
 int tm_get_written_tape_size(tm_t* tm);
 int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol);
 
+void tm_print_entire_tape_symbol_frequencies(tm_t* tm);
 void tm_print_written_tape(tm_t* tm);
 void tm_print_state(tm_t* tm);
 void tm_debug_print_table_entry(tm_transition_table_entry_t entry);
 void tm_fancy_print_transitions(tm_t* tm, int states);
+
+//got this from musl. thank you musl.
+static uint64_t tm_random_seed;
+void tm_srand(unsigned s);
+int tm_rand(void);
 
 #endif

@@ -45,7 +45,10 @@ int main(){
 
     steps = tm_step_until_halt_or_max(tm_point, 9999999999L);
     printf("bb4 steps %ld, tapesize:%d, 1's: %d\n", steps, tm_get_written_tape_size(tm_point), tm_count_written_symbol(tm_point,1));
-    tm_print_written_tape(tm_point);
+
+    tm_init(tm_point);
+    tm_fill_tape_with_random(tm_point, 1337);
+    tm_print_entire_tape_symbol_frequencies(tm_point);
 }
 
 // [1,TM_MOVE_R,2, 1,TM_MOVE_L,3, 1,TM_MOVE_R,3, 1,TM_MOVE_R,2, 1,TM_MOVE_R,4, 0,TM_MOVE_L,5, 1,TM_MOVE_L,1, 1,TM_MOVE_L,4, 1,TM_MOVE_R,0, 0,TM_MOVE_L,1, 0]

@@ -30,6 +30,7 @@ void tm_print_written_tape(tm_t* tm)
         tm_symbol_t symbol_on_tape = tm->tape[i];
         putc(symbol_on_tape == 1 ? '1':'0', stdout);
     }
+    putc('\n', stdout);
 }
 
 int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol)
@@ -49,6 +50,43 @@ void tm_fill_tape(tm_t* tm, tm_symbol_t symbol)
     }
 }
 
+void tm_srand(unsigned s)
+{
+	tm_random_seed = s-1;
+}
+
+int tm_rand(void)
+{
+	tm_random_seed = 6364136223846793005ULL*tm_random_seed + 1;
+	return tm_random_seed>>33;
+}
+
+void tm_fill_tape_with_random(tm_t* tm, int seed)
+{
+    tm_srand(seed);
+    for(int i=0;i<tm->max_tape_index;i++){
+        tm->tape[i] = (tm_symbol_t) (tm_rand()%SYMBOLS);
+    }
+}
+
+void tm_print_entire_tape_symbol_frequencies(tm_t* tm)
+{
+    uint64_t total = 0;
+    uint64_t symbols_freq[SYMBOLS] = {0};
+    for(int i=0;i<TAPE_SIZE;i++){
+        tm_symbol_t symbol = tm->tape[i];
+        symbols_freq[symbol]++;
+        total++;
+    }
+    printf("total symbols: %ld\n", total);
+    for(int symbol=0;symbol<SYMBOLS;symbol++){
+        uint64_t count = symbols_freq[symbol];
+        float percent = (double)count/(double)total;
+        printf("    symbol %d, percent %f, frequency%ld\n", 
+            symbol, percent, count);
+    }
+}
+
 void tm_debug_print_table_entry(tm_transition_table_entry_t entry)
 {
     printf("{entry write=%d, move=%c, next_state=%d}\n", entry.write,
@@ -56,8 +94,7 @@ void tm_debug_print_table_entry(tm_transition_table_entry_t entry)
                 entry.next_state);
 }
 
-// table_str has to be zero terminated
-void tm_load_table(tm_t* tm, int states, char* table_str)
+void tm_load_table(tm_t* tm, int states, char* table_string)
 {
     for(int i=0;i<(3*SYMBOLS*states);i+=(3*SYMBOLS)){
         int z = 0;
@@ -65,7 +102,7 @@ void tm_load_table(tm_t* tm, int states, char* table_str)
         for(int symbol=0;symbol<SYMBOLS;symbol++){
             // printf("i %d, z %d\n", i, z);
             tm_transition_table_entry_t entry = (tm_transition_table_entry_t)
-                {table_str[i+z++],table_str[i+z++],table_str[i+z++]};
+                {table_string[i+z++],table_string[i+z++],table_string[i+z++]};
         
             // printf("symbol %d, state %d\n",symbol,state);
             tm->transition_table[symbol][state] = entry;
