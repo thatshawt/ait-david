@@ -3,15 +3,43 @@
 #include <string.h>
 #include <stdio.h>
 
+#define MIN(a,b) ((a)<(b) ? (a):(b))
+#define MAX(a,b) ((a)>(b) ? (a):(b))
+
 void tm_init(tm_t* tm)
 {
     tm->max_tape_index = TAPE_SIZE;
 
     tm->tape_index = tm->max_tape_index/2;
+    tm->low_visited_tape_index = tm->tape_index;
+    tm->high_visited_tape_index = tm->tape_index;
 
     tm->state = 1;
     
     tm_fill_tape(tm, 0);
+}
+
+int tm_get_written_tape_size(tm_t* tm)
+{
+    return tm->high_visited_tape_index-tm->low_visited_tape_index + 1;
+}
+
+void tm_print_written_tape(tm_t* tm)
+{
+    for(int i=tm->low_visited_tape_index;i <= tm->high_visited_tape_index;i++){
+        tm_symbol_t symbol_on_tape = tm->tape[i];
+        putc(symbol_on_tape == 1 ? '1':'0', stdout);
+    }
+}
+
+int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol)
+{
+    int count = 0;
+    for(int i=tm->low_visited_tape_index;i <= tm->high_visited_tape_index;i++){
+        tm_symbol_t symbol_on_tape = tm->tape[i];
+        if(symbol == symbol_on_tape)count++;
+    }
+    return count;
 }
 
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol)
@@ -75,6 +103,8 @@ void tm_step(tm_t* tm)
     
     //write
     tm->tape[tm->tape_index] = entry.write;
+    tm->low_visited_tape_index = MIN(tm->low_visited_tape_index, tm->tape_index);
+    tm->high_visited_tape_index = MAX(tm->high_visited_tape_index, tm->tape_index);
 
     //move
     if(entry.move == TM_MOVE_L)tm->tape_index--;
@@ -91,12 +121,12 @@ void tm_step(tm_t* tm)
 
 uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps)
 {
-    for(uint64_t i=1;i<max_steps;i++){
+    for(uint64_t i=0;i<max_steps;i++){
         // tm_print_state(tm);
-        tm_step(tm);
         if(tm->state == 0){
             return i;
         }
+        tm_step(tm);
     }
     return max_steps;
 }

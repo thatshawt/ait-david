@@ -26,6 +26,8 @@ typedef struct {
 typedef struct {
     uint32_t tape_index;
     uint32_t max_tape_index;
+    uint32_t low_visited_tape_index;
+    uint32_t high_visited_tape_index;
 
     tm_state_t state;
     
@@ -38,7 +40,10 @@ void tm_load_table(tm_t* tm, int states, char* table_str);
 void tm_step(tm_t* tm);
 uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps);
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol);
+int tm_get_written_tape_size(tm_t* tm);
+int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol);
 
+void tm_print_written_tape(tm_t* tm);
 void tm_print_state(tm_t* tm);
 void tm_debug_print_table_entry(tm_transition_table_entry_t entry);
 void tm_fancy_print_transitions(tm_t* tm, int states);

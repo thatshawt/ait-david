@@ -26,7 +26,7 @@ int main(){
     // tm_fancy_print_transitions(tm_point, 5);
 
     uint64_t steps = tm_step_until_halt_or_max(tm_point, 9999999999L);
-    printf("bb5 steps %ld\n", steps);
+    printf("bb5 steps %ld, tapesize:%d, 1's: %d\n", steps, tm_get_written_tape_size(tm_point), tm_count_written_symbol(tm_point,1));
 
 
     /*
@@ -44,7 +44,8 @@ int main(){
     // tm_fancy_print_transitions(tm_point, 4);
 
     steps = tm_step_until_halt_or_max(tm_point, 9999999999L);
-    printf("bb4 steps %ld\n", steps);
+    printf("bb4 steps %ld, tapesize:%d, 1's: %d\n", steps, tm_get_written_tape_size(tm_point), tm_count_written_symbol(tm_point,1));
+    tm_print_written_tape(tm_point);
 }
 
 // [1,TM_MOVE_R,2, 1,TM_MOVE_L,3, 1,TM_MOVE_R,3, 1,TM_MOVE_R,2, 1,TM_MOVE_R,4, 0,TM_MOVE_L,5, 1,TM_MOVE_L,1, 1,TM_MOVE_L,4, 1,TM_MOVE_R,0, 0,TM_MOVE_L,1, 0]
