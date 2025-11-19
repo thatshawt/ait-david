@@ -399,7 +399,7 @@ int load_run_halt_or_bb_next_machine_ones_and_zeros_tape(){
 	turing_reset();
 	turing_tape_zeros();
 	// turing_tape_ones();
-	t_blank_symbol = 1;
+	// t_blank_symbol = 1;
 	load_machine_from_triples_str();
 	steps = run_until_halt_or_bb();
 	if(run_halted == T_TRUE){
@@ -572,7 +572,7 @@ int main(){
 
 	// char test_str[] = {0,1,0,1,0,1,0};
 	// int length = sizeof(test_str)/sizeof(char);
-	int max_states = 3;
+	int max_states = 2;
 	// find_shortest_tm_test(test_str, length, max_states);
 	max_string_length_found = 0;
 	enumerate_turing_strings_test(max_states);

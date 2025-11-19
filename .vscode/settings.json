@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "turing_sim.h": "c",
+        "stdint.h": "c"
+    }
+}
