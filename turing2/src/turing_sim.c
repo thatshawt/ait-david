@@ -15,6 +15,8 @@ void tm_init(tm_t* tm)
     tm->high_visited_tape_index = tm->tape_index;
 
     tm->state = 1;
+
+    memset(tm->transition_table, 0, sizeof tm->transition_table);
     
     tm_fill_tape(tm, 0);
 }
@@ -50,11 +52,13 @@ void tm_fill_tape(tm_t* tm, tm_symbol_t symbol)
     }
 }
 
+//got this from musl. thank you musl.
 void tm_srand(unsigned s)
 {
 	tm_random_seed = s-1;
 }
 
+//got this from musl. thank you musl.
 int tm_rand(void)
 {
 	tm_random_seed = 6364136223846793005ULL*tm_random_seed + 1;
@@ -87,6 +91,27 @@ void tm_print_entire_tape_symbol_frequencies(tm_t* tm)
     }
 }
 
+void tm_print_entry_short(tm_transition_table_entry_t* entry)
+{
+    printf("(%d %d %d)",entry->write,entry->move,entry->next_state);
+}
+
+void tm_print_table_short(tm_t* tm)
+{
+    int states = tm->states;
+    for(int state=1;state<states+1;state++){
+        for(int symbol=0;symbol<SYMBOLS;symbol++){
+            tm_transition_table_entry_t* entry =
+                &tm->transition_table[symbol][state];
+            tm_print_entry_short(entry);
+        }
+        if(state != states)
+        printf("_");
+    }
+    printf("\n");
+}
+
+
 void tm_debug_print_table_entry(tm_transition_table_entry_t entry)
 {
     printf("{entry write=%d, move=%c, next_state=%d}\n", entry.write,
@@ -94,8 +119,9 @@ void tm_debug_print_table_entry(tm_transition_table_entry_t entry)
                 entry.next_state);
 }
 
-void tm_load_table(tm_t* tm, int states, char* table_string)
+void tm_load_table(tm_t* tm, char* table_string)
 {
+    int states = tm->states;
     for(int i=0;i<(3*SYMBOLS*states);i+=(3*SYMBOLS)){
         int z = 0;
         const int state = i/(3*SYMBOLS)+1;
@@ -114,8 +140,9 @@ void tm_load_table(tm_t* tm, int states, char* table_string)
     }
 }
 
-void tm_fancy_print_transitions(tm_t* tm, int states)
+void tm_fancy_print_transitions(tm_t* tm)
 {
+    int states = tm->states;
     for(int state=0;state<states+1;state++){
         printf("state %d:\n", state);
         for(int symbol=0;symbol<SYMBOLS;symbol++){

@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "turing_sim.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "turing_mapping.h": "c"
     }
 }
