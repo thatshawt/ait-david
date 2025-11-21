@@ -19,6 +19,7 @@ void test_all(test_opt_t* testopt)
 
 void test_turing_sim(test_opt_t* testopt)
 {
+    printf("Turing Sim Tests\n");
     {
         unittest_begin(&unitstate, "bb5 load&run", testopt);
         char bb5_table[] = BB5_TABLE_LITERAL;
@@ -83,7 +84,7 @@ void test_turing_sim(test_opt_t* testopt)
 
         tm_init(&tm);
         tm.states = 3;
-        int number = tm_max_num_of_machines(&tm);
+        int number = tm_max_num_of_machines(tm.states);
         unittest_assert_int_equals(&unitstate, number, 16777216);
 
         unittest_finish(&unitstate);
@@ -92,6 +93,8 @@ void test_turing_sim(test_opt_t* testopt)
 
 void test_turing_mapping(test_opt_t* testopt)
 {
+    printf("Turing Mapping Tests\n");
+
     {
         unittest_begin(&unitstate, "bb4 table->digits", testopt);
         int bb4Digits1[8] = {0};

@@ -17,7 +17,8 @@ enum TM_Move{
 
 enum HaltReason{
     HALT_NATURAL, // halted from transition table
-    HALT_TAPE_OUT_OF_BOUNDS //halted because when outside tape bounds
+    HALT_TAPE_OUT_OF_BOUNDS, //halted because when outside tape bounds
+    HALT_MAX_STEPS,         // hit max steps from tm_step_until_halt_or_max
 };
 
 typedef struct {
@@ -52,6 +53,7 @@ typedef struct {
 
 void tm_init(tm_t* tm);
 void tm_load_table(tm_t* tm, char* table_string);
+void tm_reset_keep_table_and_states(tm_t* tm);
 
 tm_transition_table_entry_t* tm_get_entry(tm_t* tm, int symbol, int state);
 
@@ -65,6 +67,15 @@ int tm_get_written_tape_size(tm_t* tm);
 int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol);
 
 int tm_count_symbol_entire_tape(tm_t* tm, int symbol);
+
+typedef struct{
+    tm_symbol_t* tapeslice;
+    int length;
+} tape_slice_t;
+
+void tm_slice_init_from_written_tape(tm_t* tm, tape_slice_t* slice);
+void tm_slice_free(tape_slice_t* slice);
+void tm_slice_print(tape_slice_t* slice);
 
 void tm_print_entire_tape_symbol_frequencies(tm_t* tm);
 void tm_print_written_tape(tm_t* tm);

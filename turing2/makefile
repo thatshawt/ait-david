@@ -1,5 +1,6 @@
 # Thanks to Job Vranish (https://spin.atomicobject.com/2016/08/26/makefile-c-projects/)
-TARGET_EXEC := main
+TARGET_EXEC := turing
+TARGET_LIB := turing.so
 
 BUILD_DIR := ./build
 SRC_DIRS := ./src
@@ -24,11 +25,19 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -MMD -MP
+CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC
+# LDFLAGS := -lstatic
 
-# The final build step.
+# do both executable and shared library
+all: $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/$(TARGET_LIB)
+
+# Build Executable
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
 	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
+
+# Build Library
+$(BUILD_DIR)/$(TARGET_LIB): $(OBJS)
+	$(CXX) $(OBJS) -fPIC -rdynamic -shared -Lstatic -o $@ $(LDFLAGS)
 
 # Build step for C source
 $(BUILD_DIR)/%.c.o: %.c

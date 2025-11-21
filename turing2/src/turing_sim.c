@@ -1,5 +1,7 @@
 #include "turing_sim.h"
+#include "hashmap.h"
 
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -7,6 +9,13 @@
 #define MAX(a,b) ((a)>(b) ? (a):(b))
 
 void tm_init(tm_t* tm)
+{
+    tm_reset_keep_table_and_states(tm);
+
+    memset(tm->transition_table, 0, sizeof tm->transition_table);
+}
+
+void tm_reset_keep_table_and_states(tm_t* tm)
 {
     tm->max_tape_index = TM_TAPE_SIZE;
 
@@ -17,8 +26,6 @@ void tm_init(tm_t* tm)
     tm->state = 1;
     tm->halted = false;
 
-    memset(tm->transition_table, 0, sizeof tm->transition_table);
-    
     tm_fill_tape(tm, 0);
 }
 
@@ -29,7 +36,13 @@ tm_transition_table_entry_t* tm_get_entry(tm_t* tm, int symbol, int state)
 
 int tm_get_written_tape_size(tm_t* tm)
 {
-    return tm->high_visited_tape_index-tm->low_visited_tape_index + 1;
+    int size = tm->high_visited_tape_index - tm->low_visited_tape_index + 1;
+    // if(size == 0){
+    //     printf("low %d high %d tape size was zero?\n",
+    //         tm->low_visited_tape_index,
+    //     tm->high_visited_tape_index);
+    // }
+    return size;
 }
 
 void tm_print_written_tape(tm_t* tm)
@@ -64,10 +77,64 @@ int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol)
 
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol)
 {
-    for(int i=0;i<tm->max_tape_index;i++){
+    for(int i=0;i<TM_TAPE_SIZE;i++){
         tm->tape[i] = symbol;
     }
 }
+
+void tm_slice_init_from_written_tape(tm_t* tm, tape_slice_t* slice)
+{
+    slice->length = tm_get_written_tape_size(tm);
+    slice->tapeslice = malloc(slice->length * sizeof(tm_symbol_t));
+    // int j=0;
+    // for(int i=tm->low_visited_tape_index;i<=tm->high_visited_tape_index;i++){
+    //     slice->tapeslice[j++] = tm->tape[i];
+    // }
+    for(int i=0;i<slice->length;i++){
+        slice->tapeslice[i] = tm->tape[tm->low_visited_tape_index+i];
+    }
+}
+
+void tm_slice_free(tape_slice_t* slice)
+{
+    free(slice->tapeslice);
+}
+
+void tm_slice_print(tape_slice_t* slice)
+{
+    for(int i=0;i<slice->length;i++){
+        char val = slice->tapeslice[i];
+        putc(val == 1?'1':'0', stdout);
+    }
+    putc('\n', stdout);
+}
+
+// void tm_slice_hashmap_free(const void *item)
+// {
+//     tape_slice_t* slice = item;
+//     tm_slice_free(slice);
+// }
+
+// uint64_t tm_slice_hashmap_hash(const void *item, uint64_t seed0, uint64_t seed1)
+// {
+//     tape_slice_t* slice = item;
+//     return hashmap_sip(slice->tapeslice, slice->length, seed0, seed1);
+// }
+
+// uint64_t tm_slice_hashmap_compare(const void *a, const void *b, void *udata)
+// {
+//     const tape_slice_t* sa = a;
+//     const tape_slice_t* sb = b;
+//     int length = MIN(sa->length, sb->length);
+//     for(int i=0;i<length;i++){
+//         tm_symbol_t symbolA = sa->tapeslice[i];
+//         tm_symbol_t symbolB = sb->tapeslice[i];
+//         if(symbolA > symbolB)return 1;
+//         else if(symbolA < symbolB) return -1;
+//     }
+//     return 0;
+//     // return memcmp(sa->tapeslice, sb->tapeslice,);
+// }
 
 //got this from musl. thank you musl.
 void tm_srand(unsigned s)
@@ -193,7 +260,7 @@ void tm_step(tm_t* tm)
     if(entry.move == TM_MOVE_L)tm->tape_index--;
     else tm->tape_index++;
     if(tm->tape_index < 0 || tm->tape_index > tm->max_tape_index){
-        printf("error: out of bounds tape index %d\n", tm->tape_index);
+        // printf("error: out of bounds tape index %d\n", tm->tape_index);
         tm->state = 0;
         tm->halted = true;
         tm->haltReason = HALT_TAPE_OUT_OF_BOUNDS;
@@ -218,6 +285,11 @@ uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps)
         }
         tm_step(tm);
     }
+    //yea we just did that
+    tm->state = 0;
+
+    tm->halted = true;
+    tm->haltReason = HALT_MAX_STEPS;
     return max_steps;
 }
 

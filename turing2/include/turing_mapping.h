@@ -1,13 +1,12 @@
 #ifndef TURING_MAPPING_H
 #define TURING_MAPPING_H
 
-#include "linkedlist.h"
 #include "turing_sim.h"
 #include <stdbool.h>
 
 typedef uint64_t tm_index_t;
 
-// void tm_load_table_by_index(tm_t* tm, tm_index_t index);
+void tm_load_table_by_index(tm_t* tm, tm_index_t index);
 
 int tm_get_entry_digit(int states, tm_transition_table_entry_t* entry);
 void tm_load_entry_from_digit(int states, int digit, tm_transition_table_entry_t* entry);
@@ -27,6 +26,6 @@ bool tm_next_table_lexico(tm_t* tm);
 
 int tm_num_per_entry(int states);
 int tm_num_table_entries(int states);
-tm_index_t tm_max_num_of_machines(tm_t* tm);
+tm_index_t tm_max_num_of_machines(int states);
 
 #endif

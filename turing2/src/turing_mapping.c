@@ -24,6 +24,16 @@ typedef struct {
 //     int digits[] = {0};
 // }
 
+void tm_load_table_by_index(tm_t* tm, tm_index_t index)
+{
+    //extract digits from index
+    int digits[256] = {0};
+    tm_extract_digits_from_index(tm, digits, index);
+    
+    //load from digits
+    tm_load_table_from_digits(tm, digits);
+}
+
 //loads it little endian.
 void tm_extract_digits_from_index(tm_t* tm, int* digits, tm_index_t index)
 {
@@ -195,10 +205,10 @@ int tm_num_table_entries(int states)
     return 2*states;
 }
 
-tm_index_t tm_max_num_of_machines(tm_t* tm)
+tm_index_t tm_max_num_of_machines(int states)
 {
     // (4*(n+1))^(2*n)
-    tm_index_t states = tm->states;
+    // tm_index_t states = tm->states;
     return pow(tm_num_per_entry(states),tm_num_table_entries(states));
 }
 
