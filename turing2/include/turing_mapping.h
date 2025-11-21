@@ -7,26 +7,15 @@
 
 typedef uint64_t tm_index_t;
 
-// typedef struct{
-//     const tm_index_t* singleDigitsEntryMap;
-//     const int singleDigits;
-//     const int states;
-    
-//     const tm_index_t** singleDigitsTimesTable;
-// } entrynumber_t;
-
-// void entrynumber_create(entrynumber_t* entrynum, int states);
-// void entrynumber_free(entrynumber_t* entrynum);
-
-void tm_load_table_by_index(tm_t* tm, int index);
+// void tm_load_table_by_index(tm_t* tm, tm_index_t index);
 
 int tm_get_entry_digit(int states, tm_transition_table_entry_t* entry);
 void tm_load_entry_from_digit(int states, int digit, tm_transition_table_entry_t* entry);
 void tm_load_table_from_digits(tm_t* tm, int* digits);
-void tm_load_table_into_digits_array(tm_t* tm, int* digits);
+void tm_extract_digits_from_table(tm_t* tm, int* digits);
 
 tm_index_t tm_get_table_index_from_digits(int states, int* digits);
-void tm_load_digits_from_index(tm_t* tm, int* digits, tm_index_t index);
+void tm_extract_digits_from_index(tm_t* tm, int* digits, tm_index_t index);
 
 void tm_print_table_entryDigitsForm(tm_t* tm);
 

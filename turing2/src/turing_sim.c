@@ -8,17 +8,23 @@
 
 void tm_init(tm_t* tm)
 {
-    tm->max_tape_index = TAPE_SIZE;
+    tm->max_tape_index = TM_TAPE_SIZE;
 
     tm->tape_index = tm->max_tape_index/2;
     tm->low_visited_tape_index = tm->tape_index;
     tm->high_visited_tape_index = tm->tape_index;
 
     tm->state = 1;
+    tm->halted = false;
 
     memset(tm->transition_table, 0, sizeof tm->transition_table);
     
     tm_fill_tape(tm, 0);
+}
+
+tm_transition_table_entry_t* tm_get_entry(tm_t* tm, int symbol, int state)
+{
+    return &tm->transition_table[symbol][state];
 }
 
 int tm_get_written_tape_size(tm_t* tm)
@@ -33,6 +39,17 @@ void tm_print_written_tape(tm_t* tm)
         putc(symbol_on_tape == 1 ? '1':'0', stdout);
     }
     putc('\n', stdout);
+}
+
+
+int tm_count_symbol_entire_tape(tm_t* tm, int symbol)
+{
+    int count = 0;
+    for(int i=0;i <= TM_TAPE_SIZE;i++){
+        tm_symbol_t symbol_on_tape = tm->tape[i];
+        if(symbol == symbol_on_tape)count++;
+    }
+    return count;
 }
 
 int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol)
@@ -69,21 +86,21 @@ void tm_fill_tape_with_random(tm_t* tm, int seed)
 {
     tm_srand(seed);
     for(int i=0;i<tm->max_tape_index;i++){
-        tm->tape[i] = (tm_symbol_t) (tm_rand()%SYMBOLS);
+        tm->tape[i] = (tm_symbol_t) (tm_rand()%TM_SYMBOLS);
     }
 }
 
 void tm_print_entire_tape_symbol_frequencies(tm_t* tm)
 {
     uint64_t total = 0;
-    uint64_t symbols_freq[SYMBOLS] = {0};
-    for(int i=0;i<TAPE_SIZE;i++){
+    uint64_t symbols_freq[TM_SYMBOLS] = {0};
+    for(int i=0;i<TM_TAPE_SIZE;i++){
         tm_symbol_t symbol = tm->tape[i];
         symbols_freq[symbol]++;
         total++;
     }
     printf("total symbols: %ld\n", total);
-    for(int symbol=0;symbol<SYMBOLS;symbol++){
+    for(int symbol=0;symbol<TM_SYMBOLS;symbol++){
         uint64_t count = symbols_freq[symbol];
         float percent = (double)count/(double)total;
         printf("    symbol %d, percent %f, frequency%ld\n", 
@@ -100,9 +117,9 @@ void tm_print_table_short(tm_t* tm)
 {
     int states = tm->states;
     for(int state=1;state<states+1;state++){
-        for(int symbol=0;symbol<SYMBOLS;symbol++){
+        for(int symbol=0;symbol<TM_SYMBOLS;symbol++){
             tm_transition_table_entry_t* entry =
-                &tm->transition_table[symbol][state];
+                tm_get_entry(tm,symbol,state);
             tm_print_entry_short(entry);
         }
         if(state != states)
@@ -122,16 +139,16 @@ void tm_debug_print_table_entry(tm_transition_table_entry_t entry)
 void tm_load_table(tm_t* tm, char* table_string)
 {
     int states = tm->states;
-    for(int i=0;i<(3*SYMBOLS*states);i+=(3*SYMBOLS)){
+    for(int i=0;i<(3*TM_SYMBOLS*states);i+=(3*TM_SYMBOLS)){
         int z = 0;
-        const int state = i/(3*SYMBOLS)+1;
-        for(int symbol=0;symbol<SYMBOLS;symbol++){
+        const int state = i/(3*TM_SYMBOLS)+1;
+        for(int symbol=0;symbol<TM_SYMBOLS;symbol++){
             // printf("i %d, z %d\n", i, z);
             tm_transition_table_entry_t entry = (tm_transition_table_entry_t)
                 {table_string[i+z++],table_string[i+z++],table_string[i+z++]};
         
             // printf("symbol %d, state %d\n",symbol,state);
-            tm->transition_table[symbol][state] = entry;
+            *tm_get_entry(tm, symbol, state) = entry;
             // tm_debug_print_table_entry(entry);
         }
         
@@ -145,9 +162,9 @@ void tm_fancy_print_transitions(tm_t* tm)
     int states = tm->states;
     for(int state=0;state<states+1;state++){
         printf("state %d:\n", state);
-        for(int symbol=0;symbol<SYMBOLS;symbol++){
+        for(int symbol=0;symbol<TM_SYMBOLS;symbol++){
             tm_transition_table_entry_t entry =
-                tm->transition_table[symbol][state];
+                *tm_get_entry(tm, symbol, state);
             printf("    %d: write %d, move %c, next state %d\n",
                 symbol, entry.write,
                 entry.move==TM_MOVE_R ? 'R':'L',
@@ -159,11 +176,13 @@ void tm_fancy_print_transitions(tm_t* tm)
 
 void tm_step(tm_t* tm)
 {
-    if(tm->state == 0)return;
+    if(tm->state == 0){
+        return;
+    }
 
     tm_symbol_t symbol = tm->tape[tm->tape_index];
     const tm_transition_table_entry_t entry =
-        tm->transition_table[symbol][tm->state];
+        *tm_get_entry(tm, symbol, tm->state);
     
     //write
     tm->tape[tm->tape_index] = entry.write;
@@ -176,11 +195,18 @@ void tm_step(tm_t* tm)
     if(tm->tape_index < 0 || tm->tape_index > tm->max_tape_index){
         printf("error: out of bounds tape index %d\n", tm->tape_index);
         tm->state = 0;
+        tm->halted = true;
+        tm->haltReason = HALT_TAPE_OUT_OF_BOUNDS;
         return;
     }
 
     //state
     tm->state = entry.next_state;
+
+    if(tm->state == 0){
+        tm->halted = true;
+        tm->haltReason = HALT_NATURAL;
+    }
 }
 
 uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps)
