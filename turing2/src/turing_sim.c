@@ -152,7 +152,7 @@ int tm_rand(void)
 void tm_fill_tape_with_random(tm_t* tm, int seed)
 {
     tm_srand(seed);
-    for(int i=0;i<tm->max_tape_index;i++){
+    for(int i=0;i<TM_TAPE_SIZE;i++){
         tm->tape[i] = (tm_symbol_t) (tm_rand()%TM_SYMBOLS);
     }
 }

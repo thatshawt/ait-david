@@ -1,0 +1,91 @@
+
+hello turing
+
+Running all tests.
+Turing Sim Tests
+Test 'bb5 load&run' PASSED
+Test 'bb4 load&run' PASSED
+Test 'random tape test' PASSED
+Test 'counting 3 state machines bruteforce' PASSED
+Test 'number of 3 state machines' PASSED
+Turing Mapping Tests
+Test 'bb4 table->digits' PASSED
+Test 'bb4 digits->index' PASSED
+Test 'bb4 index->digits' PASSED
+Test 'bb4 digits->table' PASSED
+Testing complete.
+10111111111111
+states 2 halters 9784
+states 2 halters 9784
+total counted strings: 19568
+1
+lengthstr 1, count 6912, freq 0.353230
+
+1101
+lengthstr 4, count 4, freq 0.000204
+
+11
+lengthstr 2, count 1408, freq 0.071954
+
+100
+lengthstr 3, count 12, freq 0.000613
+
+101
+lengthstr 3, count 8, freq 0.000409
+
+1001
+lengthstr 4, count 4, freq 0.000204
+
+110
+lengthstr 3, count 12, freq 0.000613
+
+1111
+lengthstr 4, count 4, freq 0.000204
+
+1011
+lengthstr 4, count 4, freq 0.000204
+
+0100
+lengthstr 4, count 4, freq 0.000204
+
+10
+lengthstr 2, count 1408, freq 0.071954
+
+001
+lengthstr 3, count 12, freq 0.000613
+
+0010
+lengthstr 4, count 4, freq 0.000204
+
+0000
+lengthstr 4, count 4, freq 0.000204
+
+000
+lengthstr 3, count 8, freq 0.000409
+
+0110
+lengthstr 4, count 4, freq 0.000204
+
+01
+lengthstr 2, count 1408, freq 0.071954
+
+111
+lengthstr 3, count 8, freq 0.000409
+
+011
+lengthstr 3, count 12, freq 0.000613
+
+010
+lengthstr 3, count 8, freq 0.000409
+
+0
+lengthstr 1, count 6912, freq 0.353230
+
+00
+lengthstr 2, count 1408, freq 0.071954
+
+states 2 halters 9784
+took 49 milliseconds to simulate 20736 2 state machines
+thats like 423 machines per millisecond
+thats like 423183 machines per second
+thats around 211591836 machine steps per second. maybe...

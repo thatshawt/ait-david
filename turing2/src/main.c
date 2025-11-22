@@ -32,9 +32,15 @@ uint64_t user_hash(const void *item, uint64_t seed0, uint64_t seed1) {
 }
 
 tm_symbol_t fillSymbol = 0;
+bool fillRandom = false;
+int fillSeed = 100;
 void fill_tm_with_symbol(tm_t* tm)
 {
-    tm_fill_tape(tm, fillSymbol);
+    if(fillRandom){
+        tm_fill_tape_with_random(tm, fillSeed);
+    }else{
+        tm_fill_tape(tm, fillSymbol);
+    }
 }
 
 int main(){
@@ -43,12 +49,12 @@ int main(){
     tm_t tm;
     tm_t* tm_point = &tm;
 
-    test_opt_t testOptions;
-    testOptions.onlyPrintFailingTests = false;
+    // test_opt_t testOptions;
+    // testOptions.onlyPrintFailingTests = false;
 
-    printf("Running all tests.\n");
-    test_all(&testOptions);
-    printf("Testing complete.\n");
+    // printf("Running all tests.\n");
+    // test_all(&testOptions);
+    // printf("Testing complete.\n");
 
 
     //run bb4 and print tape slice
@@ -72,21 +78,38 @@ int main(){
             sizeof(tm_slice_counter_t), 0, tm_rand(), tm_rand(), 
             tm_slicecounter_hashmap_hash,
             tm_slicecounter_hashmap_compare,
-            NULL,// tm_slicecounter_hashmap_free,
+            tm_slicecounter_hashmap_free,
             NULL
         );
 
+    int max_steps = 300;
+    int states = 2;
+    int startIndex = 0;
+    int indexesConsidered = tm_max_num_of_machines(states)+1;
+    int randomIterations = 500;
+
     fillSymbol = 0;
-    tm_enumerate_index_length_with_hashmap(3, 0, 9999999, 100,
+    tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
         slice_count_map,
         fill_tm_with_symbol
     );
 
     fillSymbol = 1;
-    tm_enumerate_index_length_with_hashmap(3, 0, 9999999, 100,
+    tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
         slice_count_map,
         fill_tm_with_symbol
     );
+
+    fillSeed = 1;
+    fillRandom = true;
+    for(int i=0;i< randomIterations ;i++){
+        printf("on i %d. \n", i);
+        tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
+            slice_count_map,
+            fill_tm_with_symbol
+        );
+        fillSeed++;
+    }
 
     size_t iterA = 0;
     void *itemA;
@@ -117,6 +140,10 @@ int main(){
 
 
     return 1;
+
+
+
+
 
     // create a new hash map where each item is a `struct user`. The second
     // argument is the initial capacity. The third and fourth arguments are 

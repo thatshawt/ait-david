@@ -33,6 +33,7 @@ void tm_print_enumerate_performance_stats(int states, int max_steps)
     printf("thats around %llu machine steps per second. maybe...\n", machines*1000*max_steps/duration);
 }
 
+bool atErrorNum = false;
 void tm_enumerate_index_length_generic(
     int states,
     tm_index_t start,
@@ -58,6 +59,11 @@ void tm_enumerate_index_length_generic(
 
         if(tm.halted == true && tm.haltReason == HALT_NATURAL){
             // tm_print_table_short(&tm);
+            if(i == 20039){ //error happens here on the goddaaamnnn yea...
+                atErrorNum = true;
+            }else{
+                atErrorNum = false;
+            }
             if(halt_receiver)halt_receiver(&tm);
             halters++;
         }
@@ -101,9 +107,9 @@ int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata)
     const int length1 = sa->length;
     const int length2 = sb->length;
 
-    if(length1 > length2){
+    if(length1 < length2){
         return 1;
-    }else if(length1 < length2){
+    }else if(length1 > length2){
         return -1;
     }
 
@@ -111,34 +117,60 @@ int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata)
     // return memcmp(sa->tapeslice, sb->tapeslice,);
 }
 
-struct hashmap* halt_receiver_hashmap_map;
+struct{
+    char lottaPoo[100];
+    struct hashmap* counter_map;
+    char lottaPoopoo[100];
+} bigBadStruct;
 int conuter = 0;
 void halt_receiver_hashmap(tm_t* tm)
 {
     // printf("hash received start\n");
     tm_slice_counter_t sliceCounter;
+    sliceCounter.count = 1;
+    // if(atErrorNum)printf("before slice init, sliceCounter.count %llu\n", sliceCounter.count);
+    
     tm_slice_init_from_written_tape(tm, &sliceCounter.slice);
+    // if(atErrorNum)printf("after slice init, sliceCounter.count %llu\n", sliceCounter.count);
 
     // printf("    hash get\n");
-    tm_slice_counter_t* result = hashmap_get(halt_receiver_hashmap_map, &sliceCounter);
+    tm_slice_counter_t* result = hashmap_get(bigBadStruct.counter_map, &sliceCounter);
     if(result != NULL){
         if(result->slice.length == 0){
             printf("%d result has length zero?\n", conuter++);
             exit(1);
         }
         result->count++;
-        hashmap_set(halt_receiver_hashmap_map, result);
+        sliceCounter.count = result->count;
+        tm_slice_free(&sliceCounter.slice);
+        sliceCounter.slice = result->slice;
+        // if(atErrorNum){
+        //     printf("sliceCounter.count %llu, sliceCounter.slice.length %d, slice @ 20039: \n",
+        //          sliceCounter.count, sliceCounter.slice.length);
+        //     printf("result->count %llu, result->slice.length %d, slice @ 20039: \n",
+        //         result->count, result->slice.length);
+        //     tm_slice_print(&sliceCounter.slice);
+        //     // printf(" ");
+        //     tm_slice_print(&result->slice);
+        // }
+        
+        if(hashmap_oom(bigBadStruct.counter_map)){
+            printf("hashmap_oom out of memory :skull:\n");
+            exit(1);
+        }
     }else{
         // result = &sliceCounter;
-        sliceCounter.count = 1;
+        // sliceCounter.count = 1;
         // if(sliceCounter.slice.length == 0)printf("slicecounter has length zero?\n");
-        hashmap_set(halt_receiver_hashmap_map, &sliceCounter);
+        
         
         // tm_slice_counter_t* littletest = hashmap_get(halt_receiver_hashmap_map, &sliceCounter);
         // if(littletest->slice.length == 0)printf("littletest has length zero?\n");
     }
     // printf("    hash set\n");
 
+
+    hashmap_set(bigBadStruct.counter_map, &sliceCounter);
     
     // printf("finish hash receive\n");
 }
@@ -152,7 +184,7 @@ void tm_enumerate_index_length_with_hashmap(
     void(*before_stepping)(tm_t* tm)
 )
 {
-    halt_receiver_hashmap_map = map;
+    bigBadStruct.counter_map = map;
     tm_enumerate_index_length_generic(states, start, length, max_steps,
         halt_receiver_hashmap,
         before_stepping

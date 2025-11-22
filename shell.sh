@@ -1,1 +1,1 @@
-nix-shell -p gcc gdb gnumake "python3.withPackages (pkgs: [])"
+nix-shell -p gcc gdb valgrind gnumake "python3.withPackages (pkgs: [])"
