@@ -9,10 +9,11 @@ typedef struct{
 
 void test_opt_init(test_opt_t* testopt);
 
-// void test_init();
 void test_all(test_opt_t* testopt);
 void test_turing_sim(test_opt_t* testopt);
 void test_turing_mapping(test_opt_t* testopt);
+void test_turing_enumerate(test_opt_t* testopt);
+
 
 typedef struct{
     bool passing;

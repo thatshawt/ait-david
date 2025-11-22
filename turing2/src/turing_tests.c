@@ -15,6 +15,7 @@ void test_all(test_opt_t* testopt)
 {
     test_turing_sim(testopt);
     test_turing_mapping(testopt);
+    test_turing_enumerate(testopt);
 }
 
 tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
@@ -166,6 +167,13 @@ void test_turing_mapping(test_opt_t* testopt)
     }
 }
 
+void test_turing_enumerate(test_opt_t* testopt)
+{
+    //take the slice code from main.c and do a test with that...
+
+
+    //hashmap enumeration test.
+}
 
 /////////////////////////////////////////////
 

@@ -8,7 +8,7 @@
 
 typedef struct{
     tape_slice_t slice;
-    uint64_t count;
+    uint64_t count; //TODO make this an arbtritrary precision integer with the library
 } tm_slice_counter_t;
 
 void tm_slicecounter_hashmap_free(void *item);
