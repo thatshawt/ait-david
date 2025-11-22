@@ -16,9 +16,10 @@ enum TM_Move{
 };
 
 enum HaltReason{
-    HALT_NATURAL, // halted from transition table
-    HALT_TAPE_OUT_OF_BOUNDS, //halted because when outside tape bounds
-    HALT_MAX_STEPS,         // hit max steps from tm_step_until_halt_or_max
+    HALT_NATURAL,               // halted from transition table
+    HALT_TAPE_OUT_OF_BOUNDS,    // halted because went outside tape bounds
+    HALT_MAX_STEPS,             // hit max steps from tm_step_until_halt_or_max
+    HALT_TRIVIAL_NONHALTING,           // found to never halt i guess...
 };
 
 typedef struct {
@@ -58,7 +59,12 @@ void tm_reset_keep_table_and_states(tm_t* tm);
 tm_transition_table_entry_t* tm_get_entry(tm_t* tm, int symbol, int state);
 
 void tm_step(tm_t* tm);
-uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps);
+
+typedef struct{
+    bool trivialNonhaltingCheck;
+    uint64_t max_steps;
+} tm_run_opt_t;
+uint64_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt);
 
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol);
 void tm_fill_tape_with_random(tm_t* tm, int seed);

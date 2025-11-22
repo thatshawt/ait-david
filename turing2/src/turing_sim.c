@@ -276,8 +276,32 @@ void tm_step(tm_t* tm)
     }
 }
 
-uint64_t tm_step_until_halt_or_max(tm_t* tm, uint64_t max_steps)
+uint64_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt)
 {
+    //check trivial nonhalting
+    //it never works bruh idk why
+    if(opt.trivialNonhaltingCheck){
+        // printf("checked");
+        bool hasHaltingTrans = false;
+        for(int sym=0;sym<TM_SYMBOLS;sym++){
+            for(int state=1;state<TM_MAX_STATES;state++){
+                if(hasHaltingTrans)break;
+                if(tm_get_entry(tm,sym,state)->next_state == 0){
+                    hasHaltingTrans = true;
+                    break;
+                }
+            }
+        }
+        if(hasHaltingTrans == false){
+            tm->halted = true;
+            tm->haltReason = HALT_TRIVIAL_NONHALTING;
+            tm->state = 0;
+            // printf("actually did it");
+            return 0;
+        }
+    }
+    const uint64_t max_steps = opt.max_steps;
+    
     for(uint64_t i=0;i<max_steps;i++){
         // tm_print_state(tm);
         if(tm->state == 0){

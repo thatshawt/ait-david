@@ -55,7 +55,12 @@ void tm_enumerate_index_length_generic(
 
         if(before_stepping)before_stepping(&tm);
 
-        tm_step_until_halt_or_max(&tm, max_steps);
+        tm_run_opt_t runopt = (tm_run_opt_t){
+            .trivialNonhaltingCheck=true, //we might not need this but eh
+            .max_steps=max_steps
+        };
+
+        tm_step_until_halt_or_max(&tm, runopt);
 
         if(tm.halted == true && tm.haltReason == HALT_NATURAL){
             // tm_print_table_short(&tm);

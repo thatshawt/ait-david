@@ -4,6 +4,7 @@
 #include "turing_sim.h"
 #include <stdbool.h>
 
+//TODO eventually replace this with the arbritrary precision thing...
 typedef uint64_t tm_index_t;
 
 void tm_load_table_by_index(tm_t* tm, tm_index_t index);
@@ -21,7 +22,7 @@ void tm_print_table_entryDigitsForm(tm_t* tm);
 // tm_transition_table_entry_t entrynumber_entry_from_index(entrynumber_t* entrynum, tm_index_t index);
 bool tm_entry_equals(tm_transition_table_entry_t* entry1, tm_transition_table_entry_t* entry2);
 bool tm_entry_increment(int states, tm_transition_table_entry_t* entry);
-bool tm_entry_decrement(int states, tm_transition_table_entry_t* entry);
+// bool tm_entry_decrement(int states, tm_transition_table_entry_t* entry);
 bool tm_next_table_lexico(tm_t* tm);
 
 int tm_num_per_entry(int states);

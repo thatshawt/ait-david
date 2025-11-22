@@ -17,9 +17,16 @@ void test_all(test_opt_t* testopt)
     test_turing_mapping(testopt);
 }
 
+tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
+        .trivialNonhaltingCheck=false,
+        .max_steps=9999999999L
+    };
+
 void test_turing_sim(test_opt_t* testopt)
 {
     printf("Turing Sim Tests\n");
+
+    
     {
         unittest_begin(&unitstate, "bb5 load&run", testopt);
         char bb5_table[] = BB5_TABLE_LITERAL;
@@ -27,7 +34,7 @@ void test_turing_sim(test_opt_t* testopt)
         tm_init(&tm);
         tm.states = 5;
         tm_load_table(&tm, bb5_table);
-        uint64_t steps = tm_step_until_halt_or_max(&tm, 9999999999L);
+        uint64_t steps = tm_step_until_halt_or_max(&tm, runopt_9999_nocheck);
         unittest_assert_int_equals(&unitstate, steps, 47176870);
         unittest_assert_int_equals(&unitstate, tm_get_written_tape_size(&tm), 12289);
         unittest_assert_int_equals(&unitstate, tm_count_written_symbol(&tm,1), 4098);
@@ -44,7 +51,7 @@ void test_turing_sim(test_opt_t* testopt)
         tm_init(&tm);
         tm.states = 4;
         tm_load_table(&tm, bb4_table);
-        uint64_t steps = tm_step_until_halt_or_max(&tm, 9999999999L);
+        uint64_t steps = tm_step_until_halt_or_max(&tm, runopt_9999_nocheck);
         unittest_assert_int_equals(&unitstate, steps, 107);
         unittest_assert_int_equals(&unitstate, tm_get_written_tape_size(&tm), 14);
         unittest_assert_int_equals(&unitstate, tm_count_written_symbol(&tm,1), 13);
@@ -151,7 +158,7 @@ void test_turing_mapping(test_opt_t* testopt)
 
         tm_load_table_from_digits(&tm, bb4Digits);
 
-        int steps = tm_step_until_halt_or_max(&tm, 9999999L);
+        int steps = tm_step_until_halt_or_max(&tm, runopt_9999_nocheck);
 
         unittest_assert_int_equals(&unitstate, steps, 107);
 

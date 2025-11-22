@@ -59,13 +59,20 @@ int main(){
 
     //run bb4 and print tape slice
 
+    tm_print_enumerate_performance_stats(3,500);
+
     tm_init(&tm);
     tm.states=4;
 
     char bb4Literal[] = BB4_TABLE_LITERAL;
 
+    tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
+        .trivialNonhaltingCheck=false,
+        .max_steps=99999999999L
+    };
+
     tm_load_table(&tm, bb4Literal);
-    tm_step_until_halt_or_max(&tm, 99999999999L);
+    tm_step_until_halt_or_max(&tm, runopt_9999_nocheck);
 
     tape_slice_t slice;
     tm_slice_init_from_written_tape(&tm, &slice);
@@ -86,7 +93,7 @@ int main(){
     int states = 2;
     int startIndex = 0;
     int indexesConsidered = tm_max_num_of_machines(states)+1;
-    int randomIterations = 500;
+    int randomIterations = 10;
 
     fillSymbol = 0;
     tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
@@ -133,11 +140,6 @@ int main(){
     }
 
     hashmap_free(slice_count_map);
-    
-
-    tm_print_enumerate_performance_stats(2,500);
-    // tm_print_enumerate_performance_stats(3,500);
-
 
     return 1;
 
