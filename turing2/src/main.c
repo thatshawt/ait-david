@@ -32,7 +32,7 @@ int main(){
         .length=tm_max_num_of_machines(states)+1,
         .states=states,
         .max_steps=300,
-        .randomIterations=0,
+        .randomIterations=1000,
         .start=0
     };
 
@@ -40,7 +40,6 @@ int main(){
 
     size_t iterA = 0;
     void *itemA;
-
     uint64_t totalCount = 0;
     while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
         const tm_slice_counter_t *sliceCounter = itemA;
