@@ -3,26 +3,6 @@
 #include <math.h>
 #include <stdio.h>
 
-//get tm from integer index.
-
-// typedef uint64_t tm_index_t;
-
-// typedef struct {
-
-// } awd;
-
-/*
-typedef struct {
-    tm_symbol_t write;
-    enum TM_Move move;
-    tm_state_t next_state;
-} tm_transition_table_entry_t;
-*/
-
-// void tm_load_table_by_index(tm_t* tm, tm_index_t index)
-// {
-//     int digits[] = {0};
-// }
 
 void tm_load_table_by_index(tm_t* tm, tm_index_t index)
 {
@@ -37,10 +17,14 @@ void tm_load_table_by_index(tm_t* tm, tm_index_t index)
 //loads it little endian.
 void tm_extract_digits_from_index(tm_t* tm, int* digits, tm_index_t index)
 {
-    const tm_index_t multiplier = tm_num_per_entry(tm->states);
+    tm_mutex_lock(tm);
+    const int states = tm->states;
+    tm_mutex_unlock(tm);
+
+    const tm_index_t multiplier = tm_num_per_entry(states);
     
     tm_index_t count = index;
-    int* d = digits+tm_num_table_entries(tm->states) - 1;
+    int* d = digits+tm_num_table_entries(states) - 1;
     
     while(true){
         tm_index_t base = 1;
@@ -84,11 +68,14 @@ tm_index_t tm_get_table_index_from_digits(int states, int* digits)
 
 void tm_extract_digits_from_table(tm_t* tm, int* digits)
 {
+    tm_mutex_lock(tm);
+    const int states = tm->states;
+    tm_mutex_unlock(tm);
     int* d = digits;
     for(int sym=0;sym<TM_SYMBOLS;sym++){
-        for(int state=1;state<=tm->states;state++){
-            tm_transition_table_entry_t* entry = tm_get_entry(tm, sym, state);
-            int digit = tm_get_entry_digit(tm->states, entry);
+        for(int state=1;state<=states;state++){
+            tm_transition_table_entry_t entry = tm_get_entry(tm, sym, state);
+            int digit = tm_get_entry_digit(states, &entry);
             d[0] = digit;
             d++;
         }
@@ -97,10 +84,13 @@ void tm_extract_digits_from_table(tm_t* tm, int* digits)
 
 void tm_print_table_entryDigitsForm(tm_t* tm)
 {
+    tm_mutex_lock(tm);
+    const int states = tm->states;
+    tm_mutex_unlock(tm);
     for(int sym=0;sym<TM_SYMBOLS;sym++){
-        for(int state=1;state<=tm->states;state++){
-            tm_transition_table_entry_t* entry = tm_get_entry(tm, sym, state);
-            printf("%d ", tm_get_entry_digit(tm->states, entry));
+        for(int state=1;state<=states;state++){
+            tm_transition_table_entry_t entry = tm_get_entry(tm, sym, state);
+            printf("%d ", tm_get_entry_digit(states, &entry));
         }
     }
     printf("\n");
@@ -138,11 +128,15 @@ void tm_load_entry_from_digit(int states, int digit, tm_transition_table_entry_t
 
 void tm_load_table_from_digits(tm_t* tm, int* digits)
 {
+    tm_mutex_lock(tm);
+    const int states = tm->states;
+    tm_mutex_unlock(tm);
     int* d = digits;
     for(int j=0;j<TM_SYMBOLS;j++){
-        for(int i=1;i<=tm->states;i++){
-            tm_transition_table_entry_t* entry = tm_get_entry(tm, j, i);
-            tm_load_entry_from_digit(tm->states, *d++, entry);
+        for(int i=1;i<=states;i++){
+            tm_transition_table_entry_t entry = tm_get_entry(tm, j, i);
+            tm_load_entry_from_digit(states, *d++, &entry);
+            tm_set_entry(tm,j,i,&entry);
         }
     }
     
@@ -208,8 +202,16 @@ int tm_num_table_entries(int states)
 tm_index_t tm_max_num_of_machines(int states)
 {
     // (4*(n+1))^(2*n)
+    // (4n+4)^(2n)
     // tm_index_t states = tm->states;
     return pow(tm_num_per_entry(states),tm_num_table_entries(states));
+}
+
+// i dont know why or how but this seems wrong...
+uint64_t tm_machines_considered_for_full_enumeration(int states)
+{
+    // (4n + 2)^2n
+    return pow(4*states + 2, 2*states);
 }
 
 /*
@@ -227,10 +229,12 @@ bool tm_next_table_lexico(tm_t* tm)
     int symbol = 0;
     int state = 1; // dont start at 0, which is just for halting
     for(;;){
+        tm_transition_table_entry_t entry = tm_get_entry(tm, symbol, state);
         bool tryIncrement = tm_entry_increment(
             tm->states,
-            tm_get_entry(tm, symbol, state)
+            &entry
         );
+        tm_set_entry(tm, symbol, state, &entry);
 
         if(tryIncrement == true){//overflowed
             if(++symbol >= TM_SYMBOLS){//symbol overflow
@@ -248,3 +252,8 @@ bool tm_next_table_lexico(tm_t* tm)
 
     }
 }
+
+// bool tm_next_table_enumeration(tm_t* tm)
+// {
+
+// }

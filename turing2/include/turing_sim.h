@@ -1,6 +1,8 @@
 #ifndef TURING_SIM_H
 #define TURING_SIM_H
 
+#include "turing_threading.h"
+#include <pthread.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -29,6 +31,8 @@ typedef struct {
 } tm_transition_table_entry_t;
 
 typedef struct {
+    pthread_mutex_t mutex;
+
     //current position on tape.
     uint32_t tape_index;
     //maximum prescribed tape index despite the TAPE_SIZE.
@@ -53,10 +57,16 @@ typedef struct {
 } tm_t;
 
 void tm_init(tm_t* tm);
-void tm_load_table(tm_t* tm, char* table_string);
+void tm_destroy(tm_t* tm);
+void tm_reset(tm_t* tm);
+void tm_mutex_lock(tm_t* tm);
+void tm_mutex_unlock(tm_t* tm);
 void tm_reset_keep_table_and_states(tm_t* tm);
+void tm_load_table(tm_t* tm, char* table_string);
 
-tm_transition_table_entry_t* tm_get_entry(tm_t* tm, int symbol, int state);
+
+tm_transition_table_entry_t tm_get_entry(tm_t* tm, int symbol, int state);
+void tm_set_entry(tm_t* tm, int symbol, int state, tm_transition_table_entry_t* entry);
 
 void tm_step(tm_t* tm);
 
@@ -79,6 +89,8 @@ typedef struct{
     int length;
 } tape_slice_t;
 
+int tm_slice_compare(tape_slice_t *slice1, tape_slice_t *slice2);
+
 void tm_slice_init_from_written_tape(tm_t* tm, tape_slice_t* slice);
 void tm_slice_free(tape_slice_t* slice);
 void tm_slice_print(tape_slice_t* slice);
@@ -92,7 +104,6 @@ void tm_fancy_print_transitions(tm_t* tm);
 void tm_print_table_short(tm_t* tm);
 
 //got this from musl. thank you musl.
-static uint64_t tm_random_seed;
 void tm_srand(unsigned s);
 int tm_rand(void);
 

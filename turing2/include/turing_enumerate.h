@@ -17,6 +17,16 @@ int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata);
 
 void tm_print_enumerate_performance_stats(int states, int max_steps);
 
+typedef struct{
+    int states;
+    tm_index_t start;
+    int length;
+    uint64_t max_steps;
+    int randomIterations;
+} enumerate_job_opt_t;
+
+struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt);
+
 void tm_enumerate_index_length_generic(
     int states,
     tm_index_t start,

@@ -24,9 +24,11 @@ bool tm_entry_equals(tm_transition_table_entry_t* entry1, tm_transition_table_en
 bool tm_entry_increment(int states, tm_transition_table_entry_t* entry);
 // bool tm_entry_decrement(int states, tm_transition_table_entry_t* entry);
 bool tm_next_table_lexico(tm_t* tm);
+// bool tm_next_table_enumeration(tm_t* tm);
 
 int tm_num_per_entry(int states);
 int tm_num_table_entries(int states);
 tm_index_t tm_max_num_of_machines(int states);
+uint64_t tm_machines_considered_for_full_enumeration(int states);
 
 #endif

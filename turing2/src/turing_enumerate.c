@@ -1,5 +1,7 @@
 #include "turing_enumerate.h"
+#include "turing_sim.h"
 #include "hashmap.h"
+#include "turing_threading.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +18,65 @@ uint64_t current_timestamp() {
     return (uint64_t)milliseconds;
 }
 
+tm_symbol_t fillSymbol[TM_MAX_THREADS] = {0};
+bool fillRandom[TM_MAX_THREADS] = {false};
+int fillSeed[TM_MAX_THREADS] = {0};
+void fill_tm_with_symbol(tm_t* tm)
+{
+    const int selfid = turing_threading_self_index();
+    if(fillRandom[selfid]){
+        tm_fill_tape_with_random(tm, fillSeed[selfid]);
+    }else{
+        tm_fill_tape(tm, fillSymbol[selfid]);
+    }
+}
+
+struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
+{
+    const int selfid = turing_threading_self_index();
+
+    struct hashmap* slice_count_map = hashmap_new(
+            sizeof(tm_slice_counter_t), 0, tm_rand(), tm_rand(), 
+            tm_slicecounter_hashmap_hash,
+            tm_slicecounter_hashmap_compare,
+            tm_slicecounter_hashmap_free,
+            NULL
+        );
+
+    int max_steps = opt->max_steps;
+    int states = opt->states;
+    int startIndex = opt->start;
+    int indexesConsidered = opt->length;
+    int randomIterations = opt->randomIterations;
+
+    printf("Running enumeration  states %d, max_steps %d, randomIters %d, startIndex %d, indexesConsidered %d,   ",
+        states, max_steps, randomIterations, startIndex, indexesConsidered);
+
+    fillSymbol[selfid] = 0;
+    tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
+        slice_count_map,
+        fill_tm_with_symbol
+    );
+
+    fillSymbol[selfid] = 1;
+    tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
+        slice_count_map,
+        fill_tm_with_symbol
+    );
+
+    fillSeed[selfid] = 1;
+    fillRandom[selfid] = true;
+    for(int i=0;i< randomIterations ;i++){
+        printf("on i %d. \n", i);
+        tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
+            slice_count_map,
+            fill_tm_with_symbol
+        );
+        fillSeed[selfid]++;
+    }
+    return slice_count_map;
+}
+
 void tm_print_enumerate_performance_stats(int states, int max_steps)
 {
     uint64_t machines = tm_max_num_of_machines(states);
@@ -26,11 +87,11 @@ void tm_print_enumerate_performance_stats(int states, int max_steps)
 
     uint64_t duration = milliEnd-milliStart;
 
-    printf("took %llu milliseconds to simulate %llu %d state machines\n",
+    printf("Performance: took %llu milliseconds to simulate %llu %d state machines\n",
         duration, machines, states);
-    printf("thats like %llu machines per millisecond\n", machines/duration);
-    printf("thats like %llu machines per second\n", machines*1000/duration);
-    printf("thats around %llu machine steps per second. maybe...\n", machines*1000*max_steps/duration);
+    printf("Performance: thats like %llu machines per millisecond\n", machines/duration);
+    printf("Performance: thats like %llu machines per second\n", machines*1000/duration);
+    // printf("Performance: thats around %llu machine steps per second. maybe...\n", machines*1000*max_steps/duration);
 }
 
 bool atErrorNum = false;
@@ -64,19 +125,22 @@ void tm_enumerate_index_length_generic(
 
         if(tm.halted == true && tm.haltReason == HALT_NATURAL){
             // tm_print_table_short(&tm);
-            if(i == 20039){ //error happens here on the goddaaamnnn yea...
-                atErrorNum = true;
-            }else{
-                atErrorNum = false;
-            }
+            // if(i == 20039){ //error happens here on the goddaaamnnn yea...
+            //     atErrorNum = true;
+            // }else{
+            //     atErrorNum = false;
+            // }
             if(halt_receiver)halt_receiver(&tm);
             halters++;
         }
         // printf("i %d\n", i);
-        //if we hit the last machine then break.
-        //but still go to the next one though.
-        if(tm_next_table_lexico(&tm))break;
+        // go to next machine. if there is no next machine it breaks.
+        if(tm_next_table_lexico(&tm)){
+            // printf("table overflowed at %d\n", i);
+            break;
+        }
     }
+    tm_destroy(&tm);
     printf("states %d halters %d\n", states, halters);
 }
 
@@ -97,29 +161,11 @@ int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata)
 {
     const tm_slice_counter_t* slicecounterA = a;
     const tm_slice_counter_t* slicecounterB = b;
-
+    
     const tape_slice_t* sa = &slicecounterA->slice;
     const tape_slice_t* sb = &slicecounterB->slice;
-
-    int length = MIN(sa->length, sb->length);
-    for(int i=0;i<length;i++){
-        tm_symbol_t symbolA = sa->tapeslice[i];
-        tm_symbol_t symbolB = sb->tapeslice[i];
-        if(symbolA > symbolB)return 1;
-        else if(symbolA < symbolB) return -1;
-    }
-
-    const int length1 = sa->length;
-    const int length2 = sb->length;
-
-    if(length1 < length2){
-        return 1;
-    }else if(length1 > length2){
-        return -1;
-    }
-
-    return 0;
-    // return memcmp(sa->tapeslice, sb->tapeslice,);
+    
+    return tm_slice_compare(sa, sb);
 }
 
 struct{

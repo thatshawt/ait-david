@@ -26,7 +26,72 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <pthread.h>
 #include "hashmap.h"
+
+struct user {
+    char *name;
+    int age;
+};
+
+int user_compare(const void *a, const void *b, void *udata) {
+    const struct user *ua = a;
+    const struct user *ub = b;
+    return strcmp(ua->name, ub->name);
+}
+
+bool user_iter(const void *item, void *udata) {
+    const struct user *user = item;
+    printf("%s (age=%d)\n", user->name, user->age);
+    return true;
+}
+
+uint64_t user_hash(const void *item, uint64_t seed0, uint64_t seed1) {
+    const struct user *user = item;
+    return hashmap_sip(user->name, strlen(user->name), seed0, seed1);
+}
+
+void example(){
+    // create a new hash map where each item is a `struct user`. The second
+    // argument is the initial capacity. The third and fourth arguments are 
+    // optional seeds that are passed to the following hash function.
+    struct hashmap *map = hashmap_new(sizeof(struct user), 0, 0, 0, 
+                                     user_hash, user_compare, NULL, NULL);
+
+    // Here we'll load some users into the hash map. Each set operation
+    // performs a copy of the data that is pointed to in the second argument.
+    hashmap_set(map, &(struct user){ .name="Dale", .age=44 });
+    hashmap_set(map, &(struct user){ .name="Roger", .age=68 });
+    hashmap_set(map, &(struct user){ .name="Jane", .age=47 });
+
+    struct user *user; 
+    
+    printf("\n-- get some users --\n");
+    user = hashmap_get(map, &(struct user){ .name="Jane" });
+    printf("%s age=%d\n", user->name, user->age);
+
+    user = hashmap_get(map, &(struct user){ .name="Roger" });
+    printf("%s age=%d\n", user->name, user->age);
+
+    user = hashmap_get(map, &(struct user){ .name="Dale" });
+    printf("%s age=%d\n", user->name, user->age);
+
+    user = hashmap_get(map, &(struct user){ .name="Tom" });
+    printf("%s\n", user?"exists":"not exists");
+
+    printf("\n-- iterate over all users (hashmap_scan) --\n");
+    hashmap_scan(map, user_iter, NULL);
+
+    printf("\n-- iterate over all users (hashmap_iter) --\n");
+    size_t iter = 0;
+    void *item;
+    while (hashmap_iter(map, &iter, &item)) {
+        const struct user *user = item;
+        printf("%s (age=%d)\n", user->name, user->age);
+    }
+
+    hashmap_free(map);
+}
 
 #define GROW_AT   0.60 /* 60% */
 #define SHRINK_AT 0.10 /* 10% */
@@ -54,6 +119,7 @@ struct bucket {
 
 // hashmap is an open addressed hash map using robinhood hashing.
 struct hashmap {
+    pthread_mutex_t mutex;
     void *(*malloc)(size_t);
     void *(*realloc)(void *, size_t);
     void (*free)(void *);
@@ -79,8 +145,20 @@ struct hashmap {
     void *edata;
 };
 
+void hashmap_lock(struct hashmap *map)
+{
+    pthread_mutex_lock(&map->mutex);
+}
+
+void hashmap_unlock(struct hashmap *map)
+{
+    pthread_mutex_unlock(&map->mutex);
+}
+
 void hashmap_set_grow_by_power(struct hashmap *map, size_t power) {
+    hashmap_lock(map);
     map->growpower = power < 1 ? 1 : power > 16 ? 16 : power;
+    hashmap_unlock(map);
 }
 
 static double clamp_load_factor(double factor, double default_factor) {
@@ -92,9 +170,11 @@ static double clamp_load_factor(double factor, double default_factor) {
 }
 
 void hashmap_set_load_factor(struct hashmap *map, double factor) {
+    hashmap_lock(map);
     factor = clamp_load_factor(factor, map->loadfactor / 100.0);
     map->loadfactor = factor * 100;
     map->growat = map->nbuckets * (map->loadfactor / 100.0);
+    hashmap_unlock(map);
 }
 
 static struct bucket *bucket_at0(void *buckets, size_t bucketsz, size_t i) {
@@ -151,6 +231,7 @@ struct hashmap *hashmap_new_with_allocator(void *(*_malloc)(size_t),
         return NULL;
     }
     memset(map, 0, sizeof(struct hashmap));
+    pthread_mutex_init(&map->mutex, NULL);
     map->elsize = elsize;
     map->bucketsz = bucketsz;
     map->seed0 = seed0;
@@ -224,6 +305,7 @@ static void free_elements(struct hashmap *map) {
 // the currently number of allocated buckets. This is an optimization to ensure
 // that this operation does not perform any allocations.
 void hashmap_clear(struct hashmap *map, bool update_cap) {
+    hashmap_lock(map);
     map->count = 0;
     free_elements(map);
     if (update_cap) {
@@ -240,6 +322,7 @@ void hashmap_clear(struct hashmap *map, bool update_cap) {
     map->mask = map->nbuckets-1;
     map->growat = map->nbuckets * (map->loadfactor / 100.0) ;
     map->shrinkat = map->nbuckets * SHRINK_AT;
+    hashmap_unlock(map);
 }
 
 static bool resize0(struct hashmap *map, size_t new_cap) {
@@ -247,6 +330,8 @@ static bool resize0(struct hashmap *map, size_t new_cap) {
         map->free, map->elsize, new_cap, map->seed0, map->seed1, map->hash, 
         map->compare, map->elfree, map->udata);
     if (!map2) return false;
+    hashmap_lock(map);
+    hashmap_lock(map2);
     for (size_t i = 0; i < map->nbuckets; i++) {
         struct bucket *entry = bucket_at(map, i);
         if (!entry->dib) {
@@ -276,6 +361,8 @@ static bool resize0(struct hashmap *map, size_t new_cap) {
     map->growat = map2->growat;
     map->shrinkat = map2->shrinkat;
     map->free(map2);
+    hashmap_unlock(map);
+    hashmap_unlock(map2);
     return true;
 }
 
@@ -289,11 +376,15 @@ static bool resize(struct hashmap *map, size_t new_cap) {
 const void *hashmap_set_with_hash(struct hashmap *map, const void *item,
     uint64_t hash)
 {
+    hashmap_lock(map);
     hash = clip_hash(hash);
     map->oom = false;
     if (map->count >= map->growat) {
+        hashmap_unlock(map);
         if (!resize(map, map->nbuckets*(1<<map->growpower))) {
+            hashmap_lock(map);
             map->oom = true;
+            hashmap_unlock(map);
             return NULL;
         }
     }
@@ -311,6 +402,7 @@ const void *hashmap_set_with_hash(struct hashmap *map, const void *item,
         if (bucket->dib == 0) {
             memcpy(bucket, entry, map->bucketsz);
             map->count++;
+            hashmap_unlock(map);
             return NULL;
         }
         bitem = bucket_item(bucket);
@@ -319,6 +411,7 @@ const void *hashmap_set_with_hash(struct hashmap *map, const void *item,
         {
             memcpy(map->spare, bitem, map->elsize);
             memcpy(bitem, eitem, map->elsize);
+            hashmap_unlock(map);
             return map->spare;
         }
         if (bucket->dib < entry->dib) {
@@ -330,6 +423,7 @@ const void *hashmap_set_with_hash(struct hashmap *map, const void *item,
         i = (i + 1) & map->mask;
         entry->dib += 1;
     }
+    hashmap_unlock(map);
 }
 
 // hashmap_set inserts or replaces an item in the hash map. If an item is
@@ -346,19 +440,25 @@ const void *hashmap_set(struct hashmap *map, const void *item) {
 const void *hashmap_get_with_hash(const struct hashmap *map, const void *key,
     uint64_t hash)
 {
+    hashmap_lock(map);
     hash = clip_hash(hash);
     size_t i = hash & map->mask;
     while(1) {
         struct bucket *bucket = bucket_at(map, i);
-        if (!bucket->dib) return NULL;
+        if (!bucket->dib){
+            hashmap_unlock(map);
+            return NULL;
+        }
         if (bucket->hash == hash) {
             void *bitem = bucket_item(bucket);
             if (!map->compare || map->compare(key, bitem, map->udata) == 0) {
+                hashmap_unlock(map);
                 return bitem;
             }
         }
         i = (i + 1) & map->mask;
     }
+    hashmap_unlock(map);
 }
 
 // hashmap_get returns the item based on the provided key. If the item is not
@@ -385,12 +485,14 @@ const void *hashmap_probe(struct hashmap *map, uint64_t position) {
 const void *hashmap_delete_with_hash(struct hashmap *map, const void *key,
     uint64_t hash)
 {
+    hashmap_lock(map);
     hash = clip_hash(hash);
     map->oom = false;
     size_t i = hash & map->mask;
     while(1) {
         struct bucket *bucket = bucket_at(map, i);
         if (!bucket->dib) {
+            hashmap_unlock(map);
             return NULL;
         }
         void *bitem = bucket_item(bucket);
@@ -415,12 +517,16 @@ const void *hashmap_delete_with_hash(struct hashmap *map, const void *key,
                 // Ignore the return value. It's ok for the resize operation to
                 // fail to allocate enough memory because a shrink operation
                 // does not change the integrity of the data.
+                hashmap_unlock(map);
                 resize(map, map->nbuckets/2);
+                hashmap_lock(map);
             }
+            hashmap_unlock(map);
             return map->spare;
         }
         i = (i + 1) & map->mask;
     }
+    hashmap_unlock(map);
 }
 
 // hashmap_delete removes an item from the hash map and returns it. If the
@@ -431,7 +537,10 @@ const void *hashmap_delete(struct hashmap *map, const void *key) {
 
 // hashmap_count returns the number of items in the hash map.
 size_t hashmap_count(const struct hashmap *map) {
-    return map->count;
+    hashmap_lock(map);
+    size_t count = map->count;
+    hashmap_unlock(map);
+    return count;
 }
 
 // hashmap_free frees the hash map
@@ -442,12 +551,16 @@ void hashmap_free(struct hashmap *map) {
     free_elements(map);
     map->free(map->buckets);
     map->free(map);
+    pthread_mutex_destroy(&map->mutex);
 }
 
 // hashmap_oom returns true if the last hashmap_set() call failed due to the 
 // system being out of memory.
 bool hashmap_oom(struct hashmap *map) {
-    return map->oom;
+    hashmap_lock(map);
+    bool oom = map->oom;
+    hashmap_unlock(map);
+    return oom;
 }
 
 // hashmap_scan iterates over all items in the hash map

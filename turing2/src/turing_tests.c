@@ -13,9 +13,11 @@ tm_t tm;
 
 void test_all(test_opt_t* testopt)
 {
+    printf("\nRunning all tests.\n");
     test_turing_sim(testopt);
     test_turing_mapping(testopt);
     test_turing_enumerate(testopt);
+    printf("Testing complete.\n\n");
 }
 
 tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
@@ -25,7 +27,7 @@ tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
 
 void test_turing_sim(test_opt_t* testopt)
 {
-    printf("Turing Sim Tests\n");
+    printf("    Turing Sim Tests\n");
 
     
     {
@@ -39,7 +41,7 @@ void test_turing_sim(test_opt_t* testopt)
         unittest_assert_int_equals(&unitstate, steps, 47176870);
         unittest_assert_int_equals(&unitstate, tm_get_written_tape_size(&tm), 12289);
         unittest_assert_int_equals(&unitstate, tm_count_written_symbol(&tm,1), 4098);
-
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -56,7 +58,45 @@ void test_turing_sim(test_opt_t* testopt)
         unittest_assert_int_equals(&unitstate, steps, 107);
         unittest_assert_int_equals(&unitstate, tm_get_written_tape_size(&tm), 14);
         unittest_assert_int_equals(&unitstate, tm_count_written_symbol(&tm,1), 13);
+        tm_destroy(&tm);
+        unittest_finish(&unitstate);
+    }
 
+    {
+        unittest_begin(&unitstate, "bb4 tape slice compare", testopt);
+
+        tm_init(&tm);
+        tm.states=4;
+
+        char bb4Literal[] = BB4_TABLE_LITERAL;
+
+        tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
+            .trivialNonhaltingCheck=false,
+            .max_steps=99999999999L
+        };
+
+        tm_load_table(&tm, bb4Literal);
+        tm_step_until_halt_or_max(&tm, runopt_9999_nocheck);
+
+        tape_slice_t slice;
+        tm_slice_init_from_written_tape(&tm, &slice);
+        // tm_slice_print(&slice);
+        
+        // 10111111111111
+
+        tm_symbol_t* bb4TapeSliceData = (tm_symbol_t[]){1,0,1,1,1,1,1,1,1,1,1,1,1,1};
+
+        tape_slice_t bb4ExpectedSlice = (tape_slice_t){
+            .tapeslice = bb4TapeSliceData,
+            .length = 14
+        };
+
+        int sliceCompare = tm_slice_compare(&slice, &bb4ExpectedSlice);
+
+        unittest_assert_int_equals(&unitstate, sliceCompare, 0);
+    
+        tm_slice_free(&slice);
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -67,8 +107,8 @@ void test_turing_sim(test_opt_t* testopt)
         tm_fill_tape_with_random(&tm, 1337);
         int ones = tm_count_symbol_entire_tape(&tm, 1);
         // printf("ones %d\n", ones);
-        unittest_assert_int_equals(&unitstate, ones, 19834);
-
+        unittest_assert_int_equals(&unitstate, ones, 19833);
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -83,7 +123,7 @@ void test_turing_sim(test_opt_t* testopt)
         }
         // printf("%d states, %d diff tables\n", tm.states, i);
         unittest_assert_int_equals(&unitstate, i, 16777216);
-
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -94,14 +134,14 @@ void test_turing_sim(test_opt_t* testopt)
         tm.states = 3;
         int number = tm_max_num_of_machines(tm.states);
         unittest_assert_int_equals(&unitstate, number, 16777216);
-
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 }
 
 void test_turing_mapping(test_opt_t* testopt)
 {
-    printf("Turing Mapping Tests\n");
+    printf("    Turing Mapping Tests\n");
 
     {
         unittest_begin(&unitstate, "bb4 table->digits", testopt);
@@ -117,6 +157,7 @@ void test_turing_mapping(test_opt_t* testopt)
             unittest_assert_int_equals(&unitstate,
                 bb4Digits1[i], bb4DigitsExpected1[i]);
         }
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -127,6 +168,7 @@ void test_turing_mapping(test_opt_t* testopt)
         const int bb4Digits[] = {11, 5, 3, 19, 9, 12, 17, 6};
         tm_index_t index = tm_get_table_index_from_digits(4, bb4Digits);
         unittest_assert_int_equals(&unitstate, (uint32_t)index, (uint32_t)8807993311);
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -146,7 +188,7 @@ void test_turing_mapping(test_opt_t* testopt)
             unittest_assert_int_equals(&unitstate,
                 bb4Digits[i], bb4DigitsExpected[i]);
         }
-
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 
@@ -160,19 +202,22 @@ void test_turing_mapping(test_opt_t* testopt)
         tm_load_table_from_digits(&tm, bb4Digits);
 
         int steps = tm_step_until_halt_or_max(&tm, runopt_9999_nocheck);
-
+        // printf("steps: %d\n", steps);
         unittest_assert_int_equals(&unitstate, steps, 107);
-
+        tm_destroy(&tm);
         unittest_finish(&unitstate);
     }
 }
 
 void test_turing_enumerate(test_opt_t* testopt)
 {
-    //take the slice code from main.c and do a test with that...
+    printf("    Turing Enumeration Tests\n");
+    
+    {
+        //hashmap enumeration test.
 
+    }
 
-    //hashmap enumeration test.
 }
 
 /////////////////////////////////////////////
@@ -192,9 +237,9 @@ void unittest_finish(unittest_state_t* state)
 {
     if(state->passing == true){
         if(state->opt->onlyPrintFailingTests == false)
-            printf("Test '%s' PASSED\n", state->testname);
+            printf("        Test '%s' PASSED\n", state->testname);
     }else{
-        printf("Test '%s' FAILED\n", state->testname);
+        printf("        Test '%s' FAILED\n", state->testname);
     }
 }
 

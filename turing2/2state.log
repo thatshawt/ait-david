@@ -1,0 +1,110 @@
+rm -r ./build
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/main.c -o build/./src/main.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_enumerate.c -o build/./src/turing_enumerate.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_sim.c -o build/./src/turing_sim.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/hashmap.c -o build/./src/hashmap.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_tests.c -o build/./src/turing_tests.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_mapping.c -o build/./src/turing_mapping.c.o
+g++ ./build/./src/main.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -g -o build/turing 
+g++ ./build/./src/main.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -fPIC -rdynamic -shared -Lstatic -o build/turing.so 
+./build/turing
+
+hello turing
+
+
+Running all tests.
+    Turing Sim Tests
+        Test 'bb5 load&run' PASSED
+        Test 'bb4 load&run' PASSED
+        Test 'bb4 tape slice compare' PASSED
+        Test 'random tape test' PASSED
+        Test 'counting 3 state machines bruteforce' PASSED
+        Test 'number of 3 state machines' PASSED
+    Turing Mapping Tests
+        Test 'bb4 table->digits' PASSED
+        Test 'bb4 digits->index' PASSED
+        Test 'bb4 index->digits' PASSED
+        Test 'bb4 digits->table' PASSED
+    Turing Enumeration Tests
+Testing complete.
+
+states 2 halters 9784
+Performance: took 57 milliseconds to simulate 20736 2 state machines
+Performance: thats like 363 machines per millisecond
+Performance: thats like 363789 machines per second
+Performance: thats around 181894736 machine steps per second. maybe...
+Running enumeration  states 2, max_steps 300, randomIters 0, startIndex 0, indexesConsidered 20737,   states 2 halters 9784
+states 2 halters 9784
+total counted strings: 19568
+1
+lengthstr 1, count 6912, freq 0.333333
+
+1101
+lengthstr 4, count 4, freq 0.000193
+
+11
+lengthstr 2, count 1408, freq 0.067901
+
+100
+lengthstr 3, count 12, freq 0.000579
+
+101
+lengthstr 3, count 8, freq 0.000386
+
+1001
+lengthstr 4, count 4, freq 0.000193
+
+110
+lengthstr 3, count 12, freq 0.000579
+
+1111
+lengthstr 4, count 4, freq 0.000193
+
+1011
+lengthstr 4, count 4, freq 0.000193
+
+0100
+lengthstr 4, count 4, freq 0.000193
+
+10
+lengthstr 2, count 1408, freq 0.067901
+
+001
+lengthstr 3, count 12, freq 0.000579
+
+0010
+lengthstr 4, count 4, freq 0.000193
+
+0000
+lengthstr 4, count 4, freq 0.000193
+
+000
+lengthstr 3, count 8, freq 0.000386
+
+0110
+lengthstr 4, count 4, freq 0.000193
+
+01
+lengthstr 2, count 1408, freq 0.067901
+
+111
+lengthstr 3, count 8, freq 0.000386
+
+011
+lengthstr 3, count 12, freq 0.000579
+
+010
+lengthstr 3, count 8, freq 0.000386
+
+0
+lengthstr 1, count 6912, freq 0.333333
+
+00
+lengthstr 2, count 1408, freq 0.067901
+

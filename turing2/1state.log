@@ -1,0 +1,50 @@
+rm -r ./build
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/main.c -o build/./src/main.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_enumerate.c -o build/./src/turing_enumerate.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_sim.c -o build/./src/turing_sim.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/hashmap.c -o build/./src/hashmap.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_tests.c -o build/./src/turing_tests.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g  -c src/turing_mapping.c -o build/./src/turing_mapping.c.o
+g++ ./build/./src/main.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -g -o build/turing 
+g++ ./build/./src/main.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -fPIC -rdynamic -shared -Lstatic -o build/turing.so 
+./build/turing
+
+hello turing
+
+
+Running all tests.
+    Turing Sim Tests
+        Test 'bb5 load&run' PASSED
+        Test 'bb4 load&run' PASSED
+        Test 'bb4 tape slice compare' PASSED
+        Test 'random tape test' PASSED
+        Test 'counting 3 state machines bruteforce' PASSED
+        Test 'number of 3 state machines' PASSED
+    Turing Mapping Tests
+        Test 'bb4 table->digits' PASSED
+        Test 'bb4 digits->index' PASSED
+        Test 'bb4 index->digits' PASSED
+        Test 'bb4 digits->table' PASSED
+    Turing Enumeration Tests
+Testing complete.
+
+states 2 halters 9784
+Performance: took 61 milliseconds to simulate 20736 2 state machines
+Performance: thats like 339 machines per millisecond
+Performance: thats like 339934 machines per second
+Performance: thats around 169967213 machine steps per second. maybe...
+Running enumeration  states 1, max_steps 300, randomIters 0, startIndex 0, indexesConsidered 65,   states 1 halters 32
+states 1 halters 32
+total counted strings: 64
+1
+lengthstr 1, count 32, freq 0.500000
+
+0
+lengthstr 1, count 32, freq 0.500000
+
