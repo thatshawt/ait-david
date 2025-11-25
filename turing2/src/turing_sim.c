@@ -132,6 +132,14 @@ void tm_fill_tape(tm_t* tm, tm_symbol_t symbol)
     tm_mutex_unlock(tm);
 }
 
+tape_slice_t tm_slice_clone(tape_slice_t *slice)
+{
+    tape_slice_t result;
+    result.length = slice->length;
+    result.tapeslice = malloc(slice->length * sizeof(tm_symbol_t));
+    return result;
+}
+
 int tm_slice_compare(tape_slice_t *sa, tape_slice_t *sb)
 {
     const int length = MIN(sa->length, sb->length);

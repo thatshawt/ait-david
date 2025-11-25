@@ -90,6 +90,7 @@ typedef struct{
 } tape_slice_t;
 
 int tm_slice_compare(tape_slice_t *slice1, tape_slice_t *slice2);
+tape_slice_t tm_slice_clone(tape_slice_t *slice1);
 
 void tm_slice_init_from_written_tape(tm_t* tm, tape_slice_t* slice);
 void tm_slice_free(tape_slice_t* slice);

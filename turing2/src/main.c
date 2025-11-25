@@ -32,7 +32,7 @@ int main(){
         .length=tm_max_num_of_machines(states)+1,
         .states=states,
         .max_steps=300,
-        .randomIterations=1000,
+        .randomIterations=0,
         .start=0
     };
 

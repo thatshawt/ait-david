@@ -11,6 +11,9 @@ typedef struct{
     uint64_t count; //TODO make this an arbtritrary precision integer with the library
 } tm_slice_counter_t;
 
+
+// merge b into a.
+void tm_slicecounter_hashmap_merge(struct hashmap* mapA, struct hashmap* mapB);
 void tm_slicecounter_hashmap_free(void *item);
 uint64_t tm_slicecounter_hashmap_hash(const void *item, uint64_t seed0, uint64_t seed1);
 int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata);
