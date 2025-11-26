@@ -26,6 +26,7 @@ typedef struct{
     int length;
     uint64_t max_steps;
     int randomIterations;
+    int workthreads;
 } enumerate_job_opt_t;
 
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt);

@@ -1,13 +1,16 @@
 #include "turing_threading.h"
+#include <stdio.h>
 
 turing_thread_info_t turing_global_thread_info;
 
 void ttlock(){
-    ttlock(&turing_global_thread_info.mutex);
+    pthread_mutex_lock(&turing_global_thread_info.mutex);
+    // printf("obtained lock\n");
 }
 
 void ttunlock(){
-    ttunlock(&turing_global_thread_info.mutex);
+    pthread_mutex_unlock(&turing_global_thread_info.mutex);
+    // printf("released lock\n");
 }
 
 void turing_threading_init_global()
@@ -16,22 +19,22 @@ void turing_threading_init_global()
         turing_global_thread_info.index_is_null[i] = true;
     }
     pthread_mutex_init(&turing_global_thread_info.mutex, NULL);
-    turing_global_thread_info.config_workThreadsCount = 1;
+    // turing_global_thread_info.config_workThreadsCount = 1;
 }
 
-void turing_threading_set_workthreads_count(int workthreads)
-{
-    ttlock();
+// void turing_threading_set_workthreads_count(int workthreads)
+// {
+//     ttlock();
 
-    turing_global_thread_info.config_workThreadsCount = workthreads;
+//     turing_global_thread_info.config_workThreadsCount = workthreads;
 
-    ttunlock();
-}
+//     ttunlock();
+// }
 
-int turing_threading_get_workthreads_count()
-{
-    return turing_global_thread_info.config_workThreadsCount;
-}
+// int turing_threading_get_workthreads_count()
+// {
+//     return turing_global_thread_info.config_workThreadsCount;
+// }
 
 void turing_threading_destroy()
 {
@@ -40,8 +43,8 @@ void turing_threading_destroy()
 
 void turing_threading_self_remove()
 {
-    ttlock();
     const int i = turing_threading_self_index();
+    ttlock();
     turing_global_thread_info.index_is_null[i] = true;
     ttunlock();
 }

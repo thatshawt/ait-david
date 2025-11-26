@@ -25,8 +25,8 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread
-# LDFLAGS := -lstatic
+CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread #-fsanitize=address
+# LDFLAGS := -fsanitize=address
 
 # do both executable and shared library
 all: $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/$(TARGET_LIB)
@@ -50,7 +50,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 
-.PHONY: clean valgrind run
+.PHONY: clean valgrind gdb run
 clean:
 	rm -r $(BUILD_DIR)
 
@@ -64,6 +64,10 @@ valgrind:
          --verbose \
          --log-file=valgrind-out.txt \
          $(BUILD_DIR)/$(TARGET_EXEC)
+	
+gdb:
+	gdb $(BUILD_DIR)/$(TARGET_EXEC)
+
 
 # Include the .d makefiles. The - at the front suppresses the errors of missing
 # Makefiles. Initially, all the .d files will be missing, and we don't want those

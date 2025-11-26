@@ -331,7 +331,7 @@ static bool resize0(struct hashmap *map, size_t new_cap) {
         map->compare, map->elfree, map->udata);
     if (!map2) return false;
     hashmap_lock(map);
-    hashmap_lock(map2);
+    // hashmap_lock(map2);
     for (size_t i = 0; i < map->nbuckets; i++) {
         struct bucket *entry = bucket_at(map, i);
         if (!entry->dib) {
@@ -362,7 +362,7 @@ static bool resize0(struct hashmap *map, size_t new_cap) {
     map->shrinkat = map2->shrinkat;
     map->free(map2);
     hashmap_unlock(map);
-    hashmap_unlock(map2);
+    // hashmap_unlock(map2);
     return true;
 }
 

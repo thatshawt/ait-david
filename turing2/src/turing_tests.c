@@ -72,7 +72,7 @@ void test_turing_sim(test_opt_t* testopt)
 
         tm_run_opt_t runopt_9999_nocheck = (tm_run_opt_t){
             .trivialNonhaltingCheck=false,
-            .max_steps=99999999999L
+            .max_steps=99999999L
         };
 
         tm_load_table(&tm, bb4Literal);

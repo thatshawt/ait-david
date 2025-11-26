@@ -12,16 +12,22 @@
 int main(){
     printf("\nhello turing\n\n");
 
+    printf("main pthread_self() %d\n", pthread_self());
+
     turing_threading_init_global();
 
     turing_threading_self_init();
 
-    printf("self turing thread id %d", turing_threading_self_index());
+    // printf("did init?");
+
+    // printf("self turing thread id %d", turing_threading_self_index());
 
     test_opt_t testOptions;
     testOptions.onlyPrintFailingTests = false;
 
-    test_all(&testOptions);
+    // test_all(&testOptions);
+
+    // return 1;
 
     // tm_print_enumerate_performance_stats(2,500);
 
@@ -33,7 +39,8 @@ int main(){
         .states=states,
         .max_steps=300,
         .randomIterations=0,
-        .start=0
+        .start=0,
+        .workthreads=8
     };
 
     struct hashmap* slice_count_map = do_tm_enumerate_job(&enumerateOpt);
@@ -63,6 +70,8 @@ int main(){
     hashmap_free(slice_count_map);
 
     turing_threading_destroy();
+
+    printf("done\n");
 
     return 0;
 }
