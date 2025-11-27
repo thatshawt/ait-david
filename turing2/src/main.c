@@ -13,6 +13,8 @@ int main(){
     printf("\nhello turing\n\n");
 
     printf("main pthread_self() %d\n", pthread_self());
+    printf("sizeof(tm_slice_counter_t) %d\n", sizeof(tm_slice_counter_t));
+    printf("sizeof(tape_slice_t) %d\n", sizeof(tape_slice_t));
 
     turing_threading_init_global();
 
@@ -31,16 +33,17 @@ int main(){
 
     // tm_print_enumerate_performance_stats(2,500);
 
-    tm_srand(1337);
+    const int selfid = turing_threading_self_index();
+    tm_srand(selfid, 1337);
 
     int states = 2;
     enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
         .length=tm_max_num_of_machines(states)+1,
         .states=states,
         .max_steps=300,
-        .randomIterations=0,
+        .randomIterations=100,
         .start=0,
-        .workthreads=8
+        .workthreads=4
     };
 
     struct hashmap* slice_count_map = do_tm_enumerate_job(&enumerateOpt);

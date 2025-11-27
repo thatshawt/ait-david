@@ -99,13 +99,14 @@ void* enumerate_job_per_thread(void* a){
 
     fillSeed[selfid] = 1;
     fillRandom[selfid] = true;
-    for(int i=0;i<randomIterations ;i++){
-        printf("on i %d. \n", i);
+    for(int i=0;i<randomIterations;i++){
+        printf("on i %d. selfid %d\n", i, selfid);
         tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
             args->slice_count_map,
             fill_tm_with_symbol
         );
         fillSeed[selfid]++;
+        // printf("completed i %d, selfid %d\n", i, selfid);
     }
 
     turing_threading_self_remove();
@@ -126,7 +127,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     const int workthreads = opt->workthreads;
     for(int i=0;i<workthreads;i++){
         slice_count_map[i] = hashmap_new(
-            sizeof(tm_slice_counter_t), 0, tm_rand(), tm_rand(), 
+            sizeof(tm_slice_counter_t), 0, tm_rand(selfid), tm_rand(selfid), 
             tm_slicecounter_hashmap_hash,
             tm_slicecounter_hashmap_compare,
             tm_slicecounter_hashmap_free,
@@ -186,7 +187,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     //merge and destroy all the maps into the 0th one
     for(int i=1;i<workthreads;i++){
         tm_slicecounter_hashmap_merge(slice_count_map[0], slice_count_map[i]);
-        if(i!=0)hashmap_free(slice_count_map[i]);
+        hashmap_free(slice_count_map[i]);
     }
 
     //free thread args that we malloc'ed
@@ -241,6 +242,8 @@ void tm_enumerate_index_length_generic(
         };
 
         tm_step_until_halt_or_max(&tm, runopt);
+
+        // printf("stepped until halt");
 
         if(tm.halted == true && tm.haltReason == HALT_NATURAL){
             if(halt_receiver)halt_receiver(&tm);

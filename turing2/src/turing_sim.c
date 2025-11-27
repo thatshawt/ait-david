@@ -137,6 +137,7 @@ tape_slice_t tm_slice_clone(tape_slice_t *slice)
     tape_slice_t result;
     result.length = slice->length;
     result.tapeslice = malloc(slice->length * sizeof(tm_symbol_t));
+    memcpy(result.tapeslice, slice->tapeslice, slice->length * sizeof(tm_symbol_t));
     return result;
 }
 
@@ -193,28 +194,30 @@ void tm_slice_print(tape_slice_t* slice)
 
 //got this from musl. thank you musl.
 static uint64_t tm_random_seed[TM_MAX_THREADS] = {0};
-void tm_srand(unsigned s)
+void tm_srand(int threadid, unsigned s)
 {
-    const int threadid = turing_threading_self_index();
+    // const int threadid = turing_threading_self_index();
 	tm_random_seed[threadid] = s-1;
 }
 
 //got this from musl. thank you musl.
-int tm_rand(void)
+int tm_rand(int threadid)
 {
-    const int threadid = turing_threading_self_index();
+    // const int threadid = turing_threading_self_index();
 	tm_random_seed[threadid] = 6364136223846793005ULL*tm_random_seed[threadid] + 1;
 	return tm_random_seed[threadid]>>33;
 }
 
 void tm_fill_tape_with_random(tm_t* tm, int seed)
 {
-    tm_srand(seed);
+    const int threadid = turing_threading_self_index();
+    tm_srand(threadid, seed);
     tm_mutex_lock(tm);
     for(int i=0;i<TM_TAPE_SIZE;i++){
-        tm->tape[i] = (tm_symbol_t) (tm_rand()%TM_SYMBOLS);
+        tm->tape[i] = (tm_symbol_t) (tm_rand(threadid)%TM_SYMBOLS);
     }
     tm_mutex_unlock(tm);
+    // printf("filled with random\n");
 }
 
 void tm_print_entire_tape_symbol_frequencies(tm_t* tm)

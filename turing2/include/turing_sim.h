@@ -105,7 +105,7 @@ void tm_fancy_print_transitions(tm_t* tm);
 void tm_print_table_short(tm_t* tm);
 
 //got this from musl. thank you musl.
-void tm_srand(unsigned s);
-int tm_rand(void);
+void tm_srand(int threadid, unsigned s);
+int tm_rand(int threadid);
 
 #endif

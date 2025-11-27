@@ -548,10 +548,10 @@ size_t hashmap_count(const struct hashmap *map) {
 // if present, to free any data referenced in the elements of the hashmap.
 void hashmap_free(struct hashmap *map) {
     if (!map) return;
+    pthread_mutex_destroy(&map->mutex);
     free_elements(map);
     map->free(map->buckets);
     map->free(map);
-    pthread_mutex_destroy(&map->mutex);
 }
 
 // hashmap_oom returns true if the last hashmap_set() call failed due to the 
