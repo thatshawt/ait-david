@@ -61,7 +61,6 @@ typedef struct{
 void* enumerate_job_per_thread(void* a){
 
     printf("whole lotta nothing\n");
-
     
     turing_threading_self_init();
     const int selfid = turing_threading_self_index();
@@ -140,10 +139,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     int startIndex = opt->start;
     int indexesConsidered = opt->length;
     int randomIterations = opt->randomIterations;
-
-    // printf("Running enumeration states %d, max_steps %d, randomIters %d, startIndex %d, indexesConsidered %d,   ",
-        // states, max_steps, randomIterations, startIndex, indexesConsidered);
-
+    
     printf("running enumeration\n");
     printf("    states %d\n", opt->states);
     printf("    max_steps %d\n", opt->max_steps);

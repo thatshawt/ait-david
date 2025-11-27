@@ -27,7 +27,7 @@ int main(){
     test_opt_t testOptions;
     testOptions.onlyPrintFailingTests = false;
 
-    // test_all(&testOptions);
+    test_all(&testOptions);
 
     // return 1;
 
@@ -89,7 +89,6 @@ turing simulation:
 
 turing index language:
     dense mapping from integers to turing machines.
-    random nth permutation via the factorial algorithm thing.
     n+1th permutation by simple algorithm.
     nth_permutation()
     next_permutation()
