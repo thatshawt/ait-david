@@ -64,17 +64,19 @@ void tm_mutex_unlock(tm_t* tm);
 void tm_reset_keep_table_and_states(tm_t* tm);
 void tm_load_table(tm_t* tm, char* table_string);
 
-
 tm_transition_table_entry_t tm_get_entry(tm_t* tm, int symbol, int state);
 void tm_set_entry(tm_t* tm, int symbol, int state, tm_transition_table_entry_t* entry);
 
 void tm_step(tm_t* tm);
 
+//TODO eventually replace this with the arbritrary precision thing...
+typedef uint64_t tm_index_t;
+
 typedef struct{
     bool trivialNonhaltingCheck;
-    uint64_t max_steps;
+    tm_index_t max_steps;
 } tm_run_opt_t;
-uint64_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt);
+tm_index_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt);
 
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol);
 void tm_fill_tape_with_random(tm_t* tm, int seed);

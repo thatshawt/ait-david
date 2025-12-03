@@ -8,7 +8,7 @@
 
 typedef struct{
     tape_slice_t slice;
-    uint64_t count; //TODO make this an arbtritrary precision integer with the library
+    tm_index_t count; //TODO make this an arbtritrary precision integer with the library
 } tm_slice_counter_t;
 
 
@@ -24,7 +24,7 @@ typedef struct{
     int states;
     tm_index_t start;
     int length;
-    uint64_t max_steps;
+    tm_index_t max_steps;
     int randomIterations;
     int workthreads;
 } enumerate_job_opt_t;
@@ -35,7 +35,7 @@ void tm_enumerate_index_length_generic(
     int states,
     tm_index_t start,
     int length,
-    uint64_t max_steps,
+    tm_index_t max_steps,
     void(*halt_receiver)(tm_t* tm),
     void(*before_stepping)(tm_t* tm)
 );
@@ -44,7 +44,7 @@ void tm_enumerate_index_length_with_hashmap(
     int states,
     tm_index_t start,
     int length,
-    uint64_t max_steps,
+    tm_index_t max_steps,
     struct hashmap* map,
     void(*before_stepping)(tm_t* tm)
 );

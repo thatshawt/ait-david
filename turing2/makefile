@@ -6,6 +6,9 @@ BUILD_DIR := ./build
 SRC_DIRS := ./src
 INC_DIRS := ./include
 
+CC := gcc
+CXX := g++
+
 # Find all the C and C++ files we want to compile
 # Note the single quotes around the * expressions. The shell will incorrectly expand these otherwise, but we want to send the * directly to the find command.
 SRCS := $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.s')
@@ -21,12 +24,12 @@ DEPS := $(OBJS:.o=.d)
 # Every folder in ./src will need to be passed to GCC so that it can find header files
 # INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 # Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
-INC_FLAGS := $(addprefix -I,$(INC_DIRS))
+INC_FLAGS := $(addprefix -I,$(INC_DIRS)) -L${LIBGMP_DIR}/lib
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread #-fsanitize=address
-# LDFLAGS := -fsanitize=address
+CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread -lgmp #-fsanitize=address
+LDFLAGS := -L${LIBGMP_DIR}/lib -lgmp#-fsanitize=address
 
 # do both executable and shared library
 all: $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/$(TARGET_LIB)

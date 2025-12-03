@@ -1,0 +1,2468 @@
+rm -r ./build
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/main.c -o build/./src/main.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/turing_threading.c -o build/./src/turing_threading.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/turing_enumerate.c -o build/./src/turing_enumerate.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/turing_sim.c -o build/./src/turing_sim.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/hashmap.c -o build/./src/hashmap.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/turing_tests.c -o build/./src/turing_tests.c.o
+mkdir -p build/./src/
+gcc -I./include -MMD -MP -fPIC -g -lpthread   -c src/turing_mapping.c -o build/./src/turing_mapping.c.o
+g++ ./build/./src/main.c.o ./build/./src/turing_threading.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -g -o build/turing 
+g++ ./build/./src/main.c.o ./build/./src/turing_threading.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -fPIC -rdynamic -shared -Lstatic -o build/turing.so 
+./build/turing
+
+hello turing
+
+main pthread_self() 1034573632
+sizeof(tm_slice_counter_t) 24
+sizeof(tape_slice_t) 16
+
+Running all tests.
+    Turing Sim Tests
+        Test 'bb5 load&run' PASSED
+        Test 'bb4 load&run' PASSED
+        Test 'bb4 tape slice compare' PASSED
+        Test 'random tape test' PASSED
+        Test 'counting 3 state machines bruteforce' PASSED
+        Test 'number of 3 state machines' PASSED
+    Turing Mapping Tests
+        Test 'bb4 table->digits' PASSED
+        Test 'bb4 digits->index' PASSED
+        Test 'bb4 index->digits' PASSED
+        Test 'bb4 digits->table' PASSED
+    Turing Enumeration Tests
+Testing complete.
+
+running enumeration
+    states 2
+    max_steps 300
+    randomIters 10
+    startIndex 0
+    indexesConsidered 20737
+    workthreads 4
+
+whole lotta nothing
+thread job 1:
+    states 2
+    max_steps 300
+    randomIters 10
+    startIndex 0
+    indexesConsidered 5184
+
+whole lotta nothing
+thread job 2:
+    states 2
+    max_steps 300
+    randomIters 10
+    startIndex 15552
+    indexesConsidered 5184
+
+whole lotta nothing
+thread job 3:
+    states 2
+    max_steps 300
+    randomIters 10
+    startIndex 5184
+    indexesConsidered 5184
+
+whole lotta nothing
+thread job 4:
+    states 2
+    max_steps 300
+    randomIters 10
+    startIndex 10368
+    indexesConsidered 5184
+
+states 2, halters 2604
+states 2, halters 2360
+states 2, halters 2452
+states 2, halters 2368
+states 2, halters 3456
+on i 0. selfid 1
+states 2, halters 2476
+on i 0. selfid 3
+states 2, halters 1892
+on i 0. selfid 2
+states 2, halters 1960
+on i 0. selfid 4
+states 2, halters 3256
+on i 1. selfid 4
+states 2, halters 3688
+on i 1. selfid 3
+states 2, halters 3252
+on i 2. selfid 4
+states 2, halters 3216
+on i 1. selfid 2
+states 2, halters 4584
+on i 1. selfid 1
+states 2, halters 3736
+on i 2. selfid 3
+states 2, halters 3256
+on i 3. selfid 4
+states 2, halters 3256
+on i 4. selfid 4
+states 2, halters 3212
+on i 2. selfid 2
+states 2, halters 3694
+on i 3. selfid 3
+states 2, halters 3336
+on i 5. selfid 4
+states 2, halters 4536
+on i 2. selfid 1
+states 2, halters 3688
+on i 4. selfid 3
+states 2, halters 3304
+on i 6. selfid 4
+states 2, halters 3224
+on i 3. selfid 2
+states 2, halters 3736
+on i 5. selfid 3
+states 2, halters 3312
+on i 7. selfid 4
+states 2, halters 4578
+on i 3. selfid 1
+states 2, halters 3328
+on i 8. selfid 4
+states 2, halters 3680
+on i 6. selfid 3
+states 2, halters 3216
+on i 4. selfid 2
+states 2, halters 3324
+on i 9. selfid 4
+states 2, halters 3730
+on i 7. selfid 3
+states 2, halters 3336
+thread id 4, exiting thread...
+states 2, halters 4584
+on i 4. selfid 1
+states 2, halters 3232
+on i 5. selfid 2
+states 2, halters 3744
+on i 8. selfid 3
+states 2, halters 3674
+on i 9. selfid 3
+states 2, halters 4464
+on i 5. selfid 1
+states 2, halters 3216
+on i 6. selfid 2
+states 2, halters 3742
+thread id 3, exiting thread...
+states 2, halters 4536
+on i 6. selfid 1
+states 2, halters 3216
+on i 7. selfid 2
+states 2, halters 4494
+on i 7. selfid 1
+states 2, halters 3232
+on i 8. selfid 2
+states 2, halters 4464
+on i 8. selfid 1
+states 2, halters 3228
+on i 9. selfid 2
+states 2, halters 4518
+on i 9. selfid 1
+states 2, halters 3232
+thread id 2, exiting thread...
+states 2, halters 4458
+thread id 1, exiting thread...
+merge and destroy
+total counted strings: 167080
+111011
+lengthstr 6, count 8, freq 0.000048
+
+1101101
+lengthstr 7, count 2, freq 0.000012
+
+00101010
+lengthstr 8, count 4, freq 0.000024
+
+10101
+lengthstr 5, count 92, freq 0.000551
+
+1011110010
+lengthstr 10, count 2, freq 0.000012
+
+0011101
+lengthstr 7, count 4, freq 0.000024
+
+11011100
+lengthstr 8, count 2, freq 0.000012
+
+110011
+lengthstr 6, count 4, freq 0.000024
+
+00110011100
+lengthstr 11, count 2, freq 0.000012
+
+0000000101
+lengthstr 10, count 2, freq 0.000012
+
+11010
+lengthstr 5, count 56, freq 0.000335
+
+10110111010
+lengthstr 11, count 2, freq 0.000012
+
+101111011
+lengthstr 9, count 2, freq 0.000012
+
+001110111
+lengthstr 9, count 2, freq 0.000012
+
+00001
+lengthstr 5, count 210, freq 0.001257
+
+111111101010
+lengthstr 12, count 2, freq 0.000012
+
+000100100
+lengthstr 9, count 2, freq 0.000012
+
+100010000
+lengthstr 9, count 2, freq 0.000012
+
+011101100
+lengthstr 9, count 2, freq 0.000012
+
+0010000100
+lengthstr 10, count 2, freq 0.000012
+
+010000000
+lengthstr 9, count 6, freq 0.000036
+
+111000
+lengthstr 6, count 8, freq 0.000048
+
+10100000
+lengthstr 8, count 2, freq 0.000012
+
+111111111111110
+lengthstr 15, count 4, freq 0.000024
+
+011110011
+lengthstr 9, count 2, freq 0.000012
+
+0101010101
+lengthstr 10, count 8, freq 0.000048
+
+011111110
+lengthstr 9, count 6, freq 0.000036
+
+0011111
+lengthstr 7, count 16, freq 0.000096
+
+000000110
+lengthstr 9, count 2, freq 0.000012
+
+00000010
+lengthstr 8, count 36, freq 0.000215
+
+111111100
+lengthstr 9, count 8, freq 0.000048
+
+111111111111111111111111111111101
+lengthstr 33, count 2, freq 0.000012
+
+1111
+lengthstr 4, count 1642, freq 0.009828
+
+0000000000000000
+lengthstr 16, count 2, freq 0.000012
+
+11011011011011101
+lengthstr 17, count 2, freq 0.000012
+
+110110110110111010
+lengthstr 18, count 2, freq 0.000012
+
+011101111
+lengthstr 9, count 2, freq 0.000012
+
+001111
+lengthstr 6, count 26, freq 0.000156
+
+11011011
+lengthstr 8, count 2, freq 0.000012
+
+011101
+lengthstr 6, count 10, freq 0.000060
+
+0100011
+lengthstr 7, count 2, freq 0.000012
+
+101001000001011
+lengthstr 15, count 2, freq 0.000012
+
+1111110001
+lengthstr 10, count 2, freq 0.000012
+
+10110111011
+lengthstr 11, count 2, freq 0.000012
+
+00000011
+lengthstr 8, count 38, freq 0.000227
+
+1101110111
+lengthstr 10, count 2, freq 0.000012
+
+000010
+lengthstr 6, count 24, freq 0.000144
+
+10001000
+lengthstr 8, count 2, freq 0.000012
+
+00111111111111111
+lengthstr 17, count 2, freq 0.000012
+
+110010010101010000
+lengthstr 18, count 2, freq 0.000012
+
+10000000000000000
+lengthstr 17, count 4, freq 0.000024
+
+011010
+lengthstr 6, count 10, freq 0.000060
+
+001001000000001110
+lengthstr 18, count 2, freq 0.000012
+
+001010011
+lengthstr 9, count 2, freq 0.000012
+
+1000001
+lengthstr 7, count 36, freq 0.000215
+
+0111111010
+lengthstr 10, count 2, freq 0.000012
+
+11111110
+lengthstr 8, count 62, freq 0.000371
+
+1010101010
+lengthstr 10, count 10, freq 0.000060
+
+00000100
+lengthstr 8, count 2, freq 0.000012
+
+010101101
+lengthstr 9, count 2, freq 0.000012
+
+1111110100
+lengthstr 10, count 6, freq 0.000036
+
+1000101
+lengthstr 7, count 2, freq 0.000012
+
+110110011111111110001111
+lengthstr 24, count 2, freq 0.000012
+
+01010101010100
+lengthstr 14, count 2, freq 0.000012
+
+100111
+lengthstr 6, count 6, freq 0.000036
+
+011111111
+lengthstr 9, count 14, freq 0.000084
+
+01010
+lengthstr 5, count 82, freq 0.000491
+
+11110111111101011111011101011100
+lengthstr 32, count 2, freq 0.000012
+
+010001
+lengthstr 6, count 12, freq 0.000072
+
+00111111111
+lengthstr 11, count 4, freq 0.000024
+
+10110100
+lengthstr 8, count 2, freq 0.000012
+
+101011101
+lengthstr 9, count 6, freq 0.000036
+
+11001010
+lengthstr 8, count 6, freq 0.000036
+
+001010010
+lengthstr 9, count 2, freq 0.000012
+
+01010100
+lengthstr 8, count 4, freq 0.000024
+
+11111100
+lengthstr 8, count 30, freq 0.000180
+
+01110111
+lengthstr 8, count 2, freq 0.000012
+
+10110011100
+lengthstr 11, count 2, freq 0.000012
+
+0101010101010101010101
+lengthstr 22, count 2, freq 0.000012
+
+110101111
+lengthstr 9, count 2, freq 0.000012
+
+1100
+lengthstr 4, count 320, freq 0.001915
+
+010110
+lengthstr 6, count 6, freq 0.000036
+
+010001001
+lengthstr 9, count 2, freq 0.000012
+
+101010010100
+lengthstr 12, count 2, freq 0.000012
+
+111101100001111
+lengthstr 15, count 2, freq 0.000012
+
+0000111111
+lengthstr 10, count 2, freq 0.000012
+
+1101111111
+lengthstr 10, count 2, freq 0.000012
+
+010110111110100
+lengthstr 15, count 2, freq 0.000012
+
+0001010001
+lengthstr 10, count 2, freq 0.000012
+
+01001100011
+lengthstr 11, count 2, freq 0.000012
+
+01010111101
+lengthstr 11, count 2, freq 0.000012
+
+000000000000000000000000
+lengthstr 24, count 8, freq 0.000048
+
+110110111111110001
+lengthstr 18, count 2, freq 0.000012
+
+001000101010101000010100
+lengthstr 24, count 2, freq 0.000012
+
+01111110
+lengthstr 8, count 2, freq 0.000012
+
+111110111
+lengthstr 9, count 2, freq 0.000012
+
+00001000000010100000100010100011
+lengthstr 32, count 2, freq 0.000012
+
+00110010
+lengthstr 8, count 2, freq 0.000012
+
+000001100
+lengthstr 9, count 2, freq 0.000012
+
+10000001
+lengthstr 8, count 2, freq 0.000012
+
+001010101010
+lengthstr 12, count 2, freq 0.000012
+
+0111011110
+lengthstr 10, count 2, freq 0.000012
+
+0101110111
+lengthstr 10, count 2, freq 0.000012
+
+11111111
+lengthstr 8, count 88, freq 0.000527
+
+0111110110
+lengthstr 10, count 2, freq 0.000012
+
+0111111011
+lengthstr 10, count 2, freq 0.000012
+
+0000100001
+lengthstr 10, count 2, freq 0.000012
+
+1110
+lengthstr 4, count 764, freq 0.004573
+
+110011010
+lengthstr 9, count 2, freq 0.000012
+
+101010000
+lengthstr 9, count 2, freq 0.000012
+
+11101111
+lengthstr 8, count 4, freq 0.000024
+
+1011110101
+lengthstr 10, count 4, freq 0.000024
+
+0010010
+lengthstr 7, count 2, freq 0.000012
+
+001010
+lengthstr 6, count 66, freq 0.000395
+
+11011010
+lengthstr 8, count 4, freq 0.000024
+
+11110111111101011111011101011101
+lengthstr 32, count 2, freq 0.000012
+
+0000001010
+lengthstr 10, count 6, freq 0.000036
+
+10101011110
+lengthstr 11, count 2, freq 0.000012
+
+100000100001
+lengthstr 12, count 2, freq 0.000012
+
+011111111111111111
+lengthstr 18, count 8, freq 0.000048
+
+00000000000000000
+lengthstr 17, count 4, freq 0.000024
+
+1111111110
+lengthstr 10, count 34, freq 0.000203
+
+0000001111
+lengthstr 10, count 2, freq 0.000012
+
+0010001
+lengthstr 7, count 2, freq 0.000012
+
+10000100000001010000010001010000
+lengthstr 32, count 2, freq 0.000012
+
+011111
+lengthstr 6, count 194, freq 0.001161
+
+111010
+lengthstr 6, count 14, freq 0.000084
+
+0010100010
+lengthstr 10, count 6, freq 0.000036
+
+011110010
+lengthstr 9, count 2, freq 0.000012
+
+100101
+lengthstr 6, count 2, freq 0.000012
+
+01111111111
+lengthstr 11, count 8, freq 0.000048
+
+1000
+lengthstr 4, count 1066, freq 0.006380
+
+011111011110
+lengthstr 12, count 2, freq 0.000012
+
+100001100
+lengthstr 9, count 2, freq 0.000012
+
+00011111100011
+lengthstr 14, count 2, freq 0.000012
+
+1000000000000000000
+lengthstr 19, count 4, freq 0.000024
+
+1101001010
+lengthstr 10, count 2, freq 0.000012
+
+1111111101
+lengthstr 10, count 2, freq 0.000012
+
+0011110010
+lengthstr 10, count 2, freq 0.000012
+
+110100100100100010
+lengthstr 18, count 2, freq 0.000012
+
+11001
+lengthstr 5, count 14, freq 0.000084
+
+0111101
+lengthstr 7, count 4, freq 0.000024
+
+0011111111111111111
+lengthstr 19, count 4, freq 0.000024
+
+11000000
+lengthstr 8, count 10, freq 0.000060
+
+1100001
+lengthstr 7, count 8, freq 0.000048
+
+0011000
+lengthstr 7, count 2, freq 0.000012
+
+010100100
+lengthstr 9, count 4, freq 0.000024
+
+1010100000
+lengthstr 10, count 2, freq 0.000012
+
+10111011110
+lengthstr 11, count 2, freq 0.000012
+
+010010001010101010000101
+lengthstr 24, count 2, freq 0.000012
+
+1111111100
+lengthstr 10, count 2, freq 0.000012
+
+1110100
+lengthstr 7, count 2, freq 0.000012
+
+00100010000
+lengthstr 11, count 2, freq 0.000012
+
+10111
+lengthstr 5, count 90, freq 0.000539
+
+01010101
+lengthstr 8, count 8, freq 0.000048
+
+111110
+lengthstr 6, count 158, freq 0.000946
+
+00010000
+lengthstr 8, count 4, freq 0.000024
+
+011011101010101011110100
+lengthstr 24, count 2, freq 0.000012
+
+1010110101
+lengthstr 10, count 2, freq 0.000012
+
+1000000010100
+lengthstr 13, count 2, freq 0.000012
+
+100
+lengthstr 3, count 1820, freq 0.010893
+
+01011111
+lengthstr 8, count 2, freq 0.000012
+
+1010111010
+lengthstr 10, count 2, freq 0.000012
+
+010001000
+lengthstr 9, count 4, freq 0.000024
+
+110010
+lengthstr 6, count 2, freq 0.000012
+
+1001110001
+lengthstr 10, count 2, freq 0.000012
+
+10111101010
+lengthstr 11, count 2, freq 0.000012
+
+111110011
+lengthstr 9, count 2, freq 0.000012
+
+00000000000000000000000000000001
+lengthstr 32, count 2, freq 0.000012
+
+100000100000
+lengthstr 12, count 2, freq 0.000012
+
+0111110
+lengthstr 7, count 36, freq 0.000215
+
+100000001
+lengthstr 9, count 6, freq 0.000036
+
+0000000000001
+lengthstr 13, count 2, freq 0.000012
+
+01001010
+lengthstr 8, count 8, freq 0.000048
+
+00000000000010
+lengthstr 14, count 2, freq 0.000012
+
+010101100
+lengthstr 9, count 2, freq 0.000012
+
+01111100011
+lengthstr 11, count 2, freq 0.000012
+
+110101
+lengthstr 6, count 76, freq 0.000455
+
+0111111111
+lengthstr 10, count 8, freq 0.000048
+
+100101001
+lengthstr 9, count 2, freq 0.000012
+
+101110111
+lengthstr 9, count 4, freq 0.000024
+
+1000000000000
+lengthstr 13, count 2, freq 0.000012
+
+0111010
+lengthstr 7, count 2, freq 0.000012
+
+100010010
+lengthstr 9, count 2, freq 0.000012
+
+010101001010
+lengthstr 12, count 4, freq 0.000024
+
+0101010101010101010100
+lengthstr 22, count 2, freq 0.000012
+
+111111101011
+lengthstr 12, count 2, freq 0.000012
+
+111111101
+lengthstr 9, count 6, freq 0.000036
+
+0101
+lengthstr 4, count 196, freq 0.001173
+
+111101100001110
+lengthstr 15, count 2, freq 0.000012
+
+0010000
+lengthstr 7, count 8, freq 0.000048
+
+1110001111
+lengthstr 10, count 2, freq 0.000012
+
+1101010
+lengthstr 7, count 14, freq 0.000084
+
+11000100
+lengthstr 8, count 2, freq 0.000012
+
+0100001101
+lengthstr 10, count 2, freq 0.000012
+
+0000000010
+lengthstr 10, count 10, freq 0.000060
+
+101100
+lengthstr 6, count 2, freq 0.000012
+
+10101010101
+lengthstr 11, count 4, freq 0.000024
+
+00000001
+lengthstr 8, count 70, freq 0.000419
+
+11110111
+lengthstr 8, count 2, freq 0.000012
+
+1010000100
+lengthstr 10, count 2, freq 0.000012
+
+00110011
+lengthstr 8, count 4, freq 0.000024
+
+0110001111
+lengthstr 10, count 2, freq 0.000012
+
+101001000000001110
+lengthstr 18, count 2, freq 0.000012
+
+00100000
+lengthstr 8, count 2, freq 0.000012
+
+111111111111100
+lengthstr 15, count 2, freq 0.000012
+
+010110111110101
+lengthstr 15, count 2, freq 0.000012
+
+0000000001
+lengthstr 10, count 34, freq 0.000203
+
+010100010
+lengthstr 9, count 6, freq 0.000036
+
+00000011100
+lengthstr 11, count 2, freq 0.000012
+
+000100
+lengthstr 6, count 8, freq 0.000048
+
+00000000000
+lengthstr 11, count 16, freq 0.000096
+
+1110101111
+lengthstr 10, count 2, freq 0.000012
+
+0101011
+lengthstr 7, count 30, freq 0.000180
+
+0001010000
+lengthstr 10, count 2, freq 0.000012
+
+11001100011
+lengthstr 11, count 2, freq 0.000012
+
+11110110110110011
+lengthstr 17, count 2, freq 0.000012
+
+11011111
+lengthstr 8, count 2, freq 0.000012
+
+01001011
+lengthstr 8, count 2, freq 0.000012
+
+010010001010101010000100
+lengthstr 24, count 2, freq 0.000012
+
+100011
+lengthstr 6, count 12, freq 0.000072
+
+101010101011
+lengthstr 12, count 2, freq 0.000012
+
+001011011011011101
+lengthstr 18, count 2, freq 0.000012
+
+0101101011
+lengthstr 10, count 4, freq 0.000024
+
+111110110
+lengthstr 9, count 2, freq 0.000012
+
+101001
+lengthstr 6, count 2, freq 0.000012
+
+010100100000101
+lengthstr 15, count 2, freq 0.000012
+
+110101001010
+lengthstr 12, count 4, freq 0.000024
+
+000000100000
+lengthstr 12, count 2, freq 0.000012
+
+010010000010101
+lengthstr 15, count 2, freq 0.000012
+
+00010000000101000001000101000101
+lengthstr 32, count 2, freq 0.000012
+
+110101110
+lengthstr 9, count 2, freq 0.000012
+
+101010
+lengthstr 6, count 108, freq 0.000646
+
+10010101
+lengthstr 8, count 2, freq 0.000012
+
+00110
+lengthstr 5, count 10, freq 0.000060
+
+100001101
+lengthstr 9, count 2, freq 0.000012
+
+101
+lengthstr 3, count 1128, freq 0.006751
+
+1000000000
+lengthstr 10, count 16, freq 0.000096
+
+10101010100
+lengthstr 11, count 4, freq 0.000024
+
+0101111111011
+lengthstr 13, count 2, freq 0.000012
+
+001100101
+lengthstr 9, count 2, freq 0.000012
+
+1111010
+lengthstr 7, count 4, freq 0.000024
+
+000000000000001
+lengthstr 15, count 6, freq 0.000036
+
+00001000010
+lengthstr 11, count 2, freq 0.000012
+
+01110011111100001111001100001100
+lengthstr 32, count 2, freq 0.000012
+
+001101101010101111
+lengthstr 18, count 2, freq 0.000012
+
+101010010010010001
+lengthstr 18, count 2, freq 0.000012
+
+10
+lengthstr 2, count 12208, freq 0.073067
+
+001000101010101000010101
+lengthstr 24, count 2, freq 0.000012
+
+001100
+lengthstr 6, count 4, freq 0.000024
+
+1000011
+lengthstr 7, count 6, freq 0.000036
+
+10110011
+lengthstr 8, count 2, freq 0.000012
+
+111111111111111111111111111111100
+lengthstr 33, count 2, freq 0.000012
+
+110110011111111110001110
+lengthstr 24, count 2, freq 0.000012
+
+101110
+lengthstr 6, count 10, freq 0.000060
+
+1001010001
+lengthstr 10, count 2, freq 0.000012
+
+000000
+lengthstr 6, count 312, freq 0.001867
+
+11101010111101
+lengthstr 14, count 2, freq 0.000012
+
+111111111111111111111100
+lengthstr 24, count 2, freq 0.000012
+
+1010111
+lengthstr 7, count 2, freq 0.000012
+
+111111011110
+lengthstr 12, count 2, freq 0.000012
+
+0000111110
+lengthstr 10, count 2, freq 0.000012
+
+11010100001
+lengthstr 11, count 2, freq 0.000012
+
+10111111111
+lengthstr 11, count 4, freq 0.000024
+
+0000101
+lengthstr 7, count 4, freq 0.000024
+
+0000001110
+lengthstr 10, count 2, freq 0.000012
+
+1010010100
+lengthstr 10, count 2, freq 0.000012
+
+000000000000000
+lengthstr 15, count 6, freq 0.000036
+
+11111111111100
+lengthstr 14, count 2, freq 0.000012
+
+111111010
+lengthstr 9, count 4, freq 0.000024
+
+10101011
+lengthstr 8, count 4, freq 0.000024
+
+10111111
+lengthstr 8, count 2, freq 0.000012
+
+11111111110
+lengthstr 11, count 10, freq 0.000060
+
+0000000011
+lengthstr 10, count 10, freq 0.000060
+
+111111111111111111
+lengthstr 18, count 12, freq 0.000072
+
+1010101011
+lengthstr 10, count 10, freq 0.000060
+
+0100
+lengthstr 4, count 280, freq 0.001676
+
+01011000
+lengthstr 8, count 2, freq 0.000012
+
+1110000000
+lengthstr 10, count 2, freq 0.000012
+
+01101010
+lengthstr 8, count 2, freq 0.000012
+
+01100
+lengthstr 5, count 12, freq 0.000072
+
+10001100000011110000110011110010
+lengthstr 32, count 2, freq 0.000012
+
+111010111010
+lengthstr 12, count 4, freq 0.000024
+
+11000100001
+lengthstr 11, count 2, freq 0.000012
+
+1110101110
+lengthstr 10, count 2, freq 0.000012
+
+00100011
+lengthstr 8, count 2, freq 0.000012
+
+110101101
+lengthstr 9, count 2, freq 0.000012
+
+00010
+lengthstr 5, count 70, freq 0.000419
+
+000000000001
+lengthstr 12, count 6, freq 0.000036
+
+000000000000000000000000000000001
+lengthstr 33, count 2, freq 0.000012
+
+0000000000
+lengthstr 10, count 50, freq 0.000299
+
+1011110100
+lengthstr 10, count 4, freq 0.000024
+
+010111
+lengthstr 6, count 18, freq 0.000108
+
+0101010110101
+lengthstr 13, count 2, freq 0.000012
+
+1001010
+lengthstr 7, count 6, freq 0.000036
+
+011101101
+lengthstr 9, count 2, freq 0.000012
+
+10000000000
+lengthstr 11, count 12, freq 0.000072
+
+111001
+lengthstr 6, count 2, freq 0.000012
+
+10100
+lengthstr 5, count 46, freq 0.000275
+
+11111111111
+lengthstr 11, count 18, freq 0.000108
+
+000100101010100001
+lengthstr 18, count 2, freq 0.000012
+
+00001000000010100000100010100010
+lengthstr 32, count 2, freq 0.000012
+
+0100000000000
+lengthstr 13, count 2, freq 0.000012
+
+00111
+lengthstr 5, count 94, freq 0.000563
+
+0000100
+lengthstr 7, count 2, freq 0.000012
+
+0000000100
+lengthstr 10, count 2, freq 0.000012
+
+01001
+lengthstr 5, count 18, freq 0.000108
+
+010000
+lengthstr 6, count 36, freq 0.000215
+
+010101011
+lengthstr 9, count 2, freq 0.000012
+
+10001001001001100
+lengthstr 17, count 2, freq 0.000012
+
+00000000010
+lengthstr 11, count 6, freq 0.000036
+
+0100001011
+lengthstr 10, count 4, freq 0.000024
+
+001001001001000101
+lengthstr 18, count 2, freq 0.000012
+
+00111111
+lengthstr 8, count 4, freq 0.000024
+
+00011
+lengthstr 5, count 70, freq 0.000419
+
+101011011011011101
+lengthstr 18, count 2, freq 0.000012
+
+1101111
+lengthstr 7, count 4, freq 0.000024
+
+101010101
+lengthstr 9, count 6, freq 0.000036
+
+110101101011
+lengthstr 12, count 2, freq 0.000012
+
+111111000
+lengthstr 9, count 2, freq 0.000012
+
+011011
+lengthstr 6, count 4, freq 0.000024
+
+00000000000000000000000000000000
+lengthstr 32, count 2, freq 0.000012
+
+11011010101
+lengthstr 11, count 2, freq 0.000012
+
+001010010101
+lengthstr 12, count 2, freq 0.000012
+
+001110
+lengthstr 6, count 10, freq 0.000060
+
+111110001
+lengthstr 9, count 2, freq 0.000012
+
+0011111110
+lengthstr 10, count 2, freq 0.000012
+
+00101101101101110
+lengthstr 17, count 2, freq 0.000012
+
+0001000000
+lengthstr 10, count 2, freq 0.000012
+
+000000000
+lengthstr 9, count 32, freq 0.000192
+
+0001010
+lengthstr 7, count 8, freq 0.000048
+
+00000000011
+lengthstr 11, count 6, freq 0.000036
+
+100000000000000000
+lengthstr 18, count 4, freq 0.000024
+
+1100010
+lengthstr 7, count 4, freq 0.000024
+
+10110111
+lengthstr 8, count 2, freq 0.000012
+
+1011110011
+lengthstr 10, count 2, freq 0.000012
+
+100010010010011000
+lengthstr 18, count 2, freq 0.000012
+
+000000100
+lengthstr 9, count 4, freq 0.000024
+
+10010000
+lengthstr 8, count 4, freq 0.000024
+
+01011
+lengthstr 5, count 50, freq 0.000299
+
+010111010
+lengthstr 9, count 2, freq 0.000012
+
+11011110
+lengthstr 8, count 4, freq 0.000024
+
+00000111
+lengthstr 8, count 4, freq 0.000024
+
+0
+lengthstr 1, count 41472, freq 0.248216
+
+0010110101
+lengthstr 10, count 2, freq 0.000012
+
+00100111
+lengthstr 8, count 2, freq 0.000012
+
+000001101
+lengthstr 9, count 2, freq 0.000012
+
+0101111111
+lengthstr 10, count 2, freq 0.000012
+
+01101111
+lengthstr 8, count 4, freq 0.000024
+
+101101011
+lengthstr 9, count 2, freq 0.000012
+
+1110111110
+lengthstr 10, count 2, freq 0.000012
+
+101110110
+lengthstr 9, count 2, freq 0.000012
+
+011010110
+lengthstr 9, count 2, freq 0.000012
+
+101010110101
+lengthstr 12, count 4, freq 0.000024
+
+010101010
+lengthstr 9, count 2, freq 0.000012
+
+0100000001011
+lengthstr 13, count 2, freq 0.000012
+
+111111110
+lengthstr 9, count 38, freq 0.000227
+
+0111110111
+lengthstr 10, count 2, freq 0.000012
+
+1000001111
+lengthstr 10, count 2, freq 0.000012
+
+0100000
+lengthstr 7, count 20, freq 0.000120
+
+0000000
+lengthstr 7, count 450, freq 0.002693
+
+0101010
+lengthstr 7, count 42, freq 0.000251
+
+0101011110
+lengthstr 10, count 2, freq 0.000012
+
+0011111111
+lengthstr 10, count 2, freq 0.000012
+
+1100000000
+lengthstr 10, count 2, freq 0.000012
+
+010110110110111010
+lengthstr 18, count 2, freq 0.000012
+
+100100101010100001
+lengthstr 18, count 2, freq 0.000012
+
+101111
+lengthstr 6, count 20, freq 0.000120
+
+010101101011
+lengthstr 12, count 2, freq 0.000012
+
+01101011
+lengthstr 8, count 4, freq 0.000024
+
+0100001
+lengthstr 7, count 14, freq 0.000084
+
+11111
+lengthstr 5, count 378, freq 0.002262
+
+101001000001010
+lengthstr 15, count 2, freq 0.000012
+
+111110000
+lengthstr 9, count 2, freq 0.000012
+
+0101111
+lengthstr 7, count 4, freq 0.000024
+
+111111111111111111111111
+lengthstr 24, count 4, freq 0.000024
+
+011111011111
+lengthstr 12, count 2, freq 0.000012
+
+000110
+lengthstr 6, count 2, freq 0.000012
+
+100001
+lengthstr 6, count 70, freq 0.000419
+
+01011110
+lengthstr 8, count 4, freq 0.000024
+
+11100000011100
+lengthstr 14, count 2, freq 0.000012
+
+101100111
+lengthstr 9, count 2, freq 0.000012
+
+111011010101011110
+lengthstr 18, count 2, freq 0.000012
+
+001010000
+lengthstr 9, count 2, freq 0.000012
+
+01111111
+lengthstr 8, count 30, freq 0.000180
+
+1100000000000
+lengthstr 13, count 2, freq 0.000012
+
+00101010101010
+lengthstr 14, count 2, freq 0.000012
+
+11111111111111111111111111111111
+lengthstr 32, count 4, freq 0.000024
+
+01000100
+lengthstr 8, count 2, freq 0.000012
+
+11111111111110
+lengthstr 14, count 4, freq 0.000024
+
+101111010
+lengthstr 9, count 2, freq 0.000012
+
+1111000001
+lengthstr 10, count 2, freq 0.000012
+
+11100
+lengthstr 5, count 60, freq 0.000359
+
+100010011
+lengthstr 9, count 2, freq 0.000012
+
+001010010010010001
+lengthstr 18, count 2, freq 0.000012
+
+0101001010
+lengthstr 10, count 2, freq 0.000012
+
+00101
+lengthstr 5, count 62, freq 0.000371
+
+00101010000
+lengthstr 11, count 2, freq 0.000012
+
+10101010
+lengthstr 8, count 8, freq 0.000048
+
+111101101101100111
+lengthstr 18, count 2, freq 0.000012
+
+11101010111100
+lengthstr 14, count 2, freq 0.000012
+
+0001111110
+lengthstr 10, count 2, freq 0.000012
+
+01010101010101
+lengthstr 14, count 2, freq 0.000012
+
+10101101101101110
+lengthstr 17, count 2, freq 0.000012
+
+111101
+lengthstr 6, count 14, freq 0.000084
+
+1111110101
+lengthstr 10, count 6, freq 0.000036
+
+00000000001
+lengthstr 11, count 4, freq 0.000024
+
+11111111111111
+lengthstr 14, count 4, freq 0.000024
+
+001000
+lengthstr 6, count 12, freq 0.000072
+
+111111111111
+lengthstr 12, count 12, freq 0.000072
+
+0001011
+lengthstr 7, count 2, freq 0.000012
+
+101101110101010101111010
+lengthstr 24, count 2, freq 0.000012
+
+1000010
+lengthstr 7, count 6, freq 0.000036
+
+0100010
+lengthstr 7, count 2, freq 0.000012
+
+10000000
+lengthstr 8, count 22, freq 0.000132
+
+00010101000010
+lengthstr 14, count 2, freq 0.000012
+
+0000
+lengthstr 4, count 1678, freq 0.010043
+
+1111101010
+lengthstr 10, count 2, freq 0.000012
+
+011100
+lengthstr 6, count 18, freq 0.000108
+
+0001
+lengthstr 4, count 786, freq 0.004704
+
+1010101
+lengthstr 7, count 48, freq 0.000287
+
+1101011101
+lengthstr 10, count 6, freq 0.000036
+
+000000000000
+lengthstr 12, count 16, freq 0.000096
+
+0101010100
+lengthstr 10, count 8, freq 0.000048
+
+110000000000
+lengthstr 12, count 2, freq 0.000012
+
+00100
+lengthstr 5, count 20, freq 0.000120
+
+010101001
+lengthstr 9, count 2, freq 0.000012
+
+11000
+lengthstr 5, count 96, freq 0.000575
+
+11111101
+lengthstr 8, count 30, freq 0.000180
+
+0110101
+lengthstr 7, count 6, freq 0.000036
+
+00100010
+lengthstr 8, count 2, freq 0.000012
+
+110110
+lengthstr 6, count 4, freq 0.000024
+
+0111101011
+lengthstr 10, count 2, freq 0.000012
+
+1111111111111
+lengthstr 13, count 6, freq 0.000036
+
+1011111
+lengthstr 7, count 18, freq 0.000108
+
+110
+lengthstr 3, count 2046, freq 0.012246
+
+111111111111111
+lengthstr 15, count 4, freq 0.000024
+
+11010111101
+lengthstr 11, count 2, freq 0.000012
+
+1000001000
+lengthstr 10, count 2, freq 0.000012
+
+110101101010
+lengthstr 12, count 2, freq 0.000012
+
+01110111101
+lengthstr 11, count 2, freq 0.000012
+
+011111111111
+lengthstr 12, count 10, freq 0.000060
+
+11101
+lengthstr 5, count 58, freq 0.000347
+
+10100001
+lengthstr 8, count 4, freq 0.000024
+
+1
+lengthstr 1, count 41472, freq 0.248216
+
+1010100
+lengthstr 7, count 36, freq 0.000215
+
+0111111
+lengthstr 7, count 90, freq 0.000539
+
+00000000000000
+lengthstr 14, count 6, freq 0.000036
+
+1100001101
+lengthstr 10, count 2, freq 0.000012
+
+1110001110
+lengthstr 10, count 2, freq 0.000012
+
+010000101
+lengthstr 9, count 2, freq 0.000012
+
+111010101111010
+lengthstr 15, count 2, freq 0.000012
+
+10010001
+lengthstr 8, count 2, freq 0.000012
+
+00110101
+lengthstr 8, count 6, freq 0.000036
+
+10100111
+lengthstr 8, count 2, freq 0.000012
+
+0000011
+lengthstr 7, count 36, freq 0.000215
+
+111100
+lengthstr 6, count 26, freq 0.000156
+
+11101110
+lengthstr 8, count 2, freq 0.000012
+
+00101000010
+lengthstr 11, count 2, freq 0.000012
+
+100010
+lengthstr 6, count 12, freq 0.000072
+
+1111101011
+lengthstr 10, count 2, freq 0.000012
+
+01000
+lengthstr 5, count 96, freq 0.000575
+
+000010011110000
+lengthstr 15, count 2, freq 0.000012
+
+1100111
+lengthstr 7, count 2, freq 0.000012
+
+00100001
+lengthstr 8, count 4, freq 0.000024
+
+0011100
+lengthstr 7, count 4, freq 0.000024
+
+01010110
+lengthstr 8, count 2, freq 0.000012
+
+11110
+lengthstr 5, count 226, freq 0.001353
+
+010100100100100010
+lengthstr 18, count 2, freq 0.000012
+
+10111101011
+lengthstr 11, count 2, freq 0.000012
+
+1011
+lengthstr 4, count 248, freq 0.001484
+
+111010101111011
+lengthstr 15, count 2, freq 0.000012
+
+010100100000100
+lengthstr 15, count 2, freq 0.000012
+
+00010101000011
+lengthstr 14, count 2, freq 0.000012
+
+1111011
+lengthstr 7, count 2, freq 0.000012
+
+101010010101
+lengthstr 12, count 2, freq 0.000012
+
+111110010
+lengthstr 9, count 2, freq 0.000012
+
+1011110
+lengthstr 7, count 12, freq 0.000072
+
+1010111011
+lengthstr 10, count 2, freq 0.000012
+
+11001000
+lengthstr 8, count 2, freq 0.000012
+
+10111111111111111
+lengthstr 17, count 2, freq 0.000012
+
+011
+lengthstr 3, count 1752, freq 0.010486
+
+1011111111111111111
+lengthstr 19, count 4, freq 0.000024
+
+0111101010
+lengthstr 10, count 2, freq 0.000012
+
+101001001001000101
+lengthstr 18, count 2, freq 0.000012
+
+101011
+lengthstr 6, count 46, freq 0.000275
+
+1101011
+lengthstr 7, count 2, freq 0.000012
+
+100101000
+lengthstr 9, count 2, freq 0.000012
+
+1111111
+lengthstr 7, count 448, freq 0.002681
+
+101000
+lengthstr 6, count 14, freq 0.000084
+
+00100100100100010
+lengthstr 17, count 2, freq 0.000012
+
+111010111011
+lengthstr 12, count 4, freq 0.000024
+
+00100101
+lengthstr 8, count 2, freq 0.000012
+
+10010100
+lengthstr 8, count 4, freq 0.000024
+
+101010001
+lengthstr 9, count 2, freq 0.000012
+
+111111
+lengthstr 6, count 268, freq 0.001604
+
+001001100000000001110000
+lengthstr 24, count 2, freq 0.000012
+
+1010000000101
+lengthstr 13, count 2, freq 0.000012
+
+0101000
+lengthstr 7, count 2, freq 0.000012
+
+001011
+lengthstr 6, count 8, freq 0.000048
+
+1110000001
+lengthstr 10, count 2, freq 0.000012
+
+010000000000
+lengthstr 12, count 2, freq 0.000012
+
+1101101011
+lengthstr 10, count 4, freq 0.000024
+
+000101
+lengthstr 6, count 12, freq 0.000072
+
+10000011100
+lengthstr 11, count 2, freq 0.000012
+
+10001000010
+lengthstr 11, count 2, freq 0.000012
+
+011011101010101011110101
+lengthstr 24, count 2, freq 0.000012
+
+1010100001
+lengthstr 10, count 2, freq 0.000012
+
+101101101010101111
+lengthstr 18, count 2, freq 0.000012
+
+0100001010
+lengthstr 10, count 4, freq 0.000024
+
+0110001110
+lengthstr 10, count 2, freq 0.000012
+
+10010
+lengthstr 5, count 20, freq 0.000120
+
+0100000001010
+lengthstr 13, count 2, freq 0.000012
+
+01110011111100001111001100001101
+lengthstr 32, count 2, freq 0.000012
+
+01111111111111111
+lengthstr 17, count 4, freq 0.000024
+
+0011010
+lengthstr 7, count 2, freq 0.000012
+
+1011111110101
+lengthstr 13, count 2, freq 0.000012
+
+011011010101011110
+lengthstr 18, count 2, freq 0.000012
+
+11011000
+lengthstr 8, count 2, freq 0.000012
+
+00101001001001000
+lengthstr 17, count 2, freq 0.000012
+
+1101011100
+lengthstr 10, count 6, freq 0.000036
+
+01011010
+lengthstr 8, count 2, freq 0.000012
+
+000
+lengthstr 3, count 2786, freq 0.016675
+
+11001101
+lengthstr 8, count 2, freq 0.000012
+
+0101101
+lengthstr 7, count 2, freq 0.000012
+
+0110
+lengthstr 4, count 196, freq 0.001173
+
+1000000101
+lengthstr 10, count 2, freq 0.000012
+
+111111111
+lengthstr 9, count 42, freq 0.000251
+
+0110101110
+lengthstr 10, count 2, freq 0.000012
+
+00
+lengthstr 2, count 11992, freq 0.071774
+
+10100100100100010
+lengthstr 17, count 2, freq 0.000012
+
+010101011010
+lengthstr 12, count 2, freq 0.000012
+
+001100111
+lengthstr 9, count 2, freq 0.000012
+
+00000000000011
+lengthstr 14, count 2, freq 0.000012
+
+0100001100
+lengthstr 10, count 2, freq 0.000012
+
+1010000101
+lengthstr 10, count 2, freq 0.000012
+
+1001010000
+lengthstr 10, count 2, freq 0.000012
+
+10100010000
+lengthstr 11, count 2, freq 0.000012
+
+1100000
+lengthstr 7, count 14, freq 0.000084
+
+1111000000
+lengthstr 10, count 2, freq 0.000012
+
+000010011110001
+lengthstr 15, count 2, freq 0.000012
+
+1011101
+lengthstr 7, count 2, freq 0.000012
+
+1001110000
+lengthstr 10, count 2, freq 0.000012
+
+101011011111011
+lengthstr 15, count 2, freq 0.000012
+
+0101111011
+lengthstr 10, count 2, freq 0.000012
+
+00010001
+lengthstr 8, count 2, freq 0.000012
+
+00010100
+lengthstr 8, count 4, freq 0.000024
+
+00110111
+lengthstr 8, count 2, freq 0.000012
+
+01110
+lengthstr 5, count 92, freq 0.000551
+
+10110101
+lengthstr 8, count 8, freq 0.000048
+
+0001110000
+lengthstr 10, count 2, freq 0.000012
+
+010
+lengthstr 3, count 1076, freq 0.006440
+
+1110000001110
+lengthstr 13, count 2, freq 0.000012
+
+100000
+lengthstr 6, count 220, freq 0.001317
+
+001001100000000001110001
+lengthstr 24, count 2, freq 0.000012
+
+00001010100000
+lengthstr 14, count 2, freq 0.000012
+
+10011
+lengthstr 5, count 16, freq 0.000096
+
+000000000000000000000001
+lengthstr 24, count 6, freq 0.000036
+
+011110
+lengthstr 6, count 74, freq 0.000443
+
+1111110
+lengthstr 7, count 394, freq 0.002358
+
+11010010010010001
+lengthstr 17, count 2, freq 0.000012
+
+010111011
+lengthstr 9, count 2, freq 0.000012
+
+01110110110110011
+lengthstr 17, count 2, freq 0.000012
+
+111111111111101
+lengthstr 15, count 2, freq 0.000012
+
+101101010
+lengthstr 9, count 2, freq 0.000012
+
+010100
+lengthstr 6, count 42, freq 0.000251
+
+0010100011
+lengthstr 10, count 6, freq 0.000036
+
+010011000
+lengthstr 9, count 2, freq 0.000012
+
+11011
+lengthstr 5, count 30, freq 0.000180
+
+110101100
+lengthstr 9, count 2, freq 0.000012
+
+1010000000100
+lengthstr 13, count 2, freq 0.000012
+
+0011
+lengthstr 4, count 318, freq 0.001903
+
+1101111011
+lengthstr 10, count 2, freq 0.000012
+
+1111011110
+lengthstr 10, count 2, freq 0.000012
+
+101010110
+lengthstr 9, count 2, freq 0.000012
+
+1110000001111
+lengthstr 13, count 2, freq 0.000012
+
+1111111010
+lengthstr 10, count 2, freq 0.000012
+
+1011000
+lengthstr 7, count 2, freq 0.000012
+
+1111111011
+lengthstr 10, count 2, freq 0.000012
+
+1010
+lengthstr 4, count 200, freq 0.001197
+
+001010110101
+lengthstr 12, count 4, freq 0.000024
+
+111111001
+lengthstr 9, count 2, freq 0.000012
+
+000000010
+lengthstr 9, count 6, freq 0.000036
+
+11111111111111111111111111111110
+lengthstr 32, count 4, freq 0.000024
+
+01011011011011101
+lengthstr 17, count 2, freq 0.000012
+
+0011110011
+lengthstr 10, count 2, freq 0.000012
+
+0100000000
+lengthstr 10, count 2, freq 0.000012
+
+110000
+lengthstr 6, count 38, freq 0.000227
+
+1001
+lengthstr 4, count 192, freq 0.001149
+
+0000000000000
+lengthstr 13, count 4, freq 0.000024
+
+1010001
+lengthstr 7, count 2, freq 0.000012
+
+000111
+lengthstr 6, count 8, freq 0.000048
+
+1000000010101
+lengthstr 13, count 2, freq 0.000012
+
+100100
+lengthstr 6, count 4, freq 0.000024
+
+010000100
+lengthstr 9, count 2, freq 0.000012
+
+0010000101
+lengthstr 10, count 2, freq 0.000012
+
+001111111
+lengthstr 9, count 2, freq 0.000012
+
+101011011111010
+lengthstr 15, count 2, freq 0.000012
+
+110011000
+lengthstr 9, count 2, freq 0.000012
+
+000001000
+lengthstr 9, count 2, freq 0.000012
+
+01001100
+lengthstr 8, count 2, freq 0.000012
+
+01000100001
+lengthstr 11, count 2, freq 0.000012
+
+00000000000001
+lengthstr 14, count 6, freq 0.000036
+
+1000001001
+lengthstr 10, count 2, freq 0.000012
+
+0100111
+lengthstr 7, count 2, freq 0.000012
+
+0111111111111
+lengthstr 13, count 2, freq 0.000012
+
+0010101
+lengthstr 7, count 14, freq 0.000084
+
+010101110
+lengthstr 9, count 2, freq 0.000012
+
+0000000000000000000
+lengthstr 19, count 4, freq 0.000024
+
+01101110
+lengthstr 8, count 2, freq 0.000012
+
+10000
+lengthstr 5, count 238, freq 0.001424
+
+00001000
+lengthstr 8, count 2, freq 0.000012
+
+111111111111111110
+lengthstr 18, count 4, freq 0.000024
+
+100000000000
+lengthstr 12, count 10, freq 0.000060
+
+0101001
+lengthstr 7, count 2, freq 0.000012
+
+1111111111110
+lengthstr 13, count 4, freq 0.000024
+
+11101010
+lengthstr 8, count 2, freq 0.000012
+
+000000111
+lengthstr 9, count 2, freq 0.000012
+
+0000000000000001
+lengthstr 16, count 2, freq 0.000012
+
+101010111
+lengthstr 9, count 2, freq 0.000012
+
+1011111110100
+lengthstr 13, count 2, freq 0.000012
+
+010010000010100
+lengthstr 15, count 2, freq 0.000012
+
+101011100
+lengthstr 9, count 6, freq 0.000036
+
+10000100000001010000010001010001
+lengthstr 32, count 2, freq 0.000012
+
+001100100
+lengthstr 9, count 2, freq 0.000012
+
+000000001
+lengthstr 9, count 28, freq 0.000168
+
+11011101
+lengthstr 8, count 2, freq 0.000012
+
+001001001010101000
+lengthstr 18, count 2, freq 0.000012
+
+11110101011111
+lengthstr 14, count 2, freq 0.000012
+
+00000
+lengthstr 5, count 354, freq 0.002119
+
+110001000
+lengthstr 9, count 2, freq 0.000012
+
+0101111111010
+lengthstr 13, count 2, freq 0.000012
+
+111111011
+lengthstr 9, count 4, freq 0.000024
+
+010101111
+lengthstr 9, count 2, freq 0.000012
+
+101010011
+lengthstr 9, count 2, freq 0.000012
+
+000001
+lengthstr 6, count 164, freq 0.000982
+
+01
+lengthstr 2, count 12212, freq 0.073091
+
+1010000
+lengthstr 7, count 8, freq 0.000048
+
+10101010101010
+lengthstr 14, count 2, freq 0.000012
+
+0110101111
+lengthstr 10, count 2, freq 0.000012
+
+1010110
+lengthstr 7, count 4, freq 0.000024
+
+0111110001
+lengthstr 10, count 2, freq 0.000012
+
+1100011
+lengthstr 7, count 4, freq 0.000024
+
+1110111111
+lengthstr 10, count 2, freq 0.000012
+
+001001
+lengthstr 6, count 4, freq 0.000024
+
+0010010100
+lengthstr 10, count 2, freq 0.000012
+
+0001111110001
+lengthstr 13, count 2, freq 0.000012
+
+11001100
+lengthstr 8, count 4, freq 0.000024
+
+1000100001
+lengthstr 10, count 2, freq 0.000012
+
+01111011111110101111101110101111
+lengthstr 32, count 2, freq 0.000012
+
+01101
+lengthstr 5, count 14, freq 0.000084
+
+111111111111111111111110
+lengthstr 24, count 4, freq 0.000024
+
+11111100011
+lengthstr 11, count 2, freq 0.000012
+
+010101101010
+lengthstr 12, count 2, freq 0.000012
+
+1111111111
+lengthstr 10, count 42, freq 0.000251
+
+111111111111111111111101
+lengthstr 24, count 2, freq 0.000012
+
+100000000000000000000000
+lengthstr 24, count 2, freq 0.000012
+
+001010010100
+lengthstr 12, count 2, freq 0.000012
+
+001
+lengthstr 3, count 2102, freq 0.012581
+
+11110111101
+lengthstr 11, count 2, freq 0.000012
+
+00101011110
+lengthstr 11, count 2, freq 0.000012
+
+11111111111101
+lengthstr 14, count 2, freq 0.000012
+
+0001111110000
+lengthstr 13, count 2, freq 0.000012
+
+0010
+lengthstr 4, count 282, freq 0.001688
+
+110000000
+lengthstr 9, count 6, freq 0.000036
+
+0000010
+lengthstr 7, count 38, freq 0.000227
+
+101010010
+lengthstr 9, count 2, freq 0.000012
+
+10110
+lengthstr 5, count 12, freq 0.000072
+
+0111100
+lengthstr 7, count 4, freq 0.000024
+
+10001
+lengthstr 5, count 92, freq 0.000551
+
+0000001
+lengthstr 7, count 398, freq 0.002382
+
+01010010010010001
+lengthstr 17, count 2, freq 0.000012
+
+10001100000011110000110011110011
+lengthstr 32, count 2, freq 0.000012
+
+1111100
+lengthstr 7, count 32, freq 0.000192
+
+1000001110
+lengthstr 10, count 2, freq 0.000012
+
+00000110
+lengthstr 8, count 2, freq 0.000012
+
+0111110000
+lengthstr 10, count 2, freq 0.000012
+
+1011100
+lengthstr 7, count 2, freq 0.000012
+
+010101
+lengthstr 6, count 116, freq 0.000694
+
+101010100
+lengthstr 9, count 6, freq 0.000036
+
+101101110101010101111011
+lengthstr 24, count 2, freq 0.000012
+
+1111101
+lengthstr 7, count 32, freq 0.000192
+
+011010111
+lengthstr 9, count 2, freq 0.000012
+
+111111011111
+lengthstr 12, count 2, freq 0.000012
+
+01001000
+lengthstr 8, count 2, freq 0.000012
+
+1100001100
+lengthstr 10, count 2, freq 0.000012
+
+01011010101
+lengthstr 11, count 2, freq 0.000012
+
+000010000
+lengthstr 9, count 2, freq 0.000012
+
+0001110001
+lengthstr 10, count 2, freq 0.000012
+
+110111
+lengthstr 6, count 16, freq 0.000096
+
+0111
+lengthstr 4, count 1062, freq 0.006356
+
+11010110101
+lengthstr 11, count 2, freq 0.000012
+
+00001001001001100
+lengthstr 17, count 2, freq 0.000012
+
+001010001
+lengthstr 9, count 2, freq 0.000012
+
+110001
+lengthstr 6, count 12, freq 0.000072
+
+01010100001
+lengthstr 11, count 2, freq 0.000012
+
+11101011
+lengthstr 8, count 4, freq 0.000024
+
+010100101
+lengthstr 9, count 4, freq 0.000024
+
+100100010101010100001011
+lengthstr 24, count 2, freq 0.000012
+
+00010000000101000001000101000100
+lengthstr 32, count 2, freq 0.000012
+
+00011111100010
+lengthstr 14, count 2, freq 0.000012
+
+101001001010101000
+lengthstr 18, count 2, freq 0.000012
+
+11110101011110
+lengthstr 14, count 2, freq 0.000012
+
+11100000011101
+lengthstr 14, count 2, freq 0.000012
+
+110101011010
+lengthstr 12, count 2, freq 0.000012
+
+010010010101010000
+lengthstr 18, count 2, freq 0.000012
+
+1010010
+lengthstr 7, count 2, freq 0.000012
+
+1000000
+lengthstr 7, count 86, freq 0.000515
+
+00010101
+lengthstr 8, count 2, freq 0.000012
+
+1101
+lengthstr 4, count 254, freq 0.001520
+
+000001001
+lengthstr 9, count 2, freq 0.000012
+
+01111
+lengthstr 5, count 246, freq 0.001472
+
+10101010000
+lengthstr 11, count 2, freq 0.000012
+
+0101011111
+lengthstr 10, count 2, freq 0.000012
+
+110100
+lengthstr 6, count 8, freq 0.000048
+
+0001000001
+lengthstr 10, count 2, freq 0.000012
+
+010101000
+lengthstr 9, count 2, freq 0.000012
+
+000000101
+lengthstr 9, count 4, freq 0.000024
+
+100100010101010100001010
+lengthstr 24, count 2, freq 0.000012
+
+01010110101
+lengthstr 11, count 2, freq 0.000012
+
+0001111111
+lengthstr 10, count 2, freq 0.000012
+
+1101010110101
+lengthstr 13, count 2, freq 0.000012
+
+010011
+lengthstr 6, count 2, freq 0.000012
+
+00100100
+lengthstr 8, count 2, freq 0.000012
+
+010100011
+lengthstr 9, count 6, freq 0.000036
+
+01111011111110101111101110101110
+lengthstr 32, count 2, freq 0.000012
+
+000000100001
+lengthstr 12, count 2, freq 0.000012
+
+1111110000
+lengthstr 10, count 2, freq 0.000012
+
+000100101
+lengthstr 9, count 2, freq 0.000012
+
+01000000
+lengthstr 8, count 12, freq 0.000072
+
+0000001011
+lengthstr 10, count 6, freq 0.000036
+
+10111011
+lengthstr 8, count 2, freq 0.000012
+
+10101001001001000
+lengthstr 17, count 2, freq 0.000012
+
+00001010100001
+lengthstr 14, count 2, freq 0.000012
+
+111111111110
+lengthstr 12, count 2, freq 0.000012
+
+011101101101100111
+lengthstr 18, count 2, freq 0.000012
+
+000000000000000000000000000000000
+lengthstr 33, count 2, freq 0.000012
+
+11111111111111111
+lengthstr 17, count 4, freq 0.000024
+
+0101111010
+lengthstr 10, count 2, freq 0.000012
+
+11
+lengthstr 2, count 12428, freq 0.074384
+
+10101000010
+lengthstr 11, count 2, freq 0.000012
+
+000011
+lengthstr 6, count 24, freq 0.000144
+
+000000011
+lengthstr 9, count 6, freq 0.000036
+
+1011010
+lengthstr 7, count 2, freq 0.000012
+
+1101111010
+lengthstr 10, count 2, freq 0.000012
+
+101010101010
+lengthstr 12, count 4, freq 0.000024
+
+00000000
+lengthstr 8, count 94, freq 0.000563
+
+1000000100
+lengthstr 10, count 2, freq 0.000012
+
+0011110
+lengthstr 7, count 10, freq 0.000060
+
+00111011
+lengthstr 8, count 2, freq 0.000012
+
+111101111
+lengthstr 9, count 2, freq 0.000012
+
+1100101
+lengthstr 7, count 2, freq 0.000012
+
+010110111111110001
+lengthstr 18, count 2, freq 0.000012
+
+1110101
+lengthstr 7, count 8, freq 0.000048
+
+11010101
+lengthstr 8, count 6, freq 0.000036
+
+011000
+lengthstr 6, count 6, freq 0.000036
+
+001101
+lengthstr 6, count 2, freq 0.000012
+
+110011011
+lengthstr 9, count 2, freq 0.000012
+
+0100101
+lengthstr 7, count 2, freq 0.000012
+
+000010010010011000
+lengthstr 18, count 2, freq 0.000012
+
+111
+lengthstr 3, count 2714, freq 0.016244
+
+000000000000000000
+lengthstr 18, count 4, freq 0.000024
+
+00111011110
+lengthstr 11, count 2, freq 0.000012
+
+100000000
+lengthstr 9, count 10, freq 0.000060
+
+done

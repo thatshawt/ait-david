@@ -9,7 +9,29 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <gmp.h>
+
 int main(){
+    mpz_t one,two,sum;
+
+    mpz_init(one);
+    mpz_init(two);
+    mpz_init(sum);
+
+    mpz_set_ui(one, 1);
+    mpz_set_ui(two, 2);
+    mpz_set_ui(sum, 0);
+
+    mpz_add(sum, one, two);
+
+    mpz_out_str(stdout, 10, sum);
+
+    mpz_clear(one);
+    mpz_clear(two);
+    mpz_clear(sum);
+
+    return 0;
+
     printf("\nhello turing\n\n");
 
     printf("main pthread_self() %d\n", pthread_self());
@@ -41,7 +63,7 @@ int main(){
         .length=tm_max_num_of_machines(states)+1,
         .states=states,
         .max_steps=300,
-        .randomIterations=100,
+        .randomIterations=10,
         .start=0,
         .workthreads=4
     };

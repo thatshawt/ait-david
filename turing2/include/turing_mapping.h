@@ -4,9 +4,6 @@
 #include "turing_sim.h"
 #include <stdbool.h>
 
-//TODO eventually replace this with the arbritrary precision thing...
-typedef uint64_t tm_index_t;
-
 void tm_load_table_by_index(tm_t* tm, tm_index_t index);
 
 int tm_get_entry_digit(int states, tm_transition_table_entry_t* entry);
@@ -29,6 +26,6 @@ bool tm_next_table_lexico(tm_t* tm);
 int tm_num_per_entry(int states);
 int tm_num_table_entries(int states);
 tm_index_t tm_max_num_of_machines(int states);
-uint64_t tm_machines_considered_for_full_enumeration(int states);
+tm_index_t tm_machines_considered_for_full_enumeration(int states);
 
 #endif
