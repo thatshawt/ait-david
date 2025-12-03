@@ -29,7 +29,7 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS)) -L${LIBGMP_DIR}/lib
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
 CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread -lgmp #-fsanitize=address
-LDFLAGS := -L${LIBGMP_DIR}/lib -lgmp#-fsanitize=address
+LDFLAGS := -L${LIBGMP_DIR}/lib -lgmp #-fsanitize=address
 
 # do both executable and shared library
 all: $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/$(TARGET_LIB)
