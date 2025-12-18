@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <gmp.h>
+
 #define TM_MAX_STATES 10
 #define TM_TAPE_SIZE 40000
 #define TM_SYMBOLS 2
@@ -69,14 +71,14 @@ void tm_set_entry(tm_t* tm, int symbol, int state, tm_transition_table_entry_t* 
 
 void tm_step(tm_t* tm);
 
-//TODO eventually replace this with the arbritrary precision thing...
-typedef uint64_t tm_index_t;
+// just replace it all bruh idk
+// typedef mpz_t tm_index_t;
 
 typedef struct{
     bool trivialNonhaltingCheck;
-    tm_index_t max_steps;
+    mpz_t max_steps;
 } tm_run_opt_t;
-tm_index_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt);
+void tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt, mpz_t* result);
 
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol);
 void tm_fill_tape_with_random(tm_t* tm, int seed);

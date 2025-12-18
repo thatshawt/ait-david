@@ -8,9 +8,8 @@
 
 typedef struct{
     tape_slice_t slice;
-    tm_index_t count; //TODO make this an arbtritrary precision integer with the library
+    mpz_t count;
 } tm_slice_counter_t;
-
 
 // merge b into a.
 void tm_slicecounter_hashmap_merge(struct hashmap* mapA, struct hashmap* mapB);
@@ -18,33 +17,36 @@ void tm_slicecounter_hashmap_free(void *item);
 uint64_t tm_slicecounter_hashmap_hash(const void *item, uint64_t seed0, uint64_t seed1);
 int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata);
 
-void tm_print_enumerate_performance_stats(int states, int max_steps);
+void tm_print_enumerate_performance_stats(int states, mpz_t max_steps);
 
 typedef struct{
     int states;
-    tm_index_t start;
-    int length;
-    tm_index_t max_steps;
-    int randomIterations;
+    mpz_t start;
+    mpz_t length;
+    mpz_t max_steps;
+    mpz_t randomIterations;
     int workthreads;
 } enumerate_job_opt_t;
+
+void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt);
+void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt);
 
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt);
 
 void tm_enumerate_index_length_generic(
     int states,
-    tm_index_t start,
-    int length,
-    tm_index_t max_steps,
+    mpz_t start,
+    mpz_t length,
+    mpz_t max_steps,
     void(*halt_receiver)(tm_t* tm),
     void(*before_stepping)(tm_t* tm)
 );
 
 void tm_enumerate_index_length_with_hashmap(
     int states,
-    tm_index_t start,
-    int length,
-    tm_index_t max_steps,
+    mpz_t start,
+    mpz_t length,
+    mpz_t max_steps,
     struct hashmap* map,
     void(*before_stepping)(tm_t* tm)
 );

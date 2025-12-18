@@ -14,23 +14,17 @@
 int main(){
     mpz_t one,two,sum;
 
-    mpz_init(one);
-    mpz_init(two);
-    mpz_init(sum);
+    mpz_init_set_ui(one, 10);
+    mpz_init_set_ui(two, 7);
+    mpz_init_set_ui(sum, 0);
 
-    mpz_set_ui(one, 1);
-    mpz_set_ui(two, 2);
-    mpz_set_ui(sum, 0);
+    mpz_fdiv_q(sum, one, two);
 
-    mpz_add(sum, one, two);
+    gmp_printf("%Zd / %Zd = %Zd\n", one, two, sum);
 
-    mpz_out_str(stdout, 10, sum);
+    mpz_clears(one,two,sum,NULL);
 
-    mpz_clear(one);
-    mpz_clear(two);
-    mpz_clear(sum);
-
-    return 0;
+    // return 0;
 
     printf("\nhello turing\n\n");
 
@@ -42,55 +36,73 @@ int main(){
 
     turing_threading_self_init();
 
-    // printf("did init?");
-
-    // printf("self turing thread id %d", turing_threading_self_index());
-
     test_opt_t testOptions;
     testOptions.onlyPrintFailingTests = false;
-
     test_all(&testOptions);
 
-    // return 1;
+    // return 0;
 
     // tm_print_enumerate_performance_stats(2,500);
 
     const int selfid = turing_threading_self_index();
     tm_srand(selfid, 1337);
 
-    int states = 2;
+    int states = 1;
     enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
-        .length=tm_max_num_of_machines(states)+1,
+        // .length=tm_max_num_of_machines(states)+1,
+        // .max_steps=300,
+        // .randomIterations=10,
+        // .start=0,
         .states=states,
-        .max_steps=300,
-        .randomIterations=10,
-        .start=0,
         .workthreads=4
     };
+    tm_enumerate_job_opt_init(&enumerateOpt);
+
+    tm_max_num_of_machines(states, enumerateOpt.length);
+    mpz_add_ui(enumerateOpt.length, enumerateOpt.length, 1);
+    mpz_set_ui(enumerateOpt.max_steps, 300);
+    mpz_set_ui(enumerateOpt.randomIterations, 1000);
+    mpz_set_ui(enumerateOpt.start, 0);
 
     struct hashmap* slice_count_map = do_tm_enumerate_job(&enumerateOpt);
 
+    tm_enumerate_job_opt_destroy(&enumerateOpt);
+
     size_t iterA = 0;
     void *itemA;
-    uint64_t totalCount = 0;
+    mpz_t totalCount; mpz_init_set_ui(totalCount, 0);
     while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
         const tm_slice_counter_t *sliceCounter = itemA;
-        uint64_t count = sliceCounter->count;
-        totalCount += count;
+        mpz_add(totalCount, totalCount, sliceCounter->count);// totalCount += count;
     }
-    printf("total counted strings: %lu\n", totalCount);
+    gmp_printf("total counted strings: %Zd\n", totalCount);
 
     iterA = 0;
-    // totalCount = indexesConsidered - 1;
+    mpz_t count; mpz_init(count);
+    mpq_t freq, tempq1; mpq_inits(freq, tempq1, NULL);
+
     while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
         const tm_slice_counter_t *sliceCounter = itemA;
-        uint64_t count = sliceCounter->count;
-        if(count <= 0)continue;
+        mpz_set(count, sliceCounter->count); // count = sliceCounter->count;
+
+        if(mpz_cmp_ui(count, 0) <= 0)continue;
+
+        mpq_set_z(freq, count); // freq = count
+        mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
+
+        mpq_canonicalize(freq);
+        mpq_canonicalize(tempq1);
+        mpq_div(freq, freq, tempq1); // freq = count/totalCount;
+
+        mpq_canonicalize(freq);
+
         int length = sliceCounter->slice.length;
         tm_slice_print(&sliceCounter->slice);
-        printf("lengthstr %d, count %lu, freq %lf\n\n",
-            length, count, (double)count/(double)totalCount);
+        gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
     }
+
+    mpz_clears(count, totalCount, NULL);
+    mpq_clears(freq, tempq1, NULL);
 
     hashmap_free(slice_count_map);
 

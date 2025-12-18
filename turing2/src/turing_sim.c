@@ -55,7 +55,6 @@ void tm_reset_keep_table_and_states(tm_t* tm)
     tm_fill_tape(tm, 0);
 }
 
-//TODO pthread this
 tm_transition_table_entry_t tm_get_entry(tm_t* tm, int symbol, int state)
 {
     tm_mutex_lock(tm);
@@ -352,7 +351,7 @@ void tm_step(tm_t* tm)
     tm_mutex_unlock(tm);
 }
 
-uint64_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt)
+void tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt, mpz_t* result)
 {
     //check trivial nonhalting
     //it never works bruh idk why
@@ -375,29 +374,37 @@ uint64_t tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt)
             tm->state = 0;
             tm_mutex_unlock(tm);
             // printf("actually did it");
-            return 0;
+            // return 0;
+            if(result)mpz_set_ui(*result,0);
+            return;
         }
     }
-    const uint64_t max_steps = opt.max_steps;
 
-    for(uint64_t i=0;i<max_steps;i++){
+    mpz_t i; mpz_init_set_ui(i, 0);
+    for(;mpz_cmp(i,opt.max_steps) < 0; mpz_add_ui(i, i, 1)){
         // tm_print_state(tm);
         tm_mutex_lock(tm);
         if(tm->state == 0){
             tm_mutex_unlock(tm);
-            return i;
+
+            if(result)mpz_set(*result, i);
+            mpz_clear(i);
+            return;
+            // return i;
         }
         tm_mutex_unlock(tm);
         tm_step(tm);
     }
-    //yea we just did that
+    mpz_clear(i);
     tm_mutex_lock(tm);
-    tm->state = 0;
+    tm->state = 0; //yea we just did that
 
     tm->halted = true;
     tm->haltReason = HALT_MAX_STEPS;
     tm_mutex_unlock(tm);
-    return max_steps;
+    // return max_steps;
+    if(result)mpz_set(*result, opt.max_steps);
+    return;
 }
 
 void tm_print_state(tm_t* tm)

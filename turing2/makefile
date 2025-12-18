@@ -55,7 +55,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp
 
 .PHONY: clean valgrind gdb run
 clean:
-	rm -r $(BUILD_DIR)
+	rm -rf $(BUILD_DIR)
 
 run:
 	$(BUILD_DIR)/$(TARGET_EXEC)

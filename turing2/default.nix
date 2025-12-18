@@ -14,7 +14,8 @@ pkgs.mkShell {
 
   # Optional: commands to run when entering the shell
   shellHook = ''
-    echo "hell naw jigsaw!!!"
+    echo "ready for development >:)"
     export LIBGMP_DIR=${pkgs.gmp}
+    export LIBGMPXX_DIR=${pkgs.gmpxx}
   '';
 }

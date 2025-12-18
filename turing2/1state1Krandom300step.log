@@ -1,0 +1,287 @@
+rm -rf ./build
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/main.c -o build/./src/main.c.o
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/turing_threading.c -o build/./src/turing_threading.c.o
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/turing_enumerate.c -o build/./src/turing_enumerate.c.o
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/turing_sim.c -o build/./src/turing_sim.c.o
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/hashmap.c -o build/./src/hashmap.c.o
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/turing_tests.c -o build/./src/turing_tests.c.o
+mkdir -p build/./src/
+gcc -I./include -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -MMD -MP -fPIC -g -lpthread -lgmp   -c src/turing_mapping.c -o build/./src/turing_mapping.c.o
+g++ ./build/./src/main.c.o ./build/./src/turing_threading.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -g -o build/turing -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -lgmp 
+g++ ./build/./src/main.c.o ./build/./src/turing_threading.c.o ./build/./src/turing_enumerate.c.o ./build/./src/turing_sim.c.o ./build/./src/hashmap.c.o ./build/./src/turing_tests.c.o ./build/./src/turing_mapping.c.o -fPIC -rdynamic -shared -Lstatic -o build/turing.so -L/nix/store/m9fycbkaairz8kampnsl7sx1aanvl0db-gmp-with-cxx-6.3.0/lib -lgmp 
+./build/turing
+10 / 7 = 1
+
+hello turing
+
+main pthread_self() -1238395072
+sizeof(tm_slice_counter_t) 32
+sizeof(tape_slice_t) 16
+
+Running all tests.
+    Turing Sim Tests
+        PASS 'bb5 load&run'
+        PASS 'bb4 load&run'
+        PASS 'bb4 tape slice compare'
+        PASS 'random tape test'
+        PASS 'counting 3 state machines bruteforce'
+        PASS 'number of 3 state machines'
+    Turing Mapping Tests
+11 9 5 12 3 17 19 6 
+(1 1 2)(1 0 2)_(1 0 1)(0 0 3)_(1 1 0)(1 0 4)_(1 1 4)(0 1 1)
+        FAILED 'bb4 table->digits'
+        FAILED 'bb4 digits->index'
+        PASS 'bb4 index->digits'
+        FAILED 'bb4 digits->table'
+        PASS '2 states: table incrementing == index incrementing'
+        PASS '1 states: table incrementing == index incrementing'
+    Turing Enumeration Tests
+Testing complete.
+
+running enumeration
+    states 1
+    max_steps 300
+    randomIters 1000
+    startIndex 0
+    indexesConsidered 65
+    workthreads 4
+
+thread job 2:
+    states 1
+    max_steps 300
+    randomIters 1000
+    startIndex 17
+    indexesConsidered 17
+
+thread job 1:
+    states 1
+    max_steps 300
+    randomIters 1000
+    startIndex 0
+    indexesConsidered 17
+
+thread job 4:
+    states 1
+    max_steps 300
+    randomIters 1000
+    startIndex 34
+thread job 3:
+    states 1
+    max_steps     indexesConsidered 30017
+
+
+    randomIters 1000
+    startIndex 51
+    indexesConsidered 17
+
+thread id 4, exiting thread...
+thread id 3, exiting thread...
+thread id 1, exiting thread...
+thread id 2, exiting thread...
+merge and destroy
+total counted strings: 48064
+0001
+lengthstr 4, count 248, freq 0.005160
+
+0111111111
+lengthstr 10, count 8, freq 0.000166
+
+100000
+lengthstr 6, count 72, freq 0.001498
+
+11111
+lengthstr 5, count 246, freq 0.005118
+
+1000000
+lengthstr 7, count 34, freq 0.000707
+
+01111
+lengthstr 5, count 122, freq 0.002538
+
+1000000000000000000
+lengthstr 19, count 2, freq 0.000042
+
+1111110
+lengthstr 7, count 36, freq 0.000749
+
+1000000000
+lengthstr 10, count 8, freq 0.000166
+
+00000000000001
+lengthstr 14, count 2, freq 0.000042
+
+0000000000
+lengthstr 10, count 8, freq 0.000166
+
+11110
+lengthstr 5, count 124, freq 0.002580
+
+11111110
+lengthstr 8, count 22, freq 0.000458
+
+1111111111111111111
+lengthstr 19, count 2, freq 0.000042
+
+110
+lengthstr 3, count 504, freq 0.010486
+
+000000000
+lengthstr 9, count 10, freq 0.000208
+
+00001
+lengthstr 5, count 124, freq 0.002580
+
+10000000000
+lengthstr 11, count 2, freq 0.000042
+
+1111111111
+lengthstr 10, count 8, freq 0.000166
+
+01111111
+lengthstr 8, count 6, freq 0.000125
+
+10
+lengthstr 2, count 2002, freq 0.041653
+
+001
+lengthstr 3, count 504, freq 0.010486
+
+11111111111110
+lengthstr 14, count 2, freq 0.000042
+
+0000000000000000000
+lengthstr 19, count 2, freq 0.000042
+
+10000
+lengthstr 5, count 122, freq 0.002538
+
+000
+lengthstr 3, count 1004, freq 0.020889
+
+111111111
+lengthstr 9, count 10, freq 0.000208
+
+011
+lengthstr 3, count 500, freq 0.010403
+
+00000001
+lengthstr 8, count 22, freq 0.000458
+
+11111111111
+lengthstr 11, count 6, freq 0.000125
+
+000000
+lengthstr 6, count 134, freq 0.002788
+
+0
+lengthstr 1, count 16032, freq 0.333555
+
+00
+lengthstr 2, count 2002, freq 0.041653
+
+1
+lengthstr 1, count 16032, freq 0.333555
+
+111110
+lengthstr 6, count 62, freq 0.001290
+
+0000001
+lengthstr 7, count 36, freq 0.000749
+
+11111111
+lengthstr 8, count 28, freq 0.000583
+
+1111111
+lengthstr 7, count 70, freq 0.001456
+
+0111111
+lengthstr 7, count 34, freq 0.000707
+
+11
+lengthstr 2, count 2002, freq 0.041653
+
+100
+lengthstr 3, count 500, freq 0.010403
+
+1110
+lengthstr 4, count 248, freq 0.005160
+
+011111111
+lengthstr 9, count 4, freq 0.000083
+
+00000000000000
+lengthstr 14, count 2, freq 0.000042
+
+0111111111111111111
+lengthstr 19, count 2, freq 0.000042
+
+00000000
+lengthstr 8, count 28, freq 0.000583
+
+00000000001
+lengthstr 11, count 4, freq 0.000083
+
+11111111111111
+lengthstr 14, count 2, freq 0.000042
+
+00000000000
+lengthstr 11, count 6, freq 0.000125
+
+11111111110
+lengthstr 11, count 4, freq 0.000083
+
+1111
+lengthstr 4, count 488, freq 0.010153
+
+111111
+lengthstr 6, count 134, freq 0.002788
+
+000000001
+lengthstr 9, count 6, freq 0.000125
+
+111111110
+lengthstr 9, count 6, freq 0.000125
+
+10000000
+lengthstr 8, count 6, freq 0.000125
+
+0111
+lengthstr 4, count 240, freq 0.004993
+
+00000
+lengthstr 5, count 246, freq 0.005118
+
+0000000
+lengthstr 7, count 70, freq 0.001456
+
+0000
+lengthstr 4, count 488, freq 0.010153
+
+000001
+lengthstr 6, count 62, freq 0.001290
+
+011111
+lengthstr 6, count 72, freq 0.001498
+
+01111111111
+lengthstr 11, count 2, freq 0.000042
+
+01
+lengthstr 2, count 2002, freq 0.041653
+
+111
+lengthstr 3, count 1004, freq 0.020889
+
+1000
+lengthstr 4, count 240, freq 0.004993
+
+100000000
+lengthstr 9, count 4, freq 0.000083
+
+done

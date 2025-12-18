@@ -4,15 +4,18 @@
 #include "turing_sim.h"
 #include <stdbool.h>
 
-void tm_load_table_by_index(tm_t* tm, tm_index_t index);
+//returns true if they have the same table
+bool tm_eq_tables(tm_t* tm1, tm_t* tm2);
+
+void tm_load_table_by_index(tm_t* tm, mpz_t index);
 
 int tm_get_entry_digit(int states, tm_transition_table_entry_t* entry);
 void tm_load_entry_from_digit(int states, int digit, tm_transition_table_entry_t* entry);
 void tm_load_table_from_digits(tm_t* tm, int* digits);
 void tm_extract_digits_from_table(tm_t* tm, int* digits);
 
-tm_index_t tm_get_table_index_from_digits(int states, int* digits);
-void tm_extract_digits_from_index(tm_t* tm, int* digits, tm_index_t index);
+void tm_get_table_index_from_digits(int states, int* digits, mpz_t result);
+void tm_extract_digits_from_index(tm_t* tm, int* digits, mpz_t index);
 
 void tm_print_table_entryDigitsForm(tm_t* tm);
 
@@ -25,7 +28,7 @@ bool tm_next_table_lexico(tm_t* tm);
 
 int tm_num_per_entry(int states);
 int tm_num_table_entries(int states);
-tm_index_t tm_max_num_of_machines(int states);
-tm_index_t tm_machines_considered_for_full_enumeration(int states);
+void tm_max_num_of_machines(int states, mpz_t result);
+void tm_machines_considered_for_full_enumeration(int states, mpz_t result);
 
 #endif

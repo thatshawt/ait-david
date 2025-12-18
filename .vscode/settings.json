@@ -4,6 +4,7 @@
         "stdint.h": "c",
         "turing_mapping.h": "c",
         "turing_utils.h": "c",
-        "hashmap.h": "c"
+        "hashmap.h": "c",
+        "stdbool.h": "c"
     }
 }
