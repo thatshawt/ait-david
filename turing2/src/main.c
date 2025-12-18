@@ -7,22 +7,23 @@
 #include "hashmap.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <gmp.h>
 
 int main(){
-    mpz_t one,two,sum;
+    // mpz_t one,two,sum;
 
-    mpz_init_set_ui(one, 10);
-    mpz_init_set_ui(two, 7);
-    mpz_init_set_ui(sum, 0);
+    // mpz_init_set_ui(one, 10);
+    // mpz_init_set_ui(two, 5);
+    // mpz_init_set_ui(sum, 0);
 
-    mpz_fdiv_q(sum, one, two);
+    // mpz_fdiv_r(sum, one, two);
 
-    gmp_printf("%Zd / %Zd = %Zd\n", one, two, sum);
+    // gmp_printf("%Zd / %Zd = %Zd\n", one, two, sum);
 
-    mpz_clears(one,two,sum,NULL);
+    // mpz_clears(one,two,sum,NULL);
 
     // return 0;
 
@@ -47,26 +48,48 @@ int main(){
     const int selfid = turing_threading_self_index();
     tm_srand(selfid, 1337);
 
-    int states = 1;
-    enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
-        // .length=tm_max_num_of_machines(states)+1,
-        // .max_steps=300,
-        // .randomIterations=10,
-        // .start=0,
-        .states=states,
-        .workthreads=4
-    };
-    tm_enumerate_job_opt_init(&enumerateOpt);
+    struct hashmap* slice_count_map;
+    {
+        int states = 2;
+        char *max_steps = "300";
+        char *randomIterations = "1000";
+        char *startIndex = "0";
+        char *indexesConsidered = NULL;
+        int workers = 4;
 
-    tm_max_num_of_machines(states, enumerateOpt.length);
-    mpz_add_ui(enumerateOpt.length, enumerateOpt.length, 1);
-    mpz_set_ui(enumerateOpt.max_steps, 300);
-    mpz_set_ui(enumerateOpt.randomIterations, 1000);
-    mpz_set_ui(enumerateOpt.start, 0);
+        bool mustFree_indexesConsidered = false;
+        if(indexesConsidered == NULL){
+            mpz_t indexesConsidered_z; mpz_init(indexesConsidered_z);
 
-    struct hashmap* slice_count_map = do_tm_enumerate_job(&enumerateOpt);
+            tm_max_num_of_machines(states, indexesConsidered_z);
+            mpz_add_ui(indexesConsidered_z, indexesConsidered_z, 1);
 
-    tm_enumerate_job_opt_destroy(&enumerateOpt);
+            indexesConsidered = mpz_get_str(NULL, 10, indexesConsidered_z);
+
+            mpz_clear(indexesConsidered_z);
+            mustFree_indexesConsidered = true;
+        }
+
+        enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
+            // .length=tm_max_num_of_machines(states)+1,
+            // .max_steps=300,
+            // .randomIterations=10,
+            // .start=0,
+            .states=states,
+            .workthreads=workers
+        };
+        tm_enumerate_job_opt_init(&enumerateOpt);
+
+        mpz_set_str(enumerateOpt.length, indexesConsidered, 10);
+        mpz_set_str(enumerateOpt.max_steps, max_steps, 10);
+        mpz_set_str(enumerateOpt.randomIterations, randomIterations, 10);
+        mpz_set_str(enumerateOpt.start, startIndex, 10);
+
+        slice_count_map = do_tm_enumerate_job(&enumerateOpt);
+
+        tm_enumerate_job_opt_destroy(&enumerateOpt);
+        if(mustFree_indexesConsidered)free(indexesConsidered);
+    }
 
     size_t iterA = 0;
     void *itemA;

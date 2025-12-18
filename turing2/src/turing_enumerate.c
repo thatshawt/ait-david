@@ -130,6 +130,8 @@ void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt)
     mpz_clears(opt->start, opt->length, opt->max_steps, opt->randomIterations, NULL);
 }
 
+
+
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
 {
     const int selfid = turing_threading_self_index();
@@ -169,7 +171,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         mpz_sub(indexesConsidered, max_num_machines, startIndex);
         mpz_add_ui(indexesConsidered, indexesConsidered, 1); //add 1 for good measure though
     }
-    mpz_clears(max_num_machines, end_index, NULL);
+    // mpz_clears(max_num_machines, end_index, NULL);
 
     //start running enumeration
     printf("running enumeration\n");
@@ -184,11 +186,12 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     pthread_t workthread_handles[TM_MAX_THREADS];
     enumerate_job_args_t* thread_args[TM_MAX_THREADS];
 
-    mpz_t startIndexCounter, indexesPerThread;
-    mpz_init(indexesPerThread);
+    mpz_t startIndexCounter, indexesPerThread, indexRemainder;
+    mpz_inits(indexesPerThread, indexRemainder, NULL);
     mpz_init_set(startIndexCounter,startIndex); // startIndexCounter = startIndex;
 
-    mpz_cdiv_q_ui(indexesPerThread, indexesConsidered, workthreads); // indexesPerThread = indexesConsidered/workthreads;
+    mpz_fdiv_q_ui(indexesPerThread, indexesConsidered, workthreads); // indexesPerThread = indexesConsidered/workthreads;
+    mpz_fdiv_r_ui(indexRemainder, indexesConsidered, workthreads);
 
     //spawn threads
     for(int i=0;i<workthreads;i++){
@@ -202,8 +205,14 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         args->opt.states = opt->states;
         mpz_set(args->opt.max_steps,opt->max_steps);
         mpz_set(args->opt.randomIterations,opt->randomIterations);
-        mpz_set(args->opt.start,startIndexCounter);//args->opt.start = startIndexCounter;
-        mpz_set(args->opt.length,indexesPerThread);//args->opt.length = indexesPerThread;
+        mpz_set(args->opt.start,startIndexCounter); //args->opt.start = startIndexCounter;
+        mpz_set(args->opt.length,indexesPerThread); //args->opt.length = indexesPerThread;
+
+        // if we are on the last one check if we need the last thread to pick up the slack
+        if(i==workthreads-1 && mpz_cmp_ui(indexRemainder,0) != 0){
+            gmp_printf("added slack %Zd to %Zd\n", indexRemainder, args->opt.length);
+            mpz_add(args->opt.length,args->opt.length,indexRemainder);
+        }
 
         mpz_add(startIndexCounter,startIndexCounter,indexesPerThread);//startIndexCounter += indexesPerThread;
 
@@ -235,6 +244,8 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     // free all the mpz_t's we made here
     mpz_clears(max_steps,startIndex,indexesConsidered,randomIterations,
         startIndexCounter, indexesPerThread,
+        max_num_machines, end_index,
+        indexRemainder, 
         NULL);
 
     return slice_count_map[0];
@@ -316,6 +327,7 @@ void tm_enumerate_index_length_generic(
         if(tm_next_table_lexico(&tm)){
             // printf("table overflowed at %d\n", i);
             break;
+            // tm_load_table_by_index(&tm, start);
         }
     }
     tm_destroy(&tm);
