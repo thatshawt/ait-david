@@ -24,19 +24,19 @@ DEPS := $(OBJS:.o=.d)
 # Every folder in ./src will need to be passed to GCC so that it can find header files
 # INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 # Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
-INC_FLAGS := $(addprefix -I,$(INC_DIRS)) -L${LIBGMP_DIR}/lib
+INC_FLAGS := $(addprefix -I,$(INC_DIRS)) -L${LIBGMP_DIR}/lib -I${SQLITE_INCLUDE} -L${SQLITE_LIB}
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread -lgmp #-fsanitize=address
-LDFLAGS := -L${LIBGMP_DIR}/lib -lgmp #-fsanitize=address
+CPPFLAGS := $(INC_FLAGS) -MMD -MP -fPIC -g -lpthread -lgmp -lsqlite3 -O3 #-fsanitize=address
+LDFLAGS := -L${LIBGMP_DIR}/lib -L${SQLITE_LIB} -O3 -lgmp -lsqlite3 #-fsanitize=address
 
 # do both executable and shared library
 all: $(BUILD_DIR)/$(TARGET_EXEC) $(BUILD_DIR)/$(TARGET_LIB)
 
 # Build Executable
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CXX) $(OBJS) -g -o $@ $(LDFLAGS)
+	$(CXX) $(OBJS) -o $@ $(LDFLAGS)
 
 # Build Library
 $(BUILD_DIR)/$(TARGET_LIB): $(OBJS)

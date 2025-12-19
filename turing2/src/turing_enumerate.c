@@ -410,3 +410,50 @@ void tm_enumerate_index_length_with_hashmap(
         before_stepping
     );
 }
+
+struct hashmap* do_tm_enumerate_hashmap_job_wrapped(int states, char *max_steps, char *randomIterations, char *startIndex, char *indexesConsidered, int workers)
+{
+    // int states = 2;
+    // char *max_steps = "300";
+    // char *randomIterations = "10";
+    // char *startIndex = "0";
+    // char *indexesConsidered = NULL;
+    // int workers = 4;
+
+    struct hashmap* slice_count_map;
+
+    bool mustFree_indexesConsidered = false;
+    if(indexesConsidered == NULL){
+        mpz_t indexesConsidered_z; mpz_init(indexesConsidered_z);
+
+        tm_max_num_of_machines(states, indexesConsidered_z);
+        mpz_add_ui(indexesConsidered_z, indexesConsidered_z, 1);
+
+        indexesConsidered = mpz_get_str(NULL, 10, indexesConsidered_z);
+
+        mpz_clear(indexesConsidered_z);
+        mustFree_indexesConsidered = true;
+    }
+
+    enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
+        // .length=tm_max_num_of_machines(states)+1,
+        // .max_steps=300,
+        // .randomIterations=10,
+        // .start=0,
+        .states=states,
+        .workthreads=workers
+    };
+    tm_enumerate_job_opt_init(&enumerateOpt);
+
+    mpz_set_str(enumerateOpt.length, indexesConsidered, 10);
+    mpz_set_str(enumerateOpt.max_steps, max_steps, 10);
+    mpz_set_str(enumerateOpt.randomIterations, randomIterations, 10);
+    mpz_set_str(enumerateOpt.start, startIndex, 10);
+
+    slice_count_map = do_tm_enumerate_job(&enumerateOpt);
+
+    tm_enumerate_job_opt_destroy(&enumerateOpt);
+    if(mustFree_indexesConsidered)free(indexesConsidered);
+
+    return slice_count_map;
+}

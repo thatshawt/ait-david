@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <gmp.h>
+#include <sqlite3.h>
 
 int main(){
     // mpz_t one,two,sum;
@@ -25,7 +26,54 @@ int main(){
 
     // mpz_clears(one,two,sum,NULL);
 
-    // return 0;
+    sqlite3 *db;
+    int err = sqlite3_open("test.db", &db);
+
+    if(err){
+        printf("%s\n", sqlite3_errmsg(db));
+        return 1;
+    }else{
+        printf("opened database succesfully\n");
+    }
+
+
+    sqlite3_stmt *selectAllFromTbl1;
+    // int sqlite3_prepare_v2(
+    //     sqlite3 *db,            /* Database handle */
+    //     const char *zSql,       /* SQL statement, UTF-8 encoded */
+    //     int nByte,              /* Maximum length of zSql in bytes. */
+    //     sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
+    //     const char **pzTail     /* OUT: Pointer to unused portion of zSql */
+    // );
+    err = sqlite3_prepare_v2(
+        db, "SELECT * FROM tbl1;",
+        -1, &selectAllFromTbl1,
+        NULL
+    );
+
+    if(err){
+        fprintf(stderr, "could not prepare statment\n");
+        return 1;
+    }else{
+        printf("prepared statement\n");
+    }
+    
+    err = sqlite3_step(selectAllFromTbl1);
+    printf("row 0, col0 '%s', col1 '%d'\n",
+        sqlite3_column_text(selectAllFromTbl1, 0), 
+        sqlite3_column_int(selectAllFromTbl1, 1)
+    );
+
+    err = sqlite3_step(selectAllFromTbl1);
+    printf("row 1, col0 '%s', col1 '%d'\n",
+        sqlite3_column_text(selectAllFromTbl1, 0), 
+        sqlite3_column_int(selectAllFromTbl1, 1)
+    );
+
+    sqlite3_finalize(selectAllFromTbl1);
+    sqlite3_close(db);
+
+    return 0;
 
     printf("\nhello turing\n\n");
 
@@ -52,43 +100,12 @@ int main(){
     {
         int states = 2;
         char *max_steps = "300";
-        char *randomIterations = "1000";
+        char *randomIterations = "10";
         char *startIndex = "0";
         char *indexesConsidered = NULL;
         int workers = 4;
 
-        bool mustFree_indexesConsidered = false;
-        if(indexesConsidered == NULL){
-            mpz_t indexesConsidered_z; mpz_init(indexesConsidered_z);
-
-            tm_max_num_of_machines(states, indexesConsidered_z);
-            mpz_add_ui(indexesConsidered_z, indexesConsidered_z, 1);
-
-            indexesConsidered = mpz_get_str(NULL, 10, indexesConsidered_z);
-
-            mpz_clear(indexesConsidered_z);
-            mustFree_indexesConsidered = true;
-        }
-
-        enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
-            // .length=tm_max_num_of_machines(states)+1,
-            // .max_steps=300,
-            // .randomIterations=10,
-            // .start=0,
-            .states=states,
-            .workthreads=workers
-        };
-        tm_enumerate_job_opt_init(&enumerateOpt);
-
-        mpz_set_str(enumerateOpt.length, indexesConsidered, 10);
-        mpz_set_str(enumerateOpt.max_steps, max_steps, 10);
-        mpz_set_str(enumerateOpt.randomIterations, randomIterations, 10);
-        mpz_set_str(enumerateOpt.start, startIndex, 10);
-
-        slice_count_map = do_tm_enumerate_job(&enumerateOpt);
-
-        tm_enumerate_job_opt_destroy(&enumerateOpt);
-        if(mustFree_indexesConsidered)free(indexesConsidered);
+        slice_count_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, startIndex, indexesConsidered, workers);
     }
 
     size_t iterA = 0;
@@ -96,7 +113,7 @@ int main(){
     mpz_t totalCount; mpz_init_set_ui(totalCount, 0);
     while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
         const tm_slice_counter_t *sliceCounter = itemA;
-        mpz_add(totalCount, totalCount, sliceCounter->count);// totalCount += count;
+        mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
     }
     gmp_printf("total counted strings: %Zd\n", totalCount);
 

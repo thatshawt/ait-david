@@ -31,7 +31,7 @@ typedef struct{
 void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt);
 void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt);
 
-
+struct hashmap* do_tm_enumerate_hashmap_job_wrapped(int states, char *max_steps, char *randomIterations, char *startIndex, char *indexesConsidered, int workers);
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt);
 
 void tm_enumerate_index_length_generic(
