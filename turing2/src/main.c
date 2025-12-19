@@ -13,6 +13,62 @@
 #include <gmp.h>
 #include <sqlite3.h>
 
+static int sql_callback(void *data, int argc, char **argv, char **azColName){
+   int i;
+   if(data)fprintf(stderr, "%s: ", (const char*)data);
+   
+   for(i = 0; i<argc; i++){
+      printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+   }
+   
+   printf("\n");
+   return 0;
+}
+
+typedef struct{
+    sqlite3 *db;    // sqlite3 database handle
+    char *errMsg;   // error message
+    int rc;         // return value
+    char *sql;      // sql statement
+
+    // sqlite3_exec callback
+    int(*exec_callback)(void *data, int argc, char **argv, char **columnName);
+
+} sqlenv_t;
+
+void sqlenv_open(sqlenv_t *sqlenv, char *databaseFile){
+    sqlenv->errMsg = 0;
+    /* Open database */
+    sqlenv->rc = sqlite3_open("test.db", &sqlenv->db);
+
+    if( rc ) {
+        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlenv->db));
+        return(0);
+    } else {
+        fprintf(stderr, "Opened database successfully\n");
+    }
+}
+
+void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data){
+    sqlenv->sql = sql_statement;
+
+    /* Execute SQL statement */
+    sqlenv->rc = sqlite3_exec(sqlenv->db, sqlenv->sql, sql->exec_callback, data, &sqlenv->errMsg);
+
+    if( sqlenv->rc != SQLITE_OK ){
+        fprintf(stderr, "SQL error: %s\n", sqlenv->errMsg);
+        sqlite3_free(sqlenv->errMsg);
+    } else {
+        fprintf(stdout, "Exec successful.\n");
+    }
+
+}
+
+void sqlenv_close(sqlenv_t *sqlenv){
+     sqlite3_close(sqlenv->db);
+}
+
+
 int main(){
     // mpz_t one,two,sum;
 
@@ -27,53 +83,122 @@ int main(){
     // mpz_clears(one,two,sum,NULL);
 
     sqlite3 *db;
-    int err = sqlite3_open("test.db", &db);
+    char *zErrMsg = 0;
+    int rc;
+    char *sql;
+    const char* data;
 
-    if(err){
-        printf("%s\n", sqlite3_errmsg(db));
-        return 1;
-    }else{
-        printf("opened database succesfully\n");
+    {
+        /* Open database */
+        rc = sqlite3_open("test.db", &db);
+
+        if( rc ) {
+            fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+            return(0);
+        } else {
+            fprintf(stderr, "Opened database successfully\n");
+        }
+    }
+
+    {
+        /* Create SQL statement */
+        sql = "CREATE TABLE COMPANY("  \
+            "ID INT PRIMARY KEY     NOT NULL," \
+            "NAME           TEXT    NOT NULL," \
+            "AGE            INT     NOT NULL," \
+            "ADDRESS        CHAR(50)," \
+            "SALARY         REAL );";
+
+        /* Execute SQL statement */
+        rc = sqlite3_exec(db, sql, sql_callback, 0, &zErrMsg);
+
+        if( rc != SQLITE_OK ){
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Table created successfully\n");
+        }
+    }
+
+    {
+        /* Create SQL statement */
+        sql = "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+                "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
+                "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+                "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
+                "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+                "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
+                "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+                "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );";
+
+        /* Execute SQL statement */
+        rc = sqlite3_exec(db, sql, sql_callback, 0, &zErrMsg);
+
+        if( rc != SQLITE_OK ){
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Records created successfully\n");
+        }
+    }
+
+    {
+        data = "Select All";
+        /* Create SQL statement */
+        sql = "SELECT * from COMPANY";
+
+        /* Execute SQL statement */
+        rc = sqlite3_exec(db, sql, sql_callback, (void*)data, &zErrMsg);
+
+        if( rc != SQLITE_OK ) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Operation done successfully\n");
+        }
+    }
+
+    {
+        data = "Update Salary ID=1 then Select All";
+        /* Create merged SQL statement */
+        sql = "UPDATE COMPANY set SALARY = 25000.00 where ID=1; " \
+                "SELECT * from COMPANY";
+
+        /* Execute SQL statement */
+        rc = sqlite3_exec(db, sql, sql_callback, (void*)data, &zErrMsg);
+
+        if( rc != SQLITE_OK ) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Operation done successfully\n");
+        }
+    }
+
+    {
+        data = "Delete ID=2 then Select All";
+        /* Create merged SQL statement */
+        sql = "DELETE from COMPANY where ID=2; " \
+                "SELECT * from COMPANY";
+
+        /* Execute SQL statement */
+        rc = sqlite3_exec(db, sql, sql_callback, (void*)data, &zErrMsg);
+
+        if( rc != SQLITE_OK ) {
+            fprintf(stderr, "SQL error: %s\n", zErrMsg);
+            sqlite3_free(zErrMsg);
+        } else {
+            fprintf(stdout, "Operation done successfully\n");
+        }
     }
 
 
-    sqlite3_stmt *selectAllFromTbl1;
-    // int sqlite3_prepare_v2(
-    //     sqlite3 *db,            /* Database handle */
-    //     const char *zSql,       /* SQL statement, UTF-8 encoded */
-    //     int nByte,              /* Maximum length of zSql in bytes. */
-    //     sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-    //     const char **pzTail     /* OUT: Pointer to unused portion of zSql */
-    // );
-    err = sqlite3_prepare_v2(
-        db, "SELECT * FROM tbl1;",
-        -1, &selectAllFromTbl1,
-        NULL
-    );
-
-    if(err){
-        fprintf(stderr, "could not prepare statment\n");
-        return 1;
-    }else{
-        printf("prepared statement\n");
-    }
-    
-    err = sqlite3_step(selectAllFromTbl1);
-    printf("row 0, col0 '%s', col1 '%d'\n",
-        sqlite3_column_text(selectAllFromTbl1, 0), 
-        sqlite3_column_int(selectAllFromTbl1, 1)
-    );
-
-    err = sqlite3_step(selectAllFromTbl1);
-    printf("row 1, col0 '%s', col1 '%d'\n",
-        sqlite3_column_text(selectAllFromTbl1, 0), 
-        sqlite3_column_int(selectAllFromTbl1, 1)
-    );
-
-    sqlite3_finalize(selectAllFromTbl1);
     sqlite3_close(db);
 
     return 0;
+
+
+
 
     printf("\nhello turing\n\n");
 
