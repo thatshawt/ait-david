@@ -11,9 +11,11 @@
 #include <string.h>
 
 #include <gmp.h>
-#include <sqlite3.h>
 
-static int sql_callback(void *data, int argc, char **argv, char **azColName){
+#include "sqlenv.h"
+
+
+static int sql_callback_print(void *data, int argc, char **argv, char **azColName){
     int i;
     if(data)fprintf(stderr, "%s:\n", (const char*)data);
 
@@ -25,48 +27,49 @@ static int sql_callback(void *data, int argc, char **argv, char **azColName){
     return 0;
 }
 
-typedef struct{
-    sqlite3 *db;    // sqlite3 database handle
-    char *errMsg;   // error message
-    int rc;         // return value
-    char *sql;      // sql statement
-
-    // sqlite3_exec callback
-    int(*exec_callback)(void *data, int argc, char **argv, char **columnName);
-
-} sqlenv_t;
-
-int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile){
-    sqlenv->errMsg = 0;
-    /* Open database */
-    sqlenv->rc = sqlite3_open("test.db", &sqlenv->db);
-
-    if( sqlenv->rc ) {
-        fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlenv->db));
-        return 1;
-    } else {
-        fprintf(stderr, "Opened database successfully\n");
-        return 0;
+void sql_resultHandler_print(void *sqlenv_void, enum SQL_RT resultType){
+    sqlenv_t *sqlenv = (sqlenv_t*)sqlenv_void;
+    const int rc = sqlenv->rc;
+    const char* errmsg = sqlenv->errMsg;
+    switch(resultType){
+        case SQL_RT_OPEN:
+            if(rc == SQLITE_OK){
+                fprintf(stdout, "Opened database.\n");
+            }else{
+                fprintf(stderr, "Could not open database. error '%s'\n", errmsg);
+            }
+            break;
+        case SQL_RT_EXEC:
+            if(rc == SQLITE_OK){
+                fprintf(stdout, "Did exec.\n");
+            }else{
+                fprintf(stderr, "Could not exec. error '%s'\n", errmsg);
+            }
+            break;
+        case SQL_RT_CLOSE:
+            if(rc == SQLITE_OK){
+                fprintf(stdout, "Database closed.\n");
+            }else{
+                fprintf(stderr, "Could not close database. error '%s'\n", errmsg);
+            }
+            break;
     }
 }
 
-void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data){
-    sqlenv->sql = sql_statement;
+static int sql_callback_load_countCol_into_mpz(void *data, int argc, char **argv, char **azColName){
+    for(int i = 0; i<argc; i++){
+        const char* colName = azColName[i];
+        const char* val = argv[i];
 
-    /* Execute SQL statement */
-    sqlenv->rc = sqlite3_exec(sqlenv->db, sqlenv->sql, sqlenv->exec_callback, data, &sqlenv->errMsg);
+        if(strcmp(colName, "COUNT") == 0){
+            mpz_set_str(*(mpz_t*)data, val, 10);
+            // printf("    loaded %s into data, in col %s\n", val, colName);
+        }
 
-    if( sqlenv->rc != SQLITE_OK ){
-        fprintf(stderr, "SQL error: %s\n", sqlenv->errMsg);
-        sqlite3_free(sqlenv->errMsg);
-        sqlenv->errMsg = 0;
-    } else {
-        fprintf(stdout, "Exec successful.\n");
+        // printf("%s = %s\n", colName, val ? val : "NULL");
     }
-}
 
-void sqlenv_close(sqlenv_t *sqlenv){
-    sqlite3_close(sqlenv->db);
+    return 0;
 }
 
 #define TO_STRING(x) #x
@@ -83,41 +86,68 @@ int main(){
 
     // gmp_printf("%Zd / %Zd = %Zd\n", one, two, sum);
 
-    // mpz_clears(one,two,sum,NULL);
+    // char *buff = mpz_get_str(NULL, 10, sum);
+    // printf("from buffer. sum = '%s'\n", buff);
+    // free(buff);
 
-    // printf(TO_STRING());
-    // printf(poopoo2(hi, there));
-    // printf(COMPANY_TABLE_STRING_SANDWHICH( "HELLO" , "TWIN" ));
+    // mpz_clears(one,two,sum,NULL);
 
     // return 0;
 
     sqlenv_t sqlenv;
+    sqlenv.resultHandler = &sql_resultHandler_print;
+    sqlenv.exec_callback = &sql_callback_print;
+
     if(sqlenv_open(&sqlenv, "test.db"))return 1;
 
-    sqlenv.exec_callback = &sql_callback;
+    sqlenv_exec(&sqlenv, "CREATE TABLE NumbersCount(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", NULL);
 
-    sqlenv_exec(&sqlenv, COMPANY_TABLE_STRING_SANDWHICH("CREATE TABLE ", ";"), "Create table");
+    sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount;", NULL);
 
-    sqlenv_exec(&sqlenv, "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-                "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
-                "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
-                "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
-                "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-                "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
-                "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
-                "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );", "Insert Data");
-    
-    sqlenv_exec(&sqlenv, "SELECT * from COMPANY;", "Select All");
+    {
+        mpz_t count; mpz_init(count);
 
-    sqlenv_exec(&sqlenv, "UPDATE COMPANY set SALARY = 25000.00 where ID=1; " \
-                "SELECT * from COMPANY", "Update Salary ID=1 then Select All");
+        sqlenv.exec_callback = &sql_callback_load_countCol_into_mpz;
+        sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount WHERE STR_ID='010101101';", (void*)&count);
 
-    sqlenv_exec(&sqlenv, "DELETE from COMPANY where ID=2; " \
-                "SELECT * from COMPANY", "Delete ID=2 then Select All");
+        sqlenv.exec_callback = &sql_callback_print;
+        
+        mpz_add_ui(count,count,1);
 
-    sqlenv_exec(&sqlenv, "DROP Table COMPANY;", "Drop table");
+        char insertStatementBuff[2000] = {0};
+        char updateStatementBuff[2000] = {0};
 
-    sqlenv_exec(&sqlenv, "SELECT name FROM sqlite_schema", "Show Tables");
+        char* countStr = mpz_get_str(NULL, 10, count);
+
+        sprintf(insertStatementBuff, "INSERT INTO NumbersCount(STR_ID, COUNT) VALUES ('010101101', '%s')",countStr);
+        sprintf(updateStatementBuff, "UPDATE NumbersCount SET COUNT = '%s' WHERE STR_ID='010101101';",countStr);
+
+        sqlenv_exec(&sqlenv, insertStatementBuff, NULL);
+        sqlenv_exec(&sqlenv, updateStatementBuff, NULL);
+
+        mpz_clear(count);
+        free(countStr);
+    }
+
+
+    sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount;", NULL);
+
+    // sqlenv_exec(&sqlenv, COMPANY_TABLE_STRING_SANDWHICH("CREATE TABLE ", ";"), "Create table");
+    // sqlenv_exec(&sqlenv, "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+    //             "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
+    //             "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+    //             "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
+    //             "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+    //             "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
+    //             "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+    //             "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );", "Insert Data");
+    // sqlenv_exec(&sqlenv, "SELECT * from COMPANY;", "Select All");
+    // sqlenv_exec(&sqlenv, "UPDATE COMPANY set SALARY = 25000.00 where ID=1; " \
+    //             "SELECT * from COMPANY", "Update Salary ID=1 then Select All");
+    // sqlenv_exec(&sqlenv, "DELETE from COMPANY where ID=2; " \
+    //             "SELECT * from COMPANY", "Delete ID=2 then Select All");
+    // sqlenv_exec(&sqlenv, "DROP Table COMPANY;", "Drop table");
+    // sqlenv_exec(&sqlenv, "SELECT name FROM sqlite_schema", "Show Tables");
 
     sqlenv_close(&sqlenv);
 
