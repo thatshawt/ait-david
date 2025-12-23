@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <gmp.h>
 
 
 int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
@@ -110,4 +109,41 @@ int sql_callback_load_countCol_into_mpz(void *data, int argc, char **argv, char 
     }
 
     return 0;
+}
+
+
+void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, char *countStr)
+{
+    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+
+    sprintf(statementBuffer, "INSERT INTO NumbersCount(STR_ID, COUNT) VALUES ('%s', '%s')",stringID,countStr);
+    sqlenv_exec(sqlenv, statementBuffer, NULL);
+
+    sprintf(statementBuffer, "UPDATE NumbersCount SET COUNT = '%s' WHERE STR_ID='%s';",countStr,stringID);
+    sqlenv_exec(sqlenv, statementBuffer, NULL);
+    
+    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+}
+
+void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, mpz_t *theMpz)
+{
+    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+
+    sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
+    sprintf(statementBuffer, "SELECT * FROM NumbersCount WHERE STR_ID='%s';", stringID);
+    sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
+    
+    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+}
+
+void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv)
+{
+    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+
+    sqlenv_exec(sqlenv, "CREATE TABLE NumbersCount(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", NULL);
+
+    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
 }

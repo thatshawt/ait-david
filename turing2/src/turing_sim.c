@@ -131,6 +131,15 @@ void tm_fill_tape(tm_t* tm, tm_symbol_t symbol)
     tm_mutex_unlock(tm);
 }
 
+void tm_fill_tape_range(tm_t* tm, tm_symbol_t symbol, int tapeStartI, int tapeEndI)
+{
+    tm_mutex_lock(tm);
+    for(int i=tapeStartI; i<tapeEndI;i++){
+        tm->tape[i] = symbol;
+    }
+    tm_mutex_unlock(tm);
+}
+
 tape_slice_t tm_slice_clone(tape_slice_t *slice)
 {
     tape_slice_t result;
@@ -217,6 +226,17 @@ void tm_fill_tape_with_random(tm_t* tm, int seed)
     }
     tm_mutex_unlock(tm);
     // printf("filled with random\n");
+}
+
+void tm_fill_tape_with_random_range(tm_t* tm, int seed, int tapeStartI, int tapeEndI)
+{
+    const int threadid = turing_threading_self_index();
+    tm_srand(threadid, seed);
+    tm_mutex_lock(tm);
+    for(int i=tapeStartI;i<tapeEndI;i++){
+        tm->tape[i] = (tm_symbol_t) (tm_rand(threadid)%TM_SYMBOLS);
+    }
+    tm_mutex_unlock(tm);
 }
 
 void tm_print_entire_tape_symbol_frequencies(tm_t* tm)

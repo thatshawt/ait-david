@@ -25,13 +25,22 @@ typedef struct{
     mpz_t length;
     mpz_t max_steps;
     mpz_t randomIterations;
+    mpz_t randomStartSeed;
     int workthreads;
 } enumerate_job_opt_t;
 
 void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt);
 void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt);
 
-struct hashmap* do_tm_enumerate_hashmap_job_wrapped(int states, char *max_steps, char *randomIterations, char *startIndex, char *indexesConsidered, int workers);
+struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
+    int states,
+    char *max_steps,
+    char *randomIterations,
+    char *randomStartSeed,
+    char *startIndex,
+    char *indexesConsidered, 
+    int workers);
+    
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt);
 
 void tm_enumerate_index_length_generic(

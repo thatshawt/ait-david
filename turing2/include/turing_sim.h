@@ -9,7 +9,7 @@
 #include <gmp.h>
 
 #define TM_MAX_STATES 10
-#define TM_TAPE_SIZE 40000
+#define TM_TAPE_SIZE ((500*2)+10)
 #define TM_SYMBOLS 2
 
 typedef uint8_t tm_symbol_t;
@@ -81,7 +81,10 @@ typedef struct{
 void tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt, mpz_t* result);
 
 void tm_fill_tape(tm_t* tm, tm_symbol_t symbol);
+void tm_fill_tape_range(tm_t* tm, tm_symbol_t symbol, int tapeStartI, int tapeEndI);
+
 void tm_fill_tape_with_random(tm_t* tm, int seed);
+void tm_fill_tape_with_random_range(tm_t* tm, int seed, int tapeStartI, int tapeEndI);
 
 int tm_get_written_tape_size(tm_t* tm);
 int tm_count_written_symbol(tm_t* tm, tm_symbol_t symbol);

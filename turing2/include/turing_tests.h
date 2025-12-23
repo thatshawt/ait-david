@@ -22,7 +22,7 @@ typedef struct{
 } unittest_state_t;
 void unittest_begin(unittest_state_t* state, char* name, test_opt_t* testopt);
 void unittest_finish(unittest_state_t* state);
-void unittest_assert_int_equals(unittest_state_t* state, int a, int b);
+void unittest_assert_int_equals(unittest_state_t* state, long a, long b);
 void unittest_assert_true(unittest_state_t* state, bool a);
 
 

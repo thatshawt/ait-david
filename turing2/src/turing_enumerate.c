@@ -22,13 +22,18 @@ uint64_t current_timestamp() {
 tm_symbol_t fillSymbol[TM_MAX_THREADS] = {0};
 bool fillRandom[TM_MAX_THREADS] = {false};
 int fillSeed[TM_MAX_THREADS] = {0};
+int fillMaxSteps[TM_MAX_THREADS] = {0};
 void fill_tm_with_symbol(tm_t* tm)
 {
     const int selfid = turing_threading_self_index();
+
+    const int maxSteps = fillMaxSteps[selfid];
+    const int startTapeI = TM_TAPE_SIZE/2 - maxSteps - 1;
+    const int endTapeI = TM_TAPE_SIZE/2 + maxSteps + 1;
     if(fillRandom[selfid]){
-        tm_fill_tape_with_random(tm, fillSeed[selfid]);
+        tm_fill_tape_with_random_range(tm, fillSeed[selfid], startTapeI, endTapeI);
     }else{
-        tm_fill_tape(tm, fillSymbol[selfid]);
+        tm_fill_tape_range(tm, fillSymbol[selfid], startTapeI, endTapeI);
     }
 }
 
@@ -70,11 +75,14 @@ void* enumerate_job_per_thread(void* a){
     mpz_t startIndex; mpz_init_set(startIndex,args->opt.start);// startIndex = args->opt.start;
     mpz_t indexesConsidered; mpz_init_set(indexesConsidered,args->opt.length);// indexesConsidered = args->opt.length;
     mpz_t randomIterations; mpz_init_set(randomIterations,args->opt.randomIterations);// randomIterations = args->opt.randomIterations;
+
+    fillMaxSteps[selfid] = mpz_get_ui(max_steps);
     
     printf("thread job %d:\n", selfid);
     gmp_printf("    states %d\n", args->opt.states);
     gmp_printf("    max_steps %Zd\n", args->opt.max_steps);
     gmp_printf("    randomIters %Zd\n", args->opt.randomIterations);
+    gmp_printf("    randomStartSeed %Zd\n", args->opt.randomStartSeed);
     gmp_printf("    startIndex %Zd\n", args->opt.start);
     gmp_printf("    indexesConsidered %Zd\n", args->opt.length);
     printf("\n");
@@ -93,7 +101,7 @@ void* enumerate_job_per_thread(void* a){
         fill_tm_with_symbol
     );
 
-    fillSeed[selfid] = 1;
+    fillSeed[selfid] = mpz_get_ui(args->opt.randomStartSeed);
     fillRandom[selfid] = true;
     mpz_t i; mpz_init_set_ui(i, 0);
     for(;mpz_cmp(i,randomIterations)<0;mpz_add_ui(i,i,1)){
@@ -123,14 +131,13 @@ void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt)
     mpz_init(opt->length);
     mpz_init(opt->max_steps);
     mpz_init(opt->randomIterations);
+    mpz_init(opt->randomStartSeed);
 }
 
 void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt)
 {
-    mpz_clears(opt->start, opt->length, opt->max_steps, opt->randomIterations, NULL);
+    mpz_clears(opt->start, opt->length, opt->max_steps, opt->randomIterations, opt->randomStartSeed, NULL);
 }
-
-
 
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
 {
@@ -152,12 +159,13 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
 
     int states = opt->states;
 
-    mpz_t max_steps,startIndex,indexesConsidered,randomIterations;
+    mpz_t max_steps,startIndex,indexesConsidered,randomIterations,randomStartSeed;
 
     mpz_init_set(max_steps,opt->max_steps);
     mpz_init_set(startIndex,opt->start);
     mpz_init_set(indexesConsidered,opt->length);
     mpz_init_set(randomIterations,opt->randomIterations);
+    mpz_init_set(randomStartSeed, opt->randomStartSeed);
 
     // clip indexesConsidered to make sure we save resources if it goes over.
     mpz_t max_num_machines, end_index;
@@ -178,6 +186,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     gmp_printf("    states %d\n", states);
     gmp_printf("    max_steps %Zd\n", max_steps);
     gmp_printf("    randomIters %Zd\n", randomIterations);
+    gmp_printf("    randomStartSeed %Zd\n", randomStartSeed);
     gmp_printf("    startIndex %Zd\n", startIndex);
     gmp_printf("    indexesConsidered %Zd\n", indexesConsidered);
     gmp_printf("    workthreads %d\n", opt->workthreads);
@@ -205,6 +214,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         args->opt.states = opt->states;
         mpz_set(args->opt.max_steps,opt->max_steps);
         mpz_set(args->opt.randomIterations,opt->randomIterations);
+        mpz_set(args->opt.randomStartSeed, randomStartSeed);
         mpz_set(args->opt.start,startIndexCounter); //args->opt.start = startIndexCounter;
         mpz_set(args->opt.length,indexesPerThread); //args->opt.length = indexesPerThread;
 
@@ -242,7 +252,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     }
 
     // free all the mpz_t's we made here
-    mpz_clears(max_steps,startIndex,indexesConsidered,randomIterations,
+    mpz_clears(max_steps,startIndex,indexesConsidered,randomIterations,randomStartSeed,
         startIndexCounter, indexesPerThread,
         max_num_machines, end_index,
         indexRemainder, 
@@ -411,7 +421,14 @@ void tm_enumerate_index_length_with_hashmap(
     );
 }
 
-struct hashmap* do_tm_enumerate_hashmap_job_wrapped(int states, char *max_steps, char *randomIterations, char *startIndex, char *indexesConsidered, int workers)
+struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
+    int states, 
+    char *max_steps, 
+    char *randomIterations,
+    char *randomStartSeed, 
+    char *startIndex, 
+    char *indexesConsidered, 
+    int workers)
 {
     // int states = 2;
     // char *max_steps = "300";
@@ -448,6 +465,7 @@ struct hashmap* do_tm_enumerate_hashmap_job_wrapped(int states, char *max_steps,
     mpz_set_str(enumerateOpt.length, indexesConsidered, 10);
     mpz_set_str(enumerateOpt.max_steps, max_steps, 10);
     mpz_set_str(enumerateOpt.randomIterations, randomIterations, 10);
+    mpz_set_str(enumerateOpt.randomStartSeed, randomStartSeed, 10);
     mpz_set_str(enumerateOpt.start, startIndex, 10);
 
     slice_count_map = do_tm_enumerate_job(&enumerateOpt);

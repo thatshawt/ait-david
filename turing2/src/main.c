@@ -18,38 +18,38 @@
 #define TO_STRING(x) #x
 #define COMPANY_TABLE_STRING_SANDWHICH(a, b) a TO_STRING(COMPANY(ID INT PRIMARY KEY NOT NULL,NAME TEXT NOT NULL,AGE INT NOT NULL,ADDRESS CHAR(50), SALARY REAL)) b
 
-void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, char *countStr){
-    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+// void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, char *countStr){
+//     void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+//     void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
 
-    sprintf(statementBuffer, "INSERT INTO NumbersCount(STR_ID, COUNT) VALUES ('%s', '%s')",stringID,countStr);
-    sqlenv_exec(sqlenv, statementBuffer, NULL);
+//     sprintf(statementBuffer, "INSERT INTO NumbersCount(STR_ID, COUNT) VALUES ('%s', '%s')",stringID,countStr);
+//     sqlenv_exec(sqlenv, statementBuffer, NULL);
 
-    sprintf(statementBuffer, "UPDATE NumbersCount SET COUNT = '%s' WHERE STR_ID='%s';",countStr,stringID);
-    sqlenv_exec(sqlenv, statementBuffer, NULL);
+//     sprintf(statementBuffer, "UPDATE NumbersCount SET COUNT = '%s' WHERE STR_ID='%s';",countStr,stringID);
+//     sqlenv_exec(sqlenv, statementBuffer, NULL);
     
-    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
-}
+//     sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+// }
 
-void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, mpz_t *theMpz){
-    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+// void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, mpz_t *theMpz){
+//     void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+//     void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
 
-    sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
-    sprintf(statementBuffer, "SELECT * FROM NumbersCount WHERE STR_ID='%s';", stringID);
-    sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
+//     sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
+//     sprintf(statementBuffer, "SELECT * FROM NumbersCount WHERE STR_ID='%s';", stringID);
+//     sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
     
-    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
-}
+//     sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+// }
 
-void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv){
-    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+// void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv){
+//     void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+//     void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
 
-    sqlenv_exec(sqlenv, "CREATE TABLE NumbersCount(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", NULL);
+//     sqlenv_exec(sqlenv, "CREATE TABLE NumbersCount(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", NULL);
 
-    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
-}
+//     sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+// }
 
 int main(){
     // mpz_t one,two,sum;
@@ -106,7 +106,7 @@ int main(){
         // done
         sqlenv_close(&sqlenv);
 
-        return 0;
+        // return 0;
     }
 
 
@@ -138,12 +138,13 @@ int main(){
     {
         int states = 2;
         char *max_steps = "300";
-        char *randomIterations = "10";
+        char *randomIterations = "100";
+        char *randomStartSeed = "1";
         char *startIndex = "0";
         char *indexesConsidered = NULL;
         int workers = 4;
 
-        slice_count_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, startIndex, indexesConsidered, workers);
+        slice_count_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, randomStartSeed, startIndex, indexesConsidered, workers);
     }
 
     size_t iterA = 0;

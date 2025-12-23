@@ -372,7 +372,7 @@ void unittest_finish(unittest_state_t* state)
     }
 }
 
-void unittest_assert_int_equals(unittest_state_t* state, int a, int b)
+void unittest_assert_int_equals(unittest_state_t* state, long a, long b)
 {
     state->passing = state->passing && a == b;
 }
