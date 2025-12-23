@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#define SQLENV_TEMP_ZERO void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0; \
+    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+
+#define SQLENV_TEMP_REVERT sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
 
 int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
     int(*exec_callback)(void *data, int argc, char **argv, char **columnName),
@@ -112,38 +116,74 @@ int sql_callback_load_countCol_into_mpz(void *data, int argc, char **argv, char 
 }
 
 
-void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, char *countStr)
+void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, char *stringID, char *countStr)
 {
-    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+    SQLENV_TEMP_ZERO;
 
-    sprintf(statementBuffer, "INSERT INTO NumbersCount(STR_ID, COUNT) VALUES ('%s', '%s')",stringID,countStr);
+    sprintf(statementBuffer, "INSERT INTO %s(STR_ID, COUNT) VALUES ('%s', '%s')",tableName,stringID,countStr);
     sqlenv_exec(sqlenv, statementBuffer, NULL);
 
-    sprintf(statementBuffer, "UPDATE NumbersCount SET COUNT = '%s' WHERE STR_ID='%s';",countStr,stringID);
+    sprintf(statementBuffer, "UPDATE %s SET COUNT = '%s' WHERE STR_ID='%s';",tableName,countStr,stringID);
     sqlenv_exec(sqlenv, statementBuffer, NULL);
     
-    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+    SQLENV_TEMP_REVERT;
 }
 
-void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, mpz_t *theMpz)
+void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpz_t *theMpz)
 {
-    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+    SQLENV_TEMP_ZERO;
 
     sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
-    sprintf(statementBuffer, "SELECT * FROM NumbersCount WHERE STR_ID='%s';", stringID);
+    sprintf(statementBuffer, "SELECT * FROM %s WHERE STR_ID='%s';", tablename, stringID);
     sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
     
-    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+    SQLENV_TEMP_REVERT;
 }
 
-void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv)
+int sql_callback_str_count_sum_all_count_columns_into_mpz(void *data, int argc, char **argv, char **columnName)
 {
-    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+    char numberBuffer[1000];
+    mpz_t zval; mpz_init(zval);
+    for(int i=0;i<argc;i++){
+        const char *colName = columnName[i];
+        const char *colValue = argv[i];
+        
+        if(strcmp(colName,"COUNT") == 0){
+            mpz_set_str(zval, colValue, 10);
+            mpz_add(*(mpz_t*)data, *(mpz_t*)data, zval);
+        }
 
-    sqlenv_exec(sqlenv, "CREATE TABLE NumbersCount(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", NULL);
+    }
+    mpz_clear(zval);
+}
 
-    sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
+void sql_str_count_sum_all_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, mpz_t *zval)
+{
+    SQLENV_TEMP_ZERO;
+
+    sqlenv->exec_callback = &sql_callback_str_count_sum_all_count_columns_into_mpz;
+    sprintf(statementBuffer, "SELECT * FROM %s;", tableName);
+    sqlenv_exec(sqlenv, statementBuffer, (void*)zval);
+
+    SQLENV_TEMP_REVERT;
+}
+
+void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv, char *statementBuffer, char *tablename)
+{
+    SQLENV_TEMP_ZERO;
+
+    sprintf(statementBuffer, "CREATE TABLE %s(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", tablename);
+    sqlenv_exec(sqlenv, statementBuffer, NULL);
+
+    SQLENV_TEMP_REVERT;
+}
+
+void sql_drop_table_if_exists(sqlenv_t *sqlenv, char *statementBuffer, char *tablename)
+{
+    SQLENV_TEMP_ZERO;
+
+    sprintf(statementBuffer, "DROP TABLE %s;", tablename);
+    sqlenv_exec(sqlenv, statementBuffer, NULL);
+
+    SQLENV_TEMP_REVERT;
 }

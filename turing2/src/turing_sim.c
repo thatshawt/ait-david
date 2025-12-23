@@ -200,6 +200,16 @@ void tm_slice_print(tape_slice_t* slice)
     putc('\n', stdout);
 }
 
+void tm_slice_sprint(tape_slice_t* slice, char *buffer)
+{
+    for(int i=0;i<slice->length;i++){
+        char val = slice->tapeslice[i];
+        buffer[i] = val == 1?'1':'0';
+    }
+    buffer[slice->length] = 0; //null terminate
+}
+
+
 //got this from musl. thank you musl.
 static uint64_t tm_random_seed[TM_MAX_THREADS] = {0};
 void tm_srand(int threadid, unsigned s)

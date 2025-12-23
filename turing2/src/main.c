@@ -14,42 +14,31 @@
 
 #include "sqlenv.h"
 
+void sql_store_slicecount_map_as_sql_table(
+    char *statementBuffer,
+    struct hashmap *map, 
+    sqlenv_t *sqlenv,
+    char *tableName)
+{
+    sql_drop_table_if_exists(sqlenv, statementBuffer, tableName);
 
-#define TO_STRING(x) #x
-#define COMPANY_TABLE_STRING_SANDWHICH(a, b) a TO_STRING(COMPANY(ID INT PRIMARY KEY NOT NULL,NAME TEXT NOT NULL,AGE INT NOT NULL,ADDRESS CHAR(50), SALARY REAL)) b
+    sql_create_str_count_table_ifnotexist(sqlenv, statementBuffer, tableName);
 
-// void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, char *countStr){
-//     void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-//     void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+    size_t iterA = 0;
+    void *itemA;
+    char countStr[1000];
+    char stringID[1000];
+    while (hashmap_iter(map, &iterA, &itemA)) {
+        const tm_slice_counter_t *sliceCounter = itemA;
 
-//     sprintf(statementBuffer, "INSERT INTO NumbersCount(STR_ID, COUNT) VALUES ('%s', '%s')",stringID,countStr);
-//     sqlenv_exec(sqlenv, statementBuffer, NULL);
+        tm_slice_sprint(&sliceCounter->slice, stringID);
+        mpz_get_str(countStr, 10, sliceCounter->count);
+        
+        sql_set_str_count(sqlenv, statementBuffer, tableName, stringID, countStr);
+        // mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+    }
 
-//     sprintf(statementBuffer, "UPDATE NumbersCount SET COUNT = '%s' WHERE STR_ID='%s';",countStr,stringID);
-//     sqlenv_exec(sqlenv, statementBuffer, NULL);
-    
-//     sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
-// }
-
-// void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *stringID, mpz_t *theMpz){
-//     void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-//     void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
-
-//     sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
-//     sprintf(statementBuffer, "SELECT * FROM NumbersCount WHERE STR_ID='%s';", stringID);
-//     sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
-    
-//     sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
-// }
-
-// void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv){
-//     void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
-//     void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
-
-//     sqlenv_exec(sqlenv, "CREATE TABLE NumbersCount(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", NULL);
-
-//     sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
-// }
+}
 
 int main(){
     // mpz_t one,two,sum;
@@ -76,25 +65,26 @@ int main(){
         // sqlenv.resultHandler = &sql_resultHandler_print;
         // sqlenv.exec_callback = &sql_callback_print;
 
+        char statementBuffer[2000];
+
         if(sqlenv_open(&sqlenv, "test.db", 0, 0))return 1;
 
         // create table if not exists
-        sql_create_str_count_table_ifnotexist(&sqlenv);
+        sql_create_str_count_table_ifnotexist(&sqlenv, statementBuffer, "NumbersCount");
         
         // increment count of a str
         char* stringID = "123";
 
-        char statementBuffer[2000];
 
         mpz_t count; mpz_init_set_ui(count, 0);
 
-        sql_load_str_count_into_mpz(&sqlenv, statementBuffer, stringID, &count);
+        sql_load_str_count_into_mpz(&sqlenv, statementBuffer, "NumbersCount", stringID, &count);
         
         mpz_add_ui(count,count,1);
 
-        char* countStr = mpz_get_str(NULL, 10, count);
+        char *countStr = mpz_get_str(NULL, 10, count);
 
-        sql_set_str_count(&sqlenv, statementBuffer, stringID, countStr);
+        sql_set_str_count(&sqlenv, statementBuffer, "NumbersCount", stringID, countStr);
 
         mpz_clear(count);
         free(countStr);
@@ -103,15 +93,14 @@ int main(){
         sqlenv.exec_callback = &sql_callback_print;
         sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount;", NULL);
 
+        // drop the table i guess
+        sql_drop_table_if_exists(&sqlenv, statementBuffer, "NumbersCount");
+
         // done
         sqlenv_close(&sqlenv);
 
         // return 0;
     }
-
-
-
-
 
     printf("\nhello turing\n\n");
 
@@ -159,7 +148,6 @@ int main(){
     iterA = 0;
     mpz_t count; mpz_init(count);
     mpq_t freq, tempq1; mpq_inits(freq, tempq1, NULL);
-
     while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
         const tm_slice_counter_t *sliceCounter = itemA;
         mpz_set(count, sliceCounter->count); // count = sliceCounter->count;
@@ -171,6 +159,7 @@ int main(){
 
         mpq_canonicalize(freq);
         mpq_canonicalize(tempq1);
+
         mpq_div(freq, freq, tempq1); // freq = count/totalCount;
 
         mpq_canonicalize(freq);
@@ -179,6 +168,28 @@ int main(){
         tm_slice_print(&sliceCounter->slice);
         gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
     }
+
+    char statementBuffer[2000];
+
+    sqlenv_t sqlenv;
+    sqlenv_open(&sqlenv, "test.db", 0, 0);
+
+    printf("Storing hashmap into sqltable...\n");
+    sql_store_slicecount_map_as_sql_table(statementBuffer, slice_count_map, &sqlenv, "NumbersCount2");
+    
+    printf("Summing all counts...\n");
+    mpz_t zval; mpz_init_set_ui(zval, 0);
+    sql_str_count_sum_all_count(&sqlenv, statementBuffer, "NumbersCount2", &zval);
+
+    gmp_printf("Total strings from sql: %Zd\n", zval);
+
+    mpz_clear(zval);
+
+    // sqlenv.exec_callback = &sql_callback_print;
+    // sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount2;", NULL);
+
+    sqlenv_close(&sqlenv);
+
 
     mpz_clears(count, totalCount, NULL);
     mpq_clears(freq, tempq1, NULL);
