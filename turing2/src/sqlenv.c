@@ -140,6 +140,38 @@ void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *
     SQLENV_TEMP_REVERT;
 }
 
+void sql_str_count_get_freq(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpq_t freq)
+{
+    // SQLENV_TEMP_ZERO;
+
+    // sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
+    // sprintf(statementBuffer, "SELECT * FROM %s WHERE STR_ID='%s';", tablename, stringID);
+    // sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
+
+    mpz_t count, totalCount; mpz_inits(count, totalCount, NULL);
+    mpq_t tempq1;mpq_init(tempq1);
+
+    sql_str_count_sum_all_count(sqlenv, statementBuffer, tablename, &totalCount);
+    sql_load_str_count_into_mpz(sqlenv, statementBuffer, tablename, stringID, &count);
+
+    mpq_set_z(freq, count); // freq = count
+    mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
+
+    mpq_canonicalize(freq);
+    mpq_canonicalize(tempq1);
+
+    mpq_div(freq, freq, tempq1); // freq = count/totalCount;
+
+    mpq_canonicalize(freq);
+
+    // gmp_printf("totals was %Zd, count was %Zd, freq of '%s' is %lf\n", totalCount, count, strID, mpq_get_d(freq));
+
+    mpz_clears(count, totalCount, NULL);
+    mpq_clear(tempq1);
+    
+    // SQLENV_TEMP_REVERT;
+}
+
 int sql_callback_str_count_sum_all_count_columns_into_mpz(void *data, int argc, char **argv, char **columnName)
 {
     char numberBuffer[1000];
@@ -187,3 +219,4 @@ void sql_drop_table_if_exists(sqlenv_t *sqlenv, char *statementBuffer, char *tab
 
     SQLENV_TEMP_REVERT;
 }
+

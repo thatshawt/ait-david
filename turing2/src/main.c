@@ -127,7 +127,7 @@ int main(){
     {
         int states = 2;
         char *max_steps = "300";
-        char *randomIterations = "100";
+        char *randomIterations = "0";
         char *randomStartSeed = "1";
         char *startIndex = "0";
         char *indexesConsidered = NULL;
@@ -136,63 +136,111 @@ int main(){
         slice_count_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, randomStartSeed, startIndex, indexesConsidered, workers);
     }
 
-    size_t iterA = 0;
-    void *itemA;
-    mpz_t totalCount; mpz_init_set_ui(totalCount, 0);
-    while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
-        const tm_slice_counter_t *sliceCounter = itemA;
-        mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+    {
+        size_t iterA = 0;
+        void *itemA;
+        mpz_t totalCount; mpz_init_set_ui(totalCount, 0);
+        while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
+            const tm_slice_counter_t *sliceCounter = itemA;
+            mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+        }
+        gmp_printf("total counted strings: %Zd\n", totalCount);
+
+        iterA = 0;
+        mpz_t count; mpz_init(count);
+        mpq_t freq, tempq1; mpq_inits(freq, tempq1, NULL);
+        while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
+            const tm_slice_counter_t *sliceCounter = itemA;
+            mpz_set(count, sliceCounter->count); // count = sliceCounter->count;
+
+            if(mpz_cmp_ui(count, 0) <= 0)continue;
+
+            mpq_set_z(freq, count); // freq = count
+            mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
+
+            mpq_canonicalize(freq);
+            mpq_canonicalize(tempq1);
+
+            mpq_div(freq, freq, tempq1); // freq = count/totalCount;
+
+            mpq_canonicalize(freq);
+
+            int length = sliceCounter->slice.length;
+            tm_slice_print(&sliceCounter->slice);
+            gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
+        }
+
+        mpz_clears(count, totalCount, NULL);
+        mpq_clears(freq, tempq1, NULL);
     }
-    gmp_printf("total counted strings: %Zd\n", totalCount);
 
-    iterA = 0;
-    mpz_t count; mpz_init(count);
-    mpq_t freq, tempq1; mpq_inits(freq, tempq1, NULL);
-    while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
-        const tm_slice_counter_t *sliceCounter = itemA;
-        mpz_set(count, sliceCounter->count); // count = sliceCounter->count;
+    {
+        char statementBuffer[2000];
 
-        if(mpz_cmp_ui(count, 0) <= 0)continue;
+        sqlenv_t sqlenv;
+        sqlenv_open(&sqlenv, "test.db", 0, 0);
 
-        mpq_set_z(freq, count); // freq = count
-        mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
+        printf("Storing hashmap into sqltable...\n");
+        sql_store_slicecount_map_as_sql_table(statementBuffer, slice_count_map, &sqlenv, "NumbersCount2");
+        
+        printf("Summing all counts...\n");
+        mpz_t zval; mpz_init_set_ui(zval, 0);
+        sql_str_count_sum_all_count(&sqlenv, statementBuffer, "NumbersCount2", &zval);
 
-        mpq_canonicalize(freq);
-        mpq_canonicalize(tempq1);
+        gmp_printf("Total strings from sql: %Zd\n", zval);
 
-        mpq_div(freq, freq, tempq1); // freq = count/totalCount;
+        mpz_clear(zval);
 
-        mpq_canonicalize(freq);
+        // sqlenv.exec_callback = &sql_callback_print;
+        // sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount2;", NULL);
 
-        int length = sliceCounter->slice.length;
-        tm_slice_print(&sliceCounter->slice);
-        gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
+        sqlenv_close(&sqlenv);
     }
 
-    char statementBuffer[2000];
+    {
+        char statementBuffer[2000];
+        char *tablename = "NumbersCount2";
+        char *strID = "1";
+        mpq_t freq; mpq_init(freq);
+        sqlenv_t sqlenv;
+        
+        sqlenv_open(&sqlenv, "test.db", 0, 0);
 
-    sqlenv_t sqlenv;
-    sqlenv_open(&sqlenv, "test.db", 0, 0);
+        printf("Storing hashmap into sqltable....\n");
+        sql_store_slicecount_map_as_sql_table(statementBuffer, slice_count_map, &sqlenv, tablename);
+        
+        // freq = count of strID / total counts;
+        // void sql_str_count_get_freq();
+        sql_str_count_get_freq(&sqlenv, statementBuffer, tablename, strID, freq);
+        gmp_printf("freq of '%s' is %lf\n", strID, mpq_get_d(freq));
+        {
+            // mpz_t count, totalCount; mpz_inits(count, totalCount, NULL);
+            // mpq_t tempq1;mpq_init(tempq1);
 
-    printf("Storing hashmap into sqltable...\n");
-    sql_store_slicecount_map_as_sql_table(statementBuffer, slice_count_map, &sqlenv, "NumbersCount2");
-    
-    printf("Summing all counts...\n");
-    mpz_t zval; mpz_init_set_ui(zval, 0);
-    sql_str_count_sum_all_count(&sqlenv, statementBuffer, "NumbersCount2", &zval);
+            // sql_str_count_sum_all_count(&sqlenv, statementBuffer, tableName, &totalCount);
+            // sql_load_str_count_into_mpz(&sqlenv, statementBuffer, tableName, strID, &count);
 
-    gmp_printf("Total strings from sql: %Zd\n", zval);
+            // mpq_set_z(freq, count); // freq = count
+            // mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
 
-    mpz_clear(zval);
+            // mpq_canonicalize(freq);
+            // mpq_canonicalize(tempq1);
 
-    // sqlenv.exec_callback = &sql_callback_print;
-    // sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount2;", NULL);
+            // mpq_div(freq, freq, tempq1); // freq = count/totalCount;
 
-    sqlenv_close(&sqlenv);
+            // mpq_canonicalize(freq);
 
+            // gmp_printf("totals was %Zd, count was %Zd, freq of '%s' is %lf\n", totalCount, count, strID, mpq_get_d(freq));
 
-    mpz_clears(count, totalCount, NULL);
-    mpq_clears(freq, tempq1, NULL);
+            // mpz_clears(count, totalCount, NULL);
+            // mpq_clear(tempq1);
+            // gmp_printf("Total strings from sql: %Zd\n", zval);
+        }
+
+        
+        mpq_clear(freq);
+        sqlenv_close(&sqlenv);
+    }
 
     hashmap_free(slice_count_map);
 
