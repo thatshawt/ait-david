@@ -23,7 +23,7 @@ enum HaltReason{
     HALT_NATURAL,               // halted from transition table
     HALT_TAPE_OUT_OF_BOUNDS,    // halted because went outside tape bounds
     HALT_MAX_STEPS,             // hit max steps from tm_step_until_halt_or_max
-    HALT_TRIVIAL_NONHALTING,           // found to never halt i guess...
+    HALT_TRIVIAL_NONHALTING,    // found to never halt i guess...
 };
 
 typedef struct {

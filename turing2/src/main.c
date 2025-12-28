@@ -81,7 +81,7 @@ int main(){
 
     // return 0;
 
-    // floating point log2 test
+    // floating point -log2 test
     {
         mpfr_t a;
         mpfr_inits2(30, a, NULL);
@@ -169,12 +169,23 @@ int main(){
     // generate slice count hashmap from an enumeration
     struct hashmap* slice_count_map;
     {
-        int states = 2;
-        char *max_steps = "300";
-        char *randomIterations = "100";
+        int states = 3;
+
+        //TODO make a thing that samples a max_steps that captures 99.999% halting machines.
+        // i figure sampling 20% of all machines is a confident way to measure that...
+        // idea:  find_first_power_of_two_max_steps(desired_percent_halters:float) -> max_steps:
+        //          # desired_percent is gonna be something like "0.9999"
+        //          start at 2 max_steps.
+        //          "sample 20% of randomly picked machine indexes"().
+        //          if "number of halted machines" / "number of machines sampled" < desired_percent_halters:
+        //              sample again with max_steps *= 2;
+        //          else:
+        //              return max_steps;
+        char *max_steps = "21";
+        char *randomIterations = "0";
         char *randomStartSeed = "1";
-        bool doZerosTape = false;
-        bool doOnesTape = false;
+        bool doZerosTape = true;
+        bool doOnesTape = true;
         char *startIndex = "0";
         char *indexesConsidered = NULL;
         int workers = 4;
