@@ -11,13 +11,18 @@ pkgs.mkShell {
     gnumake
     gmp
     sqlite
+    mpfr
   ];
 
   shellHook = ''
     export LIBGMP_DIR=${pkgs.gmp}
     export LIBGMPXX_DIR=${pkgs.gmpxx}
+
     export SQLITE_INCLUDE=${pkgs.sqlite.dev}/include
     export SQLITE_LIB=${pkgs.sqlite.out}/lib
+
+    export MPFR_INCLUDE=${pkgs.mpfr.dev}/include
+    export MPFR_LIB=${pkgs.mpfr.out}/lib
     
     echo "ready for development >:)"
   '';

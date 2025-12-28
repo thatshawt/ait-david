@@ -62,7 +62,6 @@ typedef struct{
 } enumerate_job_args_t;
 
 void* enumerate_job_per_thread(void* a){
-
     // printf("whole lotta nothing\n");
     
     turing_threading_self_init();
@@ -80,6 +79,8 @@ void* enumerate_job_per_thread(void* a){
     
     printf("thread job %d:\n", selfid);
     gmp_printf("    states %d\n", args->opt.states);
+    gmp_printf("    doZerosTape %d\n", args->opt.doZerosTape);
+    gmp_printf("    doOnesTape %d\n", args->opt.doOnesTape);
     gmp_printf("    max_steps %Zd\n", args->opt.max_steps);
     gmp_printf("    randomIters %Zd\n", args->opt.randomIterations);
     gmp_printf("    randomStartSeed %Zd\n", args->opt.randomStartSeed);
@@ -87,24 +88,29 @@ void* enumerate_job_per_thread(void* a){
     gmp_printf("    indexesConsidered %Zd\n", args->opt.length);
     printf("\n");
     
-    fillSymbol[selfid] = 0;
-    tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
-        args->slice_count_map,
-        fill_tm_with_symbol
-    );
-    
-    // turing_threading_self_remove();return NULL;
+    // 1 enumeration with 0s on the tape
+    if(args->opt.doZerosTape){
+        fillSymbol[selfid] = 0;
+        tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
+            args->slice_count_map,
+            fill_tm_with_symbol
+        );
+    }
 
-    fillSymbol[selfid] = 1;
-    tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
-        args->slice_count_map,
-        fill_tm_with_symbol
-    );
+    // 1 enumeration with 1s on the tape
+    if(args->opt.doOnesTape){
+        fillSymbol[selfid] = 1;
+        tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
+            args->slice_count_map,
+            fill_tm_with_symbol
+        );
+    }
 
+    // randomIterations enumerations with random 1s and 0s on tape 
     fillSeed[selfid] = mpz_get_ui(args->opt.randomStartSeed);
     fillRandom[selfid] = true;
     mpz_t i; mpz_init_set_ui(i, 0);
-    for(;mpz_cmp(i,randomIterations)<0;mpz_add_ui(i,i,1)){
+    for( ; mpz_cmp(i,randomIterations)<0; mpz_add_ui(i,i,1)){
         // gmp_printf("on i %Zd. selfid %d\n", i, selfid);
         tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
             args->slice_count_map,
@@ -114,6 +120,7 @@ void* enumerate_job_per_thread(void* a){
         // printf("completed i %d, selfid %d\n", i, selfid);
     }
 
+    // gotta call this when the thread stops so we can relinquish its turing_thread_id.
     turing_threading_self_remove();
 
     mpz_clears(max_steps,startIndex,indexesConsidered,randomIterations,i,
@@ -127,6 +134,8 @@ void* enumerate_job_per_thread(void* a){
 
 void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt)
 {
+    // opt->doOnesTape = true;
+    // opt->doZerosTape = true;
     mpz_init(opt->start);
     mpz_init(opt->length);
     mpz_init(opt->max_steps);
@@ -211,6 +220,8 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         // args->opt = *opt;
         args->slice_count_map = slice_count_map[i];
 
+        args->opt.doOnesTape = opt->doOnesTape;
+        args->opt.doZerosTape = opt->doZerosTape;
         args->opt.states = opt->states;
         mpz_set(args->opt.max_steps,opt->max_steps);
         mpz_set(args->opt.randomIterations,opt->randomIterations);
@@ -261,6 +272,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     return slice_count_map[0];
 }
 
+//TODO, fix this up
 void tm_print_enumerate_performance_stats(int states, mpz_t max_steps)
 {
     // uint64_t machines = tm_max_num_of_machines(states);
@@ -423,9 +435,11 @@ void tm_enumerate_index_length_with_hashmap(
 
 struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
     int states, 
-    char *max_steps, 
+    char *max_steps,
     char *randomIterations,
     char *randomStartSeed, 
+    bool doOnesTape,
+    bool doZerosTape,
     char *startIndex, 
     char *indexesConsidered, 
     int workers)
@@ -453,12 +467,10 @@ struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
     }
 
     enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
-        // .length=tm_max_num_of_machines(states)+1,
-        // .max_steps=300,
-        // .randomIterations=10,
-        // .start=0,
         .states=states,
-        .workthreads=workers
+        .workthreads=workers,
+        .doOnesTape=doOnesTape,
+        .doZerosTape=doZerosTape
     };
     tm_enumerate_job_opt_init(&enumerateOpt);
 

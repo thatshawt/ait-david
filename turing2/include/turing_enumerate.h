@@ -1,6 +1,7 @@
 #ifndef TURING_ENUMERATE_H
 #define TURING_ENUMERATE_H
 
+#include <stdbool.h>
 #include "turing_mapping.h"
 #include "hashmap.h"
 
@@ -21,11 +22,18 @@ void tm_print_enumerate_performance_stats(int states, mpz_t max_steps);
 
 typedef struct{
     int states;
+
     mpz_t start;
     mpz_t length;
+
     mpz_t max_steps;
+
+    bool doOnesTape;
+    bool doZerosTape;
+
     mpz_t randomIterations;
     mpz_t randomStartSeed;
+
     int workthreads;
 } enumerate_job_opt_t;
 
@@ -33,11 +41,13 @@ void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt);
 void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt);
 
 struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
-    int states,
+    int states, 
     char *max_steps,
     char *randomIterations,
-    char *randomStartSeed,
-    char *startIndex,
+    char *randomStartSeed, 
+    bool doOnesTape,
+    bool doZerosTape,
+    char *startIndex, 
     char *indexesConsidered, 
     int workers);
     

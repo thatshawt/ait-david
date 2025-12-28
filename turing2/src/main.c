@@ -11,14 +11,36 @@
 #include <string.h>
 
 #include <gmp.h>
+#include <mpfr.h>
 
 #include "sqlenv.h"
 
+/*
+TODO: create this below.
+
+    // this merges with existing table or creates a new one
+    sql_str_count_merge_with_slicecount_hashmap
+        sqlenv_t *sqlenv,
+        char *statementBuffer,
+        char *tableName
+        struct hashmap *map, 
+    );
+
+*/ 
+
+/*
+TODO: sql tests.?
+sum all state 2 strings test.?
+frequency of certain strings test.?
+*/
+
+//this overwrites the table if exists.
 void sql_store_slicecount_map_as_sql_table(
-    char *statementBuffer,
-    struct hashmap *map, 
     sqlenv_t *sqlenv,
-    char *tableName)
+    char *statementBuffer,
+    char *tableName,
+    struct hashmap *map
+)
 {
     sql_drop_table_if_exists(sqlenv, statementBuffer, tableName);
 
@@ -59,6 +81,24 @@ int main(){
 
     // return 0;
 
+    // floating point log2 test
+    {
+        mpfr_t a;
+        mpfr_inits2(30, a, NULL);
+
+        double op = 0.0123123;
+
+        mpfr_set_d(a, op, MPFR_RNDN);
+        mpfr_log2 (a, a, MPFR_RNDZ);
+        mpfr_mul_si(a, a, -1, MPFR_RNDZ);
+
+        mpfr_printf("log2(%lf) = %.10Rf\n", op, a);
+
+        mpfr_clears(a, NULL);
+        // return 1;
+    }
+
+    // incrementing into a str_count table experiment code
     {
         // start
         sqlenv_t sqlenv;
@@ -102,19 +142,22 @@ int main(){
         // return 0;
     }
 
-    printf("\nhello turing\n\n");
+    // print various messages and test all
+    {
+        printf("\nhello turing\n\n");
 
-    printf("main pthread_self() %d\n", pthread_self());
-    printf("sizeof(tm_slice_counter_t) %d\n", sizeof(tm_slice_counter_t));
-    printf("sizeof(tape_slice_t) %d\n", sizeof(tape_slice_t));
+        printf("main pthread_self() %d\n", pthread_self());
+        printf("sizeof(tm_slice_counter_t) %d\n", sizeof(tm_slice_counter_t));
+        printf("sizeof(tape_slice_t) %d\n", sizeof(tape_slice_t));
 
-    turing_threading_init_global();
+        turing_threading_init_global();
 
-    turing_threading_self_init();
+        turing_threading_self_init();
 
-    test_opt_t testOptions;
-    testOptions.onlyPrintFailingTests = false;
-    test_all(&testOptions);
+        test_opt_t testOptions;
+        testOptions.onlyPrintFailingTests = false;
+        test_all(&testOptions);
+    }
 
     // return 0;
 
@@ -123,19 +166,28 @@ int main(){
     const int selfid = turing_threading_self_index();
     tm_srand(selfid, 1337);
 
+    // generate slice count hashmap from an enumeration
     struct hashmap* slice_count_map;
     {
         int states = 2;
         char *max_steps = "300";
-        char *randomIterations = "0";
+        char *randomIterations = "100";
         char *randomStartSeed = "1";
+        bool doZerosTape = false;
+        bool doOnesTape = false;
         char *startIndex = "0";
         char *indexesConsidered = NULL;
         int workers = 4;
 
-        slice_count_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, randomStartSeed, startIndex, indexesConsidered, workers);
+        slice_count_map = do_tm_enumerate_hashmap_job_wrapped(
+            states, max_steps,
+            randomIterations, randomStartSeed,
+            doOnesTape, doZerosTape,
+            startIndex, indexesConsidered,
+            workers);
     }
 
+    // traverse slice conut hashmap
     {
         size_t iterA = 0;
         void *itemA;
@@ -174,18 +226,25 @@ int main(){
         mpq_clears(freq, tempq1, NULL);
     }
 
+    //store into sql as table
+    const char *tablename = "NumbersCount2";
+    sqlenv_t sqlenv;
+    if(sqlenv_open(&sqlenv, "test.db", 0, 0))return 1;
     {
         char statementBuffer[2000];
 
-        sqlenv_t sqlenv;
-        sqlenv_open(&sqlenv, "test.db", 0, 0);
-
         printf("Storing hashmap into sqltable...\n");
-        sql_store_slicecount_map_as_sql_table(statementBuffer, slice_count_map, &sqlenv, "NumbersCount2");
-        
+        sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map);
+
+    }
+
+    // print out total counted strings from sql
+    {
+        char statementBuffer[2000];
+
         printf("Summing all counts...\n");
         mpz_t zval; mpz_init_set_ui(zval, 0);
-        sql_str_count_sum_all_count(&sqlenv, statementBuffer, "NumbersCount2", &zval);
+        sql_str_count_sum_all_count(&sqlenv, statementBuffer, tablename, &zval);
 
         gmp_printf("Total strings from sql: %Zd\n", zval);
 
@@ -194,54 +253,32 @@ int main(){
         // sqlenv.exec_callback = &sql_callback_print;
         // sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount2;", NULL);
 
-        sqlenv_close(&sqlenv);
     }
 
+    // print frequency,-log2 of a string from sql
     {
         char statementBuffer[2000];
-        char *tablename = "NumbersCount2";
         char *strID = "1";
         mpq_t freq; mpq_init(freq);
-        sqlenv_t sqlenv;
         
-        sqlenv_open(&sqlenv, "test.db", 0, 0);
-
-        printf("Storing hashmap into sqltable....\n");
-        sql_store_slicecount_map_as_sql_table(statementBuffer, slice_count_map, &sqlenv, tablename);
-        
-        // freq = count of strID / total counts;
-        // void sql_str_count_get_freq();
+        printf("getting frequency...\n");
         sql_str_count_get_freq(&sqlenv, statementBuffer, tablename, strID, freq);
-        gmp_printf("freq of '%s' is %lf\n", strID, mpq_get_d(freq));
-        {
-            // mpz_t count, totalCount; mpz_inits(count, totalCount, NULL);
-            // mpq_t tempq1;mpq_init(tempq1);
 
-            // sql_str_count_sum_all_count(&sqlenv, statementBuffer, tableName, &totalCount);
-            // sql_load_str_count_into_mpz(&sqlenv, statementBuffer, tableName, strID, &count);
+        mpfr_t a; mpfr_inits2(256, a, NULL);
 
-            // mpq_set_z(freq, count); // freq = count
-            // mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
+        mpfr_set_q(a, freq, MPFR_RNDZ);
+        mpfr_log2(a, a, MPFR_RNDZ);
+        mpfr_mul_si(a, a, -1, MPFR_RNDZ);
 
-            // mpq_canonicalize(freq);
-            // mpq_canonicalize(tempq1);
+        mpfr_printf("freq of '%s' is %lf. -log2 is %.5Rf\n", strID, mpq_get_d(freq), a);
 
-            // mpq_div(freq, freq, tempq1); // freq = count/totalCount;
-
-            // mpq_canonicalize(freq);
-
-            // gmp_printf("totals was %Zd, count was %Zd, freq of '%s' is %lf\n", totalCount, count, strID, mpq_get_d(freq));
-
-            // mpz_clears(count, totalCount, NULL);
-            // mpq_clear(tempq1);
-            // gmp_printf("Total strings from sql: %Zd\n", zval);
-        }
-
-        
+        mpfr_clear(a);
         mpq_clear(freq);
-        sqlenv_close(&sqlenv);
     }
 
+    sqlenv_close(&sqlenv);
+
+    // free things
     hashmap_free(slice_count_map);
 
     turing_threading_destroy();
