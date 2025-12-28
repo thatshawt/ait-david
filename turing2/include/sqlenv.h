@@ -3,6 +3,7 @@
 
 #include <sqlite3.h>
 #include <gmp.h>
+#include <mpfr.h>
 
 enum SQL_RT{
     SQL_RT_EXEC, SQL_RT_OPEN, SQL_RT_CLOSE
@@ -40,6 +41,8 @@ int sql_callback_load_countCol_into_mpz(SQL_CALLBACK_FUNC_ARG_PROTO);
 void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, char *stringID, char *countStr);
 void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpz_t *theMpz);
 void sql_str_count_get_freq(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpq_t freq);
+void sql_str_count_get_freq_negativelog2(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpfr_t resultMpfr);
+
 void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv, char *statementBuffer, char *tablename);
 
 void sql_drop_table_if_exists(sqlenv_t *sqlenv, char *statementBuffer, char *tablename);

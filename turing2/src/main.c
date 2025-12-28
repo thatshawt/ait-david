@@ -169,21 +169,15 @@ int main(){
     // generate slice count hashmap from an enumeration
     struct hashmap* slice_count_map;
     {
-        int states = 3;
+        int states = 2;
 
-        //TODO make a thing that samples a max_steps that captures 99.999% halting machines.
-        // i figure sampling 20% of all machines is a confident way to measure that...
-        // idea:  find_first_power_of_two_max_steps(desired_percent_halters:float) -> max_steps:
-        //          # desired_percent is gonna be something like "0.9999"
-        //          start at 2 max_steps.
-        //          "sample 20% of randomly picked machine indexes"().
-        //          if "number of halted machines" / "number of machines sampled" < desired_percent_halters:
-        //              sample again with max_steps *= 2;
-        //          else:
-        //              return max_steps;
+        // TODO:
+        // try to capture up to 99.999% of the theoretical number of predicted
+        // halting machines. you can try sampling 20% of the machines randomly to
+        // check how many are captured.
         char *max_steps = "21";
-        char *randomIterations = "0";
         char *randomStartSeed = "1";
+        char *randomIterations = "0";
         bool doZerosTape = true;
         bool doOnesTape = true;
         char *startIndex = "0";
@@ -237,16 +231,17 @@ int main(){
         mpq_clears(freq, tempq1, NULL);
     }
 
-    //store into sql as table
+    
     const char *tablename = "NumbersCount2";
     sqlenv_t sqlenv;
     if(sqlenv_open(&sqlenv, "test.db", 0, 0))return 1;
+
+    //store into sql as table
     {
         char statementBuffer[2000];
 
         printf("Storing hashmap into sqltable...\n");
         sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map);
-
     }
 
     // print out total counted strings from sql
@@ -255,6 +250,7 @@ int main(){
 
         printf("Summing all counts...\n");
         mpz_t zval; mpz_init_set_ui(zval, 0);
+
         sql_str_count_sum_all_count(&sqlenv, statementBuffer, tablename, &zval);
 
         gmp_printf("Total strings from sql: %Zd\n", zval);
@@ -263,7 +259,6 @@ int main(){
 
         // sqlenv.exec_callback = &sql_callback_print;
         // sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount2;", NULL);
-
     }
 
     // print frequency,-log2 of a string from sql
@@ -277,9 +272,8 @@ int main(){
 
         mpfr_t a; mpfr_inits2(256, a, NULL);
 
-        mpfr_set_q(a, freq, MPFR_RNDZ);
-        mpfr_log2(a, a, MPFR_RNDZ);
-        mpfr_mul_si(a, a, -1, MPFR_RNDZ);
+        printf("getting -log2 of freq...\n");
+        sql_str_count_get_freq_negativelog2(&sqlenv, statementBuffer, tablename, strID, a);
 
         mpfr_printf("freq of '%s' is %lf. -log2 is %.5Rf\n", strID, mpq_get_d(freq), a);
 

@@ -172,6 +172,25 @@ void sql_str_count_get_freq(sqlenv_t *sqlenv, char *statementBuffer, char *table
     // SQLENV_TEMP_REVERT;
 }
 
+void sql_str_count_get_freq_negativelog2(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *strID, mpfr_t a)
+{
+    mpq_t freq; mpq_init(freq);
+    
+    // printf("getting frequency...\n");
+    sql_str_count_get_freq(sqlenv, statementBuffer, tablename, strID, freq);
+
+    // mpfr_t a; mpfr_inits2(256, a, NULL);
+
+    mpfr_set_q(a, freq, MPFR_RNDZ);
+    mpfr_log2(a, a, MPFR_RNDZ);
+    mpfr_mul_si(a, a, -1, MPFR_RNDZ);
+
+    // mpfr_printf("freq of '%s' is %lf. -log2 is %.5Rf\n", strID, mpq_get_d(freq), a);
+
+    // mpfr_clear(a);
+    mpq_clear(freq);
+}
+
 int sql_callback_str_count_sum_all_count_columns_into_mpz(void *data, int argc, char **argv, char **columnName)
 {
     char numberBuffer[1000];
