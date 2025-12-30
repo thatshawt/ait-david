@@ -16,19 +16,6 @@
 #include "sqlenv.h"
 
 /*
-TODO: create this below.
-
-    // this merges with existing table or creates a new one
-    sql_str_count_merge_with_slicecount_hashmap
-        sqlenv_t *sqlenv,
-        char *statementBuffer,
-        char *tableName
-        struct hashmap *map, 
-    );
-
-*/ 
-
-/*
 TODO: sql tests.?
 sum all state 2 strings test.?
 frequency of certain strings test.?
@@ -62,6 +49,43 @@ void sql_store_slicecount_map_as_sql_table(
 
 }
 
+// this merges an slicecount hashmap into a strcount sql table
+//TODO call this function and try it out in main()
+void sql_merge_slicecountmap_into_str_count_table
+(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tableName
+    struct hashmap *map
+)
+{
+    // sql_drop_table_if_exists(sqlenv, statementBuffer, tableName);
+
+    sql_create_str_count_table_ifnotexist(sqlenv, statementBuffer, tableName);
+
+    size_t iterA = 0;
+    void *itemA;
+    char countStr[1000];
+    char stringID[1000];
+    mpz_t count; mpz_init(count);
+    while (hashmap_iter(map, &iterA, &itemA)) {
+        const tm_slice_counter_t *sliceCounter = itemA;
+
+        tm_slice_sprint(&sliceCounter->slice, stringID);
+        
+        // mpz_set(count, sliceCounter->count);
+        mpz_set_ui(count, 0);
+        sql_load_str_count_into_mpz(&sqlenv, statementBuffer, tableName, stringID, &count);
+        mpz_add(count, count, sliceCounter->count);
+
+        mpz_get_str(countStr, 10, count);
+        
+        sql_set_str_count(sqlenv, statementBuffer, tableName, stringID, countStr);
+        // mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+    }
+    mpz_clear(count);
+}
+
 int main(){
     // mpz_t one,two,sum;
 
@@ -80,23 +104,6 @@ int main(){
     // mpz_clears(one,two,sum,NULL);
 
     // return 0;
-
-    // floating point -log2 test
-    {
-        mpfr_t a;
-        mpfr_inits2(30, a, NULL);
-
-        double op = 0.0123123;
-
-        mpfr_set_d(a, op, MPFR_RNDN);
-        mpfr_log2 (a, a, MPFR_RNDZ);
-        mpfr_mul_si(a, a, -1, MPFR_RNDZ);
-
-        mpfr_printf("log2(%lf) = %.10Rf\n", op, a);
-
-        mpfr_clears(a, NULL);
-        // return 1;
-    }
 
     // incrementing into a str_count table experiment code
     {
