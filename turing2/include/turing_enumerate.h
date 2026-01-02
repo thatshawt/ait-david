@@ -5,7 +5,7 @@
 #include "turing_mapping.h"
 #include "hashmap.h"
 
-//wowzahipitatious.
+//wowzahipitatious. skib skib?
 
 typedef struct{
     tape_slice_t slice;

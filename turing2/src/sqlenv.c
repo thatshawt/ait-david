@@ -18,7 +18,7 @@ int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
 
     sqlenv->errMsg = 0;
     /* Open database */
-    sqlenv->rc = sqlite3_open("test.db", &sqlenv->db);
+    sqlenv->rc = sqlite3_open(databaseFile, &sqlenv->db);
 
     if( sqlenv->rc ) {
         // fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(sqlenv->db));
@@ -50,6 +50,15 @@ void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data)
         if(sqlenv->resultHandler)sqlenv->resultHandler(sqlenv, SQL_RT_EXEC);
         // fprintf(stdout, "Exec successful.\n");
     }
+}
+
+void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO)){
+    SQLENV_TEMP_ZERO;
+
+    sqlenv->exec_callback = exec_callback;
+    sqlenv_exec(sqlenv, sql_statement, data);
+    
+    SQLENV_TEMP_REVERT;
 }
 
 void sqlenv_close(sqlenv_t *sqlenv)
@@ -118,26 +127,27 @@ int sql_callback_load_countCol_into_mpz(void *data, int argc, char **argv, char 
 
 void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, char *stringID, char *countStr)
 {
-    SQLENV_TEMP_ZERO;
-
-    sprintf(statementBuffer, "INSERT INTO %s(STR_ID, COUNT) VALUES ('%s', '%s')",tableName,stringID,countStr);
-    sqlenv_exec(sqlenv, statementBuffer, NULL);
+    sprintf(statementBuffer, "INSERT INTO %s(STR_ID, COUNT) VALUES ('%s', '%s');",tableName,stringID,countStr);
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        NULL,
+        NULL
+    );
 
     sprintf(statementBuffer, "UPDATE %s SET COUNT = '%s' WHERE STR_ID='%s';",tableName,countStr,stringID);
-    sqlenv_exec(sqlenv, statementBuffer, NULL);
-    
-    SQLENV_TEMP_REVERT;
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        NULL,
+        NULL
+    );
 }
 
 void sql_load_str_count_into_mpz(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpz_t *theMpz)
 {
-    SQLENV_TEMP_ZERO;
-
-    sqlenv->exec_callback = &sql_callback_load_countCol_into_mpz;
     sprintf(statementBuffer, "SELECT * FROM %s WHERE STR_ID='%s';", tablename, stringID);
-    sqlenv_exec(sqlenv, statementBuffer, (void*)theMpz);
-    
-    SQLENV_TEMP_REVERT;
+
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        (void*)theMpz,
+        sql_callback_load_countCol_into_mpz
+    );
 }
 
 void sql_str_count_get_freq(sqlenv_t *sqlenv, char *statementBuffer, char *tablename, char *stringID, mpq_t freq)
@@ -210,32 +220,32 @@ int sql_callback_str_count_sum_all_count_columns_into_mpz(void *data, int argc, 
 
 void sql_str_count_sum_all_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, mpz_t *zval)
 {
-    SQLENV_TEMP_ZERO;
-
-    sqlenv->exec_callback = &sql_callback_str_count_sum_all_count_columns_into_mpz;
     sprintf(statementBuffer, "SELECT * FROM %s;", tableName);
-    sqlenv_exec(sqlenv, statementBuffer, (void*)zval);
 
-    SQLENV_TEMP_REVERT;
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        (void*)zval,
+        sql_callback_str_count_sum_all_count_columns_into_mpz
+    );
 }
 
 void sql_create_str_count_table_ifnotexist(sqlenv_t *sqlenv, char *statementBuffer, char *tablename)
 {
-    SQLENV_TEMP_ZERO;
-
     sprintf(statementBuffer, "CREATE TABLE %s(STR_ID TEXT PRIMARY KEY NOT NULL, COUNT TEXT NOT NULL);", tablename);
-    sqlenv_exec(sqlenv, statementBuffer, NULL);
 
-    SQLENV_TEMP_REVERT;
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        NULL,
+        NULL
+    );
 }
 
 void sql_drop_table_if_exists(sqlenv_t *sqlenv, char *statementBuffer, char *tablename)
 {
-    SQLENV_TEMP_ZERO;
-
     sprintf(statementBuffer, "DROP TABLE %s;", tablename);
-    sqlenv_exec(sqlenv, statementBuffer, NULL);
 
-    SQLENV_TEMP_REVERT;
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        NULL,
+        NULL
+    );
+
 }
 

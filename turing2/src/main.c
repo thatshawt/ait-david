@@ -55,7 +55,7 @@ void sql_merge_slicecountmap_into_str_count_table
 (
     sqlenv_t *sqlenv,
     char *statementBuffer,
-    char *tableName
+    char *tableName,
     struct hashmap *map
 )
 {
@@ -75,7 +75,7 @@ void sql_merge_slicecountmap_into_str_count_table
         
         // mpz_set(count, sliceCounter->count);
         mpz_set_ui(count, 0);
-        sql_load_str_count_into_mpz(&sqlenv, statementBuffer, tableName, stringID, &count);
+        sql_load_str_count_into_mpz(sqlenv, statementBuffer, tableName, stringID, &count);
         mpz_add(count, count, sliceCounter->count);
 
         mpz_get_str(countStr, 10, count);
@@ -85,6 +85,16 @@ void sql_merge_slicecountmap_into_str_count_table
     }
     mpz_clear(count);
 }
+
+// struct hashmap* sql_get_slicecountmap_from_str_count_table
+// (
+//     sqlenv_t *sqlenv,
+//     char *statementBuffer,
+//     char *tableName
+// )
+// {
+
+// }
 
 int main(){
     // mpz_t one,two,sum;
@@ -114,14 +124,13 @@ int main(){
 
         char statementBuffer[2000];
 
-        if(sqlenv_open(&sqlenv, "test.db", 0, 0))return 1;
+        if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
 
         // create table if not exists
         sql_create_str_count_table_ifnotexist(&sqlenv, statementBuffer, "NumbersCount");
         
         // increment count of a str
         char* stringID = "123";
-
 
         mpz_t count; mpz_init_set_ui(count, 0);
 
@@ -230,18 +239,17 @@ int main(){
             mpq_canonicalize(freq);
 
             int length = sliceCounter->slice.length;
-            tm_slice_print(&sliceCounter->slice);
-            gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
+            // tm_slice_print(&sliceCounter->slice);
+            // gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
         }
 
         mpz_clears(count, totalCount, NULL);
         mpq_clears(freq, tempq1, NULL);
     }
 
-    
     const char *tablename = "NumbersCount2";
     sqlenv_t sqlenv;
-    if(sqlenv_open(&sqlenv, "test.db", 0, 0))return 1;
+    if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
 
     //store into sql as table
     {

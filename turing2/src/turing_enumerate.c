@@ -77,16 +77,16 @@ void* enumerate_job_per_thread(void* a){
 
     fillMaxSteps[selfid] = mpz_get_ui(max_steps);
     
-    printf("thread job %d:\n", selfid);
-    gmp_printf("    states %d\n", args->opt.states);
-    gmp_printf("    doZerosTape %d\n", args->opt.doZerosTape);
-    gmp_printf("    doOnesTape %d\n", args->opt.doOnesTape);
-    gmp_printf("    max_steps %Zd\n", args->opt.max_steps);
-    gmp_printf("    randomIters %Zd\n", args->opt.randomIterations);
-    gmp_printf("    randomStartSeed %Zd\n", args->opt.randomStartSeed);
-    gmp_printf("    startIndex %Zd\n", args->opt.start);
-    gmp_printf("    indexesConsidered %Zd\n", args->opt.length);
-    printf("\n");
+    // printf("thread job %d:\n", selfid);
+    // gmp_printf("    states %d\n", args->opt.states);
+    // gmp_printf("    doZerosTape %d\n", args->opt.doZerosTape);
+    // gmp_printf("    doOnesTape %d\n", args->opt.doOnesTape);
+    // gmp_printf("    max_steps %Zd\n", args->opt.max_steps);
+    // gmp_printf("    randomIters %Zd\n", args->opt.randomIterations);
+    // gmp_printf("    randomStartSeed %Zd\n", args->opt.randomStartSeed);
+    // gmp_printf("    startIndex %Zd\n", args->opt.start);
+    // gmp_printf("    indexesConsidered %Zd\n", args->opt.length);
+    // printf("\n");
     
     // 1 enumeration with 0s on the tape
     if(args->opt.doZerosTape){
@@ -126,7 +126,7 @@ void* enumerate_job_per_thread(void* a){
     mpz_clears(max_steps,startIndex,indexesConsidered,randomIterations,i,
         NULL);
     
-    printf("thread id %d, exiting thread...\n", selfid);
+    // printf("thread id %d, exiting thread...\n", selfid);
     // pthread_exit(NULL);
 
     return NULL;
@@ -231,7 +231,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
 
         // if we are on the last one check if we need the last thread to pick up the slack
         if(i==workthreads-1 && mpz_cmp_ui(indexRemainder,0) != 0){
-            gmp_printf("added slack %Zd to %Zd\n", indexRemainder, args->opt.length);
+            // gmp_printf("added slack %Zd\n", indexRemainder);
             mpz_add(args->opt.length,args->opt.length,indexRemainder);
         }
 
@@ -246,7 +246,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         pthread_join(workthread_handles[i], NULL);
     }
 
-    printf("merge and destroy\n");
+    // printf("merge and destroy\n");
 
     //merge and destroy all the maps into the 0th one
     for(int i=1;i<workthreads;i++){
