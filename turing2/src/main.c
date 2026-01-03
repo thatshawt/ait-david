@@ -15,12 +15,6 @@
 
 #include "sqlenv.h"
 
-/*
-TODO: sql tests.?
-sum all state 2 strings test.?
-frequency of certain strings test.?
-*/
-
 //this overwrites the table if exists.
 void sql_store_slicecount_map_as_sql_table(
     sqlenv_t *sqlenv,
@@ -108,79 +102,10 @@ void print_freq_sql_str_count_table_string(
     mpq_clear(freq);
 }
 
-// struct hashmap* sql_get_slicecountmap_from_str_count_table
-// (
-//     sqlenv_t *sqlenv,
-//     char *statementBuffer,
-//     char *tableName
-// )
-// {
-
-// }
-
 int main(){
-    // mpz_t one,two,sum;
 
-    // mpz_init_set_ui(one, 10);
-    // mpz_init_set_ui(two, 5);
-    // mpz_init_set_ui(sum, 0);
-
-    // mpz_fdiv_r(sum, one, two);
-
-    // gmp_printf("%Zd / %Zd = %Zd\n", one, two, sum);
-
-    // char *buff = mpz_get_str(NULL, 10, sum);
-    // printf("from buffer. sum = '%s'\n", buff);
-    // free(buff);
-
-    // mpz_clears(one,two,sum,NULL);
-
-    // return 0;
-
-    // incrementing into a str_count table experiment code
-    {
-        // start
-        sqlenv_t sqlenv;
-        // sqlenv.resultHandler = &sql_resultHandler_print;
-        // sqlenv.exec_callback = &sql_callback_print;
-
-        char statementBuffer[2000];
-
-        if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
-
-        // create table if not exists
-        sql_create_str_count_table_ifnotexist(&sqlenv, statementBuffer, "NumbersCount");
-        
-        // increment count of a str
-        char* stringID = "123";
-
-        mpz_t count; mpz_init_set_ui(count, 0);
-
-        sql_load_str_count_into_mpz(&sqlenv, statementBuffer, "NumbersCount", stringID, &count);
-        
-        mpz_add_ui(count,count,1);
-
-        char *countStr = mpz_get_str(NULL, 10, count);
-
-        sql_set_str_count(&sqlenv, statementBuffer, "NumbersCount", stringID, countStr);
-
-        mpz_clear(count);
-        free(countStr);
-
-        // print all
-        sqlenv.exec_callback = &sql_callback_print;
-        sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount;", NULL);
-
-        // drop the table i guess
-        sql_drop_table_if_exists(&sqlenv, statementBuffer, "NumbersCount");
-
-        // done
-        sqlenv_close(&sqlenv);
-
-        // return 0;
-    }
-
-    // print various messages and test all
+    // print various messages.
+    // run tests.
     {
         printf("\nhello turing\n\n");
 
@@ -195,9 +120,9 @@ int main(){
         test_opt_t testOptions;
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
-    }
 
-    // return 0;
+        // return 0;
+    }
 
     // tm_print_enumerate_performance_stats(2,500);
 
@@ -206,6 +131,8 @@ int main(){
 
     // generate slice count hashmap from an enumeration
     struct hashmap* slice_count_map = 0;
+    struct hashmap* slice_count_map_halfA = 0;
+    struct hashmap* slice_count_map_halfB = 0;
     {
         int states = 2;
 
@@ -217,7 +144,7 @@ int main(){
         char *randomStartSeed = "1";
         char *randomIterations = "0";
         bool doZerosTape = true;
-        bool doOnesTape = false;
+        bool doOnesTape = true;
         char *startIndex = "0";
         char *indexesConsidered = NULL;
         int workers = 1;
@@ -228,21 +155,10 @@ int main(){
             doOnesTape, doZerosTape,
             startIndex, indexesConsidered,
             workers);
-    }
 
-    struct hashmap* slice_count_map_halfA = 0;
-    struct hashmap* slice_count_map_halfB = 0;
-    {
-        int states = 2;
-        char *max_steps = "21";
-        char *randomStartSeed = "1";
-        char *randomIterations = "0";
-        bool doZerosTape = true;
-        bool doOnesTape = false;
-        int workers = 1;
 
-        char *startIndex = "0";
-        char *indexesConsidered = "10369";
+        startIndex = "0";
+        indexesConsidered = "10369";
 
         slice_count_map_halfA = do_tm_enumerate_hashmap_job_wrapped(
             states, max_steps,
@@ -251,8 +167,8 @@ int main(){
             startIndex, indexesConsidered,
             workers);
 
-        startIndex = "10368";
-        indexesConsidered = "10369";
+        startIndex = "10369";
+        indexesConsidered = NULL;
 
         slice_count_map_halfB = do_tm_enumerate_hashmap_job_wrapped(
             states, max_steps,
@@ -260,6 +176,11 @@ int main(){
             doOnesTape, doZerosTape,
             startIndex, indexesConsidered,
             workers);
+        // TODO;
+        // consolidate all the code below and create a function like this:
+        // do_tm_enumerate_sql_merge_job_wrapped().
+        // which still does the hashmap thing but returns nothing and instead
+        // merges the result into an sql table of your choosing.
     }
 
     // traverse slice count hashmaps
@@ -323,11 +244,6 @@ int main(){
         mpq_clears(freq, tempq1, NULL);
         */
     }
-
-    // return 1;
-
-
-
     
     sqlenv_t sqlenv;
     if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
@@ -358,7 +274,7 @@ int main(){
     {
         tablename = "NumbersHalfA";
         //store into sql as table
-        printf("\nStoring hashmap into sqltable...\n");
+        printf("\nStoring hashmap half A into sqltable...\n");
         sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map_halfA);
 
         printf("Summing all counts...\n");
@@ -378,7 +294,7 @@ int main(){
     {
         tablename = "NumbersHalfB";
         //store into sql as table
-        printf("\nStoring hashmap into sqltable...\n");
+        printf("\nStoring hashmap half B into sqltable...\n");
         sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map_halfB);
 
         printf("Summing all counts...\n");

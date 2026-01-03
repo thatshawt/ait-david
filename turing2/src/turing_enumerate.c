@@ -326,7 +326,7 @@ void tm_enumerate_index_length_generic(
     void(*before_stepping)(tm_t* tm)
 )
 {
-    gmp_printf("called enumerate with args: (states, %d), (start, %Zd), (length, %Zd), (max_steps, %Zd)\n", states, start, length, max_steps);
+    // gmp_printf("called enumerate with args: (states, %d), (start, %Zd), (length, %Zd), (max_steps, %Zd)\n", states, start, length, max_steps);
 
     mpz_t halters; mpz_init_set_ui(halters,0);
 
@@ -355,7 +355,7 @@ void tm_enumerate_index_length_generic(
 
         if(tm.halted == true && tm.haltReason == HALT_NATURAL){
             if(halt_receiver)halt_receiver(&tm);
-            mpz_add_ui(halters,halters,1);// halters++;
+            mpz_add_ui(halters,halters,1); // halters++;
         }
         // printf("i %d\n", i);
         // go to next machine. if there is no next machine it breaks.
@@ -366,7 +366,7 @@ void tm_enumerate_index_length_generic(
         }
     }
     tm_destroy(&tm);
-    gmp_printf("states %d, halters %Zd\n", states, halters);
+    // gmp_printf("states %d, halters %Zd\n", states, halters);
     mpz_clears(halters, i, runopt.max_steps, NULL);
 }
 
