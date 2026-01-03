@@ -23,6 +23,16 @@ tm_symbol_t fillSymbol[TM_MAX_THREADS] = {0};
 bool fillRandom[TM_MAX_THREADS] = {false};
 int fillSeed[TM_MAX_THREADS] = {0};
 int fillMaxSteps[TM_MAX_THREADS] = {0};
+
+void resetFillTapeAlgorithm(){
+    for(int i=0;i<TM_MAX_THREADS;i++){
+        fillSymbol[i] = 0;
+        fillRandom[i] = false;
+        fillSeed[i] = 0;
+        fillMaxSteps[i] = 0;
+    }
+}
+
 void fill_tm_with_symbol(tm_t* tm)
 {
     const int selfid = turing_threading_self_index();
@@ -152,9 +162,8 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
 {
     const int selfid = turing_threading_self_index();
 
-    struct hashmap* slice_count_map[TM_MAX_THREADS];
+    struct hashmap* slice_count_map[TM_MAX_THREADS] = {0};
 
-    // const int workthreads = turing_threading_get_workthreads_count();
     const int workthreads = opt->workthreads;
     for(int i=0;i<workthreads;i++){
         slice_count_map[i] = hashmap_new(
@@ -191,7 +200,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     // mpz_clears(max_num_machines, end_index, NULL);
 
     //start running enumeration
-    printf("running enumeration\n");
+    printf("\nrunning enumeration\n");
     gmp_printf("    states %d\n", states);
     gmp_printf("    max_steps %Zd\n", max_steps);
     gmp_printf("    randomIters %Zd\n", randomIterations);
@@ -199,7 +208,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     gmp_printf("    startIndex %Zd\n", startIndex);
     gmp_printf("    indexesConsidered %Zd\n", indexesConsidered);
     gmp_printf("    workthreads %d\n", opt->workthreads);
-    printf("\n");
+    // printf("\n");
     
     pthread_t workthread_handles[TM_MAX_THREADS];
     enumerate_job_args_t* thread_args[TM_MAX_THREADS];
@@ -245,6 +254,9 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         // sleep(10);
         pthread_join(workthread_handles[i], NULL);
     }
+
+    // gotta do this :skull: i think.
+    resetFillTapeAlgorithm();
 
     // printf("merge and destroy\n");
 
@@ -314,7 +326,8 @@ void tm_enumerate_index_length_generic(
     void(*before_stepping)(tm_t* tm)
 )
 {
-    // int halters = 0;
+    gmp_printf("called enumerate with args: (states, %d), (start, %Zd), (length, %Zd), (max_steps, %Zd)\n", states, start, length, max_steps);
+
     mpz_t halters; mpz_init_set_ui(halters,0);
 
     tm_t tm;
@@ -322,7 +335,7 @@ void tm_enumerate_index_length_generic(
     tm.states = states;
     tm_load_table_by_index(&tm, start);
     // tm_print_table_short(&tm);
-    mpz_t i; mpz_init_set_ui(i, 0);
+    
 
     tm_run_opt_t runopt = (tm_run_opt_t){
         .trivialNonhaltingCheck=true, //we might not need this but eh
@@ -330,11 +343,11 @@ void tm_enumerate_index_length_generic(
     };
     mpz_init_set(runopt.max_steps, max_steps);
 
+    mpz_t i; mpz_init_set_ui(i, 0);
     for(;mpz_cmp(i,length)<0;mpz_add_ui(i,i,1)){
         tm_reset_keep_table_and_states(&tm);
 
         if(before_stepping)before_stepping(&tm);
-
 
         tm_step_until_halt_or_max(&tm, runopt, NULL);
 
@@ -353,7 +366,7 @@ void tm_enumerate_index_length_generic(
         }
     }
     tm_destroy(&tm);
-    // gmp_printf("states %d, halters %Zd\n", states, halters);
+    gmp_printf("states %d, halters %Zd\n", states, halters);
     mpz_clears(halters, i, runopt.max_steps, NULL);
 }
 

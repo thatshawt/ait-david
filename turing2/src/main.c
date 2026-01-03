@@ -86,6 +86,28 @@ void sql_merge_slicecountmap_into_str_count_table
     mpz_clear(count);
 }
 
+void print_freq_sql_str_count_table_string(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tablename,
+    char *strID
+){
+    mpq_t freq; mpq_init(freq);
+    
+    printf("getting frequency...\n");
+    sql_str_count_get_freq(sqlenv, statementBuffer, tablename, strID, freq);
+
+    mpfr_t a; mpfr_inits2(256, a, NULL);
+
+    printf("getting -log2 of freq...\n");
+    sql_str_count_get_freq_negativelog2(sqlenv, statementBuffer, tablename, strID, a);
+
+    mpfr_printf("freq of '%s' is %lf. -log2 is %.5Rf\n", strID, mpq_get_d(freq), a);
+
+    mpfr_clear(a);
+    mpq_clear(freq);
+}
+
 // struct hashmap* sql_get_slicecountmap_from_str_count_table
 // (
 //     sqlenv_t *sqlenv,
@@ -183,7 +205,7 @@ int main(){
     tm_srand(selfid, 1337);
 
     // generate slice count hashmap from an enumeration
-    struct hashmap* slice_count_map;
+    struct hashmap* slice_count_map = 0;
     {
         int states = 2;
 
@@ -195,10 +217,10 @@ int main(){
         char *randomStartSeed = "1";
         char *randomIterations = "0";
         bool doZerosTape = true;
-        bool doOnesTape = true;
+        bool doOnesTape = false;
         char *startIndex = "0";
         char *indexesConsidered = NULL;
-        int workers = 4;
+        int workers = 1;
 
         slice_count_map = do_tm_enumerate_hashmap_job_wrapped(
             states, max_steps,
@@ -208,60 +230,116 @@ int main(){
             workers);
     }
 
-    // traverse slice conut hashmap
+    struct hashmap* slice_count_map_halfA = 0;
+    struct hashmap* slice_count_map_halfB = 0;
     {
+        int states = 2;
+        char *max_steps = "21";
+        char *randomStartSeed = "1";
+        char *randomIterations = "0";
+        bool doZerosTape = true;
+        bool doOnesTape = false;
+        int workers = 1;
+
+        char *startIndex = "0";
+        char *indexesConsidered = "10369";
+
+        slice_count_map_halfA = do_tm_enumerate_hashmap_job_wrapped(
+            states, max_steps,
+            randomIterations, randomStartSeed,
+            doOnesTape, doZerosTape,
+            startIndex, indexesConsidered,
+            workers);
+
+        startIndex = "10368";
+        indexesConsidered = "10369";
+
+        slice_count_map_halfB = do_tm_enumerate_hashmap_job_wrapped(
+            states, max_steps,
+            randomIterations, randomStartSeed,
+            doOnesTape, doZerosTape,
+            startIndex, indexesConsidered,
+            workers);
+    }
+
+    // traverse slice count hashmaps
+    {
+        // original
         size_t iterA = 0;
         void *itemA;
         mpz_t totalCount; mpz_init_set_ui(totalCount, 0);
-        while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
-            const tm_slice_counter_t *sliceCounter = itemA;
-            mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
-        }
-        gmp_printf("total counted strings: %Zd\n", totalCount);
 
-        iterA = 0;
+        if(slice_count_map != 0){
+            mpz_set_ui(totalCount, 0);
+            while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
+                const tm_slice_counter_t *sliceCounter = itemA;
+                mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+            }
+            gmp_printf("total counted strings original: %Zd\n", totalCount);
+        }
+
+        // half A
+        if(slice_count_map_halfA != 0){
+            iterA = 0;
+            mpz_set_ui(totalCount, 0);
+            while (hashmap_iter(slice_count_map_halfA, &iterA, &itemA)) {
+                const tm_slice_counter_t *sliceCounter = itemA;
+                mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+            }
+            gmp_printf("total counted strings half A: %Zd\n", totalCount);
+        }
+
+        // half B
+        if(slice_count_map_halfB != 0){
+            iterA = 0;
+            mpz_set_ui(totalCount, 0);
+            while (hashmap_iter(slice_count_map_halfB, &iterA, &itemA)) {
+                const tm_slice_counter_t *sliceCounter = itemA;
+                mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+            }
+            gmp_printf("total counted strings half B: %Zd\n", totalCount);
+        }
+
+        mpz_clear(totalCount);
+
+        /* iterA = 0;
         mpz_t count; mpz_init(count);
         mpq_t freq, tempq1; mpq_inits(freq, tempq1, NULL);
         while (hashmap_iter(slice_count_map, &iterA, &itemA)) {
             const tm_slice_counter_t *sliceCounter = itemA;
             mpz_set(count, sliceCounter->count); // count = sliceCounter->count;
-
             if(mpz_cmp_ui(count, 0) <= 0)continue;
-
             mpq_set_z(freq, count); // freq = count
             mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
-
             mpq_canonicalize(freq);
             mpq_canonicalize(tempq1);
-
             mpq_div(freq, freq, tempq1); // freq = count/totalCount;
-
             mpq_canonicalize(freq);
-
             int length = sliceCounter->slice.length;
             // tm_slice_print(&sliceCounter->slice);
             // gmp_printf("lengthstr %d, count %Zd, freq %lf\n\n", length, count, mpq_get_d(freq));
         }
-
         mpz_clears(count, totalCount, NULL);
         mpq_clears(freq, tempq1, NULL);
+        */
     }
 
-    const char *tablename = "NumbersCount2";
+    // return 1;
+
+
+
+    
     sqlenv_t sqlenv;
     if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
 
-    //store into sql as table
-    {
-        char statementBuffer[2000];
+    const char *tablename = "NumbersCount2";
+    char statementBuffer[2000];
 
-        printf("Storing hashmap into sqltable...\n");
+    // do stuff for original hashmap
+    {
+        //store into sql as table
+        printf("\nStoring hashmap into sqltable...\n");
         sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map);
-    }
-
-    // print out total counted strings from sql
-    {
-        char statementBuffer[2000];
 
         printf("Summing all counts...\n");
         mpz_t zval; mpz_init_set_ui(zval, 0);
@@ -270,36 +348,81 @@ int main(){
 
         gmp_printf("Total strings from sql: %Zd\n", zval);
 
-        mpz_clear(zval);
+        char *strID = "1";
+        print_freq_sql_str_count_table_string(&sqlenv, statementBuffer, tablename, strID);
 
-        // sqlenv.exec_callback = &sql_callback_print;
-        // sqlenv_exec(&sqlenv, "SELECT * FROM NumbersCount2;", NULL);
+        mpz_clear(zval);
     }
 
-    // print frequency,-log2 of a string from sql
+    // do stuff for original hashmap half A
     {
-        char statementBuffer[2000];
+        tablename = "NumbersHalfA";
+        //store into sql as table
+        printf("\nStoring hashmap into sqltable...\n");
+        sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map_halfA);
+
+        printf("Summing all counts...\n");
+        mpz_t zval; mpz_init_set_ui(zval, 0);
+
+        sql_str_count_sum_all_count(&sqlenv, statementBuffer, tablename, &zval);
+
+        gmp_printf("Total strings from sql: %Zd\n", zval);
+
         char *strID = "1";
-        mpq_t freq; mpq_init(freq);
-        
-        printf("getting frequency...\n");
-        sql_str_count_get_freq(&sqlenv, statementBuffer, tablename, strID, freq);
+        print_freq_sql_str_count_table_string(&sqlenv, statementBuffer, tablename, strID);
 
-        mpfr_t a; mpfr_inits2(256, a, NULL);
+        mpz_clear(zval);
+    }
 
-        printf("getting -log2 of freq...\n");
-        sql_str_count_get_freq_negativelog2(&sqlenv, statementBuffer, tablename, strID, a);
+    // do stuff for original hashmap half B
+    {
+        tablename = "NumbersHalfB";
+        //store into sql as table
+        printf("\nStoring hashmap into sqltable...\n");
+        sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map_halfB);
 
-        mpfr_printf("freq of '%s' is %lf. -log2 is %.5Rf\n", strID, mpq_get_d(freq), a);
+        printf("Summing all counts...\n");
+        mpz_t zval; mpz_init_set_ui(zval, 0);
 
-        mpfr_clear(a);
-        mpq_clear(freq);
+        sql_str_count_sum_all_count(&sqlenv, statementBuffer, tablename, &zval);
+
+        gmp_printf("Total strings from sql: %Zd\n", zval);
+
+        char *strID = "1";
+        print_freq_sql_str_count_table_string(&sqlenv, statementBuffer, tablename, strID);
+
+        mpz_clear(zval);
+    }
+
+    // merge B into A, then print stuff for A.
+    {
+        tablename = "NumbersHalfA";
+        printf("\nmerging hashmap half B into sql half A...\n");
+        sql_merge_slicecountmap_into_str_count_table(&sqlenv, statementBuffer, tablename, slice_count_map_halfB);
+
+        //store into sql as table
+        // printf("\nStoring hashmap into sqltable...\n");
+        // sql_store_slicecount_map_as_sql_table(&sqlenv, statementBuffer, tablename, slice_count_map_halfA);
+
+        printf("Summing all counts...\n");
+        mpz_t zval; mpz_init_set_ui(zval, 0);
+
+        sql_str_count_sum_all_count(&sqlenv, statementBuffer, tablename, &zval);
+
+        gmp_printf("Total strings from sql: %Zd\n", zval);
+
+        char *strID = "1";
+        print_freq_sql_str_count_table_string(&sqlenv, statementBuffer, tablename, strID);
+
+        mpz_clear(zval);
     }
 
     sqlenv_close(&sqlenv);
 
     // free things
     hashmap_free(slice_count_map);
+    hashmap_free(slice_count_map_halfA);
+    hashmap_free(slice_count_map_halfB);
 
     turing_threading_destroy();
 
