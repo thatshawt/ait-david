@@ -500,3 +500,26 @@ struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
 
     return slice_count_map;
 }
+
+bool do_tm_enumerate_sql_merge_job_wrapped(
+    int states, 
+    char *max_steps,
+    char *randomIterations,
+    char *randomStartSeed, 
+    bool doOnesTape,
+    bool doZerosTape,
+    char *startIndex, 
+    char *indexesConsidered, 
+    int workers,
+    
+    sqlenv_t *sqlenv,
+    char statementBuffer[],
+    char *tablename
+)
+{
+    struct hashmap *slicecount_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers);
+
+    sql_merge_slicecountmap_into_str_count_table(sqlenv, statementBuffer, tablename, slicecount_map);
+
+    hashmap_free(slicecount_map);
+}

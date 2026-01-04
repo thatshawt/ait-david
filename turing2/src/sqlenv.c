@@ -1,12 +1,10 @@
 #include "sqlenv.h"
 
+#include "turing_enumerate.h"
+#include "hashmap.h"
+
 #include <stdio.h>
 #include <string.h>
-
-#define SQLENV_TEMP_ZERO void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0; \
-    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
-
-#define SQLENV_TEMP_REVERT sqlenv->exec_callback = temp_callback; sqlenv->resultHandler = temp_resulthandler;
 
 int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
     int(*exec_callback)(void *data, int argc, char **argv, char **columnName),
@@ -52,13 +50,16 @@ void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data)
     }
 }
 
-void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO)){
-    SQLENV_TEMP_ZERO;
+void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO))
+{
+    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
 
     sqlenv->exec_callback = exec_callback;
     sqlenv_exec(sqlenv, sql_statement, data);
     
-    SQLENV_TEMP_REVERT;
+    sqlenv->exec_callback = temp_callback;
+    sqlenv->resultHandler = temp_resulthandler;
 }
 
 void sqlenv_close(sqlenv_t *sqlenv)
@@ -249,3 +250,142 @@ void sql_drop_table_if_exists(sqlenv_t *sqlenv, char *statementBuffer, char *tab
 
 }
 
+void print_freq_sql_str_count_table_string(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tablename,
+    char *strID
+)
+{
+    mpq_t freq; mpq_init(freq);
+    
+    // printf("getting frequency...\n");
+    sql_str_count_get_freq(sqlenv, statementBuffer, tablename, strID, freq);
+
+    mpfr_t a; mpfr_inits2(256, a, NULL);
+
+    // printf("getting -log2 of freq...\n");
+    sql_str_count_get_freq_negativelog2(sqlenv, statementBuffer, tablename, strID, a);
+
+    mpfr_printf("freq of '%s' is %lf. -log2 is %.5Rf\n", strID, mpq_get_d(freq), a);
+
+    mpfr_clear(a);
+    mpq_clear(freq);
+}
+
+//this overwrites the table if exists.
+void sql_store_slicecount_map_as_sql_table(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tableName,
+    struct hashmap *map
+)
+{
+    sql_drop_table_if_exists(sqlenv, statementBuffer, tableName);
+
+    sql_create_str_count_table_ifnotexist(sqlenv, statementBuffer, tableName);
+
+    size_t iterA = 0;
+    void *itemA;
+    char countStr[1000];
+    char stringID[1000];
+    while (hashmap_iter(map, &iterA, &itemA)) {
+        const tm_slice_counter_t *sliceCounter = itemA;
+
+        tm_slice_sprint(&sliceCounter->slice, stringID);
+        mpz_get_str(countStr, 10, sliceCounter->count);
+        
+        sql_set_str_count(sqlenv, statementBuffer, tableName, stringID, countStr);
+        // mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+    }
+}
+
+// this merges an slicecount hashmap into a strcount sql table
+//TODO call this function and try it out in main()
+void sql_merge_slicecountmap_into_str_count_table
+(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tableName,
+    struct hashmap *map
+)
+{
+    // sql_drop_table_if_exists(sqlenv, statementBuffer, tableName);
+
+    sql_create_str_count_table_ifnotexist(sqlenv, statementBuffer, tableName);
+
+    size_t iterA = 0;
+    void *itemA;
+    char countStr[1000];
+    char stringID[1000];
+    mpz_t count; mpz_init(count);
+    while (hashmap_iter(map, &iterA, &itemA)) {
+        const tm_slice_counter_t *sliceCounter = itemA;
+
+        tm_slice_sprint(&sliceCounter->slice, stringID);
+        // memcpy(stringID, sliceCounter->slice.tapeslice, sliceCounter->slice.length);
+        
+        // mpz_set(count, sliceCounter->count);
+        mpz_set_ui(count, 0);
+        sql_load_str_count_into_mpz(sqlenv, statementBuffer, tableName, stringID, &count);
+        mpz_add(count, count, sliceCounter->count);
+
+        mpz_get_str(countStr, 10, count);
+        
+        sql_set_str_count(sqlenv, statementBuffer, tableName, stringID, countStr);
+        // printf("set %s to %s\n", stringID, countStr);
+        // mpz_add(totalCount, totalCount, sliceCounter->count); // totalCount += count;
+    }
+    mpz_clear(count);
+}
+
+int sql_callback_loadIntoSliceCountMap(void *data, int argc, char **argv, char **columnName)
+{
+    tape_slice_t slice;
+    tm_slice_counter_t slicecounter;
+    // printf("hi there");
+    for(int i = 0; i<argc; i++){
+        const char* colName = columnName[i];
+        const char* val = argv[i];
+
+        if(strcmp(colName, "COUNT") == 0){
+            mpz_init(slicecounter.count);
+            mpz_set_str(slicecounter.count, val, 10);
+        }else if(strcmp(colName, "STR_ID") == 0){
+            tm_slice_from_cstring(&slice, val);
+            slicecounter.slice = slice;
+        }
+        
+    }
+    
+    // gmp_printf("count: %Zd, slice: '%s', lemgth %d\n", slicecounter.count ,slice.tapeslice, slice.length);
+
+    struct hashmap* slicecounter_map = (struct hashmap*)data;
+
+    hashmap_set(slicecounter_map, &slicecounter);
+
+    // mpz_clear(count);
+
+    return 0;
+}
+
+struct hashmap* sql_str_count_get_map(sqlenv_t *sqlenv, char *statementBuffer, char *tableName)
+{
+    struct hashmap* slicecounter_map = hashmap_new(
+            sizeof(tm_slice_counter_t), 0,
+            0, 0, 
+            tm_slicecounter_hashmap_hash,
+            tm_slicecounter_hashmap_compare,
+            tm_slicecounter_hashmap_free,
+            NULL
+        );
+
+    sprintf(statementBuffer, "SELECT * FROM %s;", tableName);
+
+    sqlenv_exec_with_callback(sqlenv, statementBuffer,
+        (void*)slicecounter_map,
+        &sql_callback_loadIntoSliceCountMap
+    );
+
+    return slicecounter_map;
+}

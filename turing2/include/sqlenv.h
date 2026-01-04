@@ -1,6 +1,8 @@
 #ifndef SQLENV_H
 #define SQLENV_H
 
+#include "hashmap.h"
+
 #include <sqlite3.h>
 #include <gmp.h>
 #include <mpfr.h>
@@ -27,6 +29,7 @@ int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
     void(*resultHandler)(void *sqlenv, enum SQL_RT resultType));
 
 void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data);
+void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO));
 void sqlenv_close(sqlenv_t *sqlenv);
 
 // simplest complete callbacks that print stuff
@@ -49,5 +52,29 @@ void sql_drop_table_if_exists(sqlenv_t *sqlenv, char *statementBuffer, char *tab
 
 int sql_callback_str_count_sum_all_count_columns_into_mpz(SQL_CALLBACK_FUNC_ARG_PROTO);
 void sql_str_count_sum_all_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, mpz_t *zval);
+
+int sql_callback_loadIntoSliceCountMap(SQL_CALLBACK_FUNC_ARG_PROTO);
+struct hashmap* sql_str_count_get_map(sqlenv_t *sqlenv, char *statementBuffer, char *tableName);
+
+void print_freq_sql_str_count_table_string(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tablename,
+    char *strID
+);
+
+void sql_store_slicecount_map_as_sql_table(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tableName,
+    struct hashmap *map
+);
+
+void sql_merge_slicecountmap_into_str_count_table(
+    sqlenv_t *sqlenv,
+    char *statementBuffer,
+    char *tableName,
+    struct hashmap *map
+);
 
 #endif

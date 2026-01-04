@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "turing_mapping.h"
 #include "hashmap.h"
+#include "sqlenv.h"
 
 //wowzahipitatious. skib skib?
 
@@ -49,7 +50,23 @@ struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
     bool doZerosTape,
     char *startIndex, 
     char *indexesConsidered, 
-    int workers);
+    int workers
+);
+
+bool do_tm_enumerate_sql_merge_job_wrapped(
+    int states, 
+    char *max_steps,
+    char *randomIterations,
+    char *randomStartSeed, 
+    bool doOnesTape,
+    bool doZerosTape,
+    char *startIndex, 
+    char *indexesConsidered, 
+    int workers,
+    sqlenv_t *sqlenv,
+    char statementBuffer[],
+    char *tablename
+);
     
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt);
 

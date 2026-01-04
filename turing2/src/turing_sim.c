@@ -209,6 +209,22 @@ void tm_slice_sprint(tape_slice_t* slice, char *buffer)
     buffer[slice->length] = 0; //null terminate
 }
 
+void tm_slice_from_cstring(tape_slice_t* slice, char *str)
+{
+    slice->length = strlen(str);
+    slice->tapeslice = malloc(sizeof(tm_symbol_t) * slice->length);
+    for(int i=0;i<strlen(str);i++){
+        const char thing = str[i];
+        if(thing == '0'){
+            slice->tapeslice[i] = 0;
+        }else if(thing == '1'){
+            slice->tapeslice[i] = 1;
+        }else{
+            slice->tapeslice[i] = 0; // 0 why not
+        }
+    }
+}
+
 
 //got this from musl. thank you musl.
 static uint64_t tm_random_seed[TM_MAX_THREADS] = {0};

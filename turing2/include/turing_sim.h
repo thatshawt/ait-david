@@ -103,6 +103,7 @@ void tm_slice_init_from_written_tape(tm_t* tm, tape_slice_t* slice);
 void tm_slice_free(tape_slice_t* slice);
 void tm_slice_print(tape_slice_t* slice);
 void tm_slice_sprint(tape_slice_t* slice, char *buffer);
+void tm_slice_from_cstring(tape_slice_t* slice, char *str);
 
 void tm_print_entire_tape_symbol_frequencies(tm_t* tm);
 void tm_print_written_tape(tm_t* tm);
