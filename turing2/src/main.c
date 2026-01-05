@@ -57,45 +57,59 @@ int main(){
     if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
     char statementBuffer[2000];
     {
-        int states = 2;
+        tm_enumerate_options_simple_t enumerate_simple_opt = {
+            .states = 2,
+            .max_steps = "100",
+            .startIndex = "0",
+            .indexesConsidered = NULL,
 
+            .randomStartSeed = "1",
+            .randomIterations = "0",
+
+            .doZerosTape = true,
+            .doOnesTape = true,
+
+            .workers = 4
+        };
+
+        // int states = 2;
         // TODO:
         // try to capture up to 99.999% of the theoretical number of predicted
         // halting machines. you can try sampling 20% of the machines randomly to
         // check how many are captured.
-        char *max_steps = "100";
-        char *randomStartSeed = "1";
-        char *randomIterations = "0";
-        bool doZerosTape = true;
-        bool doOnesTape = false;
-        char *startIndex = "0";
-        char *indexesConsidered = NULL;
-        int workers = 4;
+        // char *max_steps = "100";
+        // char *randomStartSeed = "1";
+        // char *randomIterations = "0";
+        // bool doZerosTape = true;
+        // bool doOnesTape = false;
+        // char *startIndex = "0";
+        // char *indexesConsidered = NULL;
+        // int workers = 4;
         
         sql_drop_table_if_exists(&sqlenv, statementBuffer, originalTableName);
-        do_tm_enumerate_sql_merge_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers,
+        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt,
             &sqlenv, statementBuffer, originalTableName
         );
         // printf("trivial nonHalters found: %d\n", trivialNonHalters);
         // trivialNonHalters = 0;
         // slice_count_map = sql_str_count_get_map(&sqlenv, statementBuffer, originalTableName);
 
-        startIndex = "0";
-        indexesConsidered = "10369";
+        enumerate_simple_opt.startIndex = "0";
+        enumerate_simple_opt.indexesConsidered = "10369";
 
         sql_drop_table_if_exists(&sqlenv, statementBuffer, halfATableName);
-        do_tm_enumerate_sql_merge_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers,
+        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt,
             &sqlenv, statementBuffer, halfATableName
         );
         // printf("trivial nonHalters found: %d\n", trivialNonHalters);
         // trivialNonHalters = 0;
         // slice_count_map_halfA = sql_str_count_get_map(&sqlenv, statementBuffer, halfATableName);
 
-        startIndex = "10369";
-        indexesConsidered = NULL;
+        enumerate_simple_opt.startIndex = "10369";
+        enumerate_simple_opt.indexesConsidered = NULL;
 
         sql_drop_table_if_exists(&sqlenv, statementBuffer, halfBTableName);
-        do_tm_enumerate_sql_merge_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers,
+        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt,
             &sqlenv, statementBuffer, halfBTableName
         );
         // printf("trivial nonHalters found: %d\n", trivialNonHalters);

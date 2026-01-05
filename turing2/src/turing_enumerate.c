@@ -19,11 +19,12 @@ uint64_t current_timestamp() {
     return (uint64_t)milliseconds;
 }
 
+// rework gonna remove these grimy greasy global variables
 tm_symbol_t fillSymbol[TM_MAX_THREADS] = {0};
 bool fillRandom[TM_MAX_THREADS] = {false};
 int fillSeed[TM_MAX_THREADS] = {0};
 int fillMaxSteps[TM_MAX_THREADS] = {0};
-
+// and this too i think?
 void resetFillTapeAlgorithm(){
     for(int i=0;i<TM_MAX_THREADS;i++){
         fillSymbol[i] = 0;
@@ -33,6 +34,11 @@ void resetFillTapeAlgorithm(){
     }
 }
 
+// make it so this gets passed a "void* data" so it can have a proper state
+// and we can also split this into multiple functions easier.
+// also to remove all those nasty global variables up there >:)
+// text search for "rework" to find the clues i left how to do this. 
+// O_O grimy greasy ahh global vars...
 void fill_tm_with_symbol(tm_t* tm)
 {
     const int selfid = turing_threading_self_index();
@@ -72,8 +78,6 @@ typedef struct{
 } enumerate_job_args_t;
 
 void* enumerate_job_per_thread(void* a){
-    // printf("whole lotta nothing\n");
-    
     turing_threading_self_init();
     const int selfid = turing_threading_self_index();
     
@@ -244,7 +248,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
             mpz_add(args->opt.length,args->opt.length,indexRemainder);
         }
 
-        mpz_add(startIndexCounter,startIndexCounter,indexesPerThread);//startIndexCounter += indexesPerThread;
+        mpz_add(startIndexCounter,startIndexCounter,indexesPerThread); //startIndexCounter += indexesPerThread;
 
         pthread_create(&workthread_handles[i], NULL, enumerate_job_per_thread, (void*)args);
     }
@@ -324,6 +328,7 @@ void tm_enumerate_index_length_generic(
     mpz_t max_steps,
     void(*halt_receiver)(tm_t* tm),
     void(*before_stepping)(tm_t* tm)
+    //rework, probaby gonna add a "void* data" here...
 )
 {
     // gmp_printf("called enumerate with args: (states, %d), (start, %Zd), (length, %Zd), (max_steps, %Zd)\n", states, start, length, max_steps);
@@ -347,6 +352,7 @@ void tm_enumerate_index_length_generic(
     for(;mpz_cmp(i,length)<0;mpz_add_ui(i,i,1)){
         tm_reset_keep_table_and_states(&tm);
 
+        //rework, gonna put "before_stepping(&tm, data)" instead.
         if(before_stepping)before_stepping(&tm);
 
         tm_step_until_halt_or_max(&tm, runopt, NULL);
@@ -436,6 +442,7 @@ void tm_enumerate_index_length_with_hashmap(
     mpz_t max_steps,
     struct hashmap* map,
     void(*before_stepping)(tm_t* tm)
+    //rework, probaby gonna add a "void* data" here...
 )
 {
     const int selfid = turing_threading_self_index();
@@ -447,15 +454,8 @@ void tm_enumerate_index_length_with_hashmap(
 }
 
 struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
-    int states, 
-    char *max_steps,
-    char *randomIterations,
-    char *randomStartSeed, 
-    bool doOnesTape,
-    bool doZerosTape,
-    char *startIndex, 
-    char *indexesConsidered, 
-    int workers)
+    tm_enumerate_options_simple_t enumerate_simple_opt
+)
 {
     // int states = 2;
     // char *max_steps = "300";
@@ -467,57 +467,49 @@ struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
     struct hashmap* slice_count_map;
 
     bool mustFree_indexesConsidered = false;
-    if(indexesConsidered == NULL){
+    if(enumerate_simple_opt.indexesConsidered == NULL){
         mpz_t indexesConsidered_z; mpz_init(indexesConsidered_z);
 
-        tm_max_num_of_machines(states, indexesConsidered_z);
+        tm_max_num_of_machines(enumerate_simple_opt.states, indexesConsidered_z);
         mpz_add_ui(indexesConsidered_z, indexesConsidered_z, 1);
 
-        indexesConsidered = mpz_get_str(NULL, 10, indexesConsidered_z);
+        enumerate_simple_opt.indexesConsidered = mpz_get_str(NULL, 10, indexesConsidered_z);
 
         mpz_clear(indexesConsidered_z);
         mustFree_indexesConsidered = true;
     }
 
     enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
-        .states=states,
-        .workthreads=workers,
-        .doOnesTape=doOnesTape,
-        .doZerosTape=doZerosTape
+        .states=enumerate_simple_opt.states,
+        .workthreads=enumerate_simple_opt.workers,
+        .doOnesTape=enumerate_simple_opt.doOnesTape,
+        .doZerosTape=enumerate_simple_opt.doZerosTape
     };
     tm_enumerate_job_opt_init(&enumerateOpt);
 
-    mpz_set_str(enumerateOpt.length, indexesConsidered, 10);
-    mpz_set_str(enumerateOpt.max_steps, max_steps, 10);
-    mpz_set_str(enumerateOpt.randomIterations, randomIterations, 10);
-    mpz_set_str(enumerateOpt.randomStartSeed, randomStartSeed, 10);
-    mpz_set_str(enumerateOpt.start, startIndex, 10);
+    mpz_set_str(enumerateOpt.length, enumerate_simple_opt.indexesConsidered, 10);
+    mpz_set_str(enumerateOpt.max_steps, enumerate_simple_opt.max_steps, 10);
+    mpz_set_str(enumerateOpt.randomIterations, enumerate_simple_opt.randomIterations, 10);
+    mpz_set_str(enumerateOpt.randomStartSeed, enumerate_simple_opt.randomStartSeed, 10);
+    mpz_set_str(enumerateOpt.start, enumerate_simple_opt.startIndex, 10);
 
     slice_count_map = do_tm_enumerate_job(&enumerateOpt);
 
     tm_enumerate_job_opt_destroy(&enumerateOpt);
-    if(mustFree_indexesConsidered)free(indexesConsidered);
+    if(mustFree_indexesConsidered)free(enumerate_simple_opt.indexesConsidered);
 
     return slice_count_map;
 }
 
 bool do_tm_enumerate_sql_merge_job_wrapped(
-    int states, 
-    char *max_steps,
-    char *randomIterations,
-    char *randomStartSeed, 
-    bool doOnesTape,
-    bool doZerosTape,
-    char *startIndex, 
-    char *indexesConsidered, 
-    int workers,
+    tm_enumerate_options_simple_t enumerate_simple_opt,
     
     sqlenv_t *sqlenv,
     char statementBuffer[],
     char *tablename
 )
 {
-    struct hashmap *slicecount_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers);
+    struct hashmap *slicecount_map = do_tm_enumerate_hashmap_job_wrapped(enumerate_simple_opt);
 
     // printf("merging into sql table...\n");
     sql_merge_slicecountmap_into_str_count_table(sqlenv, statementBuffer, tablename, slicecount_map);
