@@ -15,6 +15,8 @@
 
 #include "sqlenv.h"
 
+// int trivialNonHalters = 0;
+
 int main(){
 
     // print various messages.
@@ -61,19 +63,21 @@ int main(){
         // try to capture up to 99.999% of the theoretical number of predicted
         // halting machines. you can try sampling 20% of the machines randomly to
         // check how many are captured.
-        char *max_steps = "21";
+        char *max_steps = "100";
         char *randomStartSeed = "1";
         char *randomIterations = "0";
         bool doZerosTape = true;
-        bool doOnesTape = true;
+        bool doOnesTape = false;
         char *startIndex = "0";
         char *indexesConsidered = NULL;
-        int workers = 1;
+        int workers = 4;
         
         sql_drop_table_if_exists(&sqlenv, statementBuffer, originalTableName);
         do_tm_enumerate_sql_merge_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers,
             &sqlenv, statementBuffer, originalTableName
         );
+        // printf("trivial nonHalters found: %d\n", trivialNonHalters);
+        // trivialNonHalters = 0;
         // slice_count_map = sql_str_count_get_map(&sqlenv, statementBuffer, originalTableName);
 
         startIndex = "0";
@@ -83,6 +87,8 @@ int main(){
         do_tm_enumerate_sql_merge_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers,
             &sqlenv, statementBuffer, halfATableName
         );
+        // printf("trivial nonHalters found: %d\n", trivialNonHalters);
+        // trivialNonHalters = 0;
         // slice_count_map_halfA = sql_str_count_get_map(&sqlenv, statementBuffer, halfATableName);
 
         startIndex = "10369";
@@ -92,6 +98,8 @@ int main(){
         do_tm_enumerate_sql_merge_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers,
             &sqlenv, statementBuffer, halfBTableName
         );
+        // printf("trivial nonHalters found: %d\n", trivialNonHalters);
+        // trivialNonHalters = 0;
         // slice_count_map_halfB = sql_str_count_get_map(&sqlenv, statementBuffer, halfBTableName);
     }
 
@@ -234,11 +242,6 @@ int main(){
     }
 
     sqlenv_close(&sqlenv);
-
-    // free things
-    // hashmap_free(slice_count_map);
-    // hashmap_free(slice_count_map_halfA);
-    // hashmap_free(slice_count_map_halfB);
 
     turing_threading_destroy();
 

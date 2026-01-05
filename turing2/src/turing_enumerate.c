@@ -519,6 +519,7 @@ bool do_tm_enumerate_sql_merge_job_wrapped(
 {
     struct hashmap *slicecount_map = do_tm_enumerate_hashmap_job_wrapped(states, max_steps, randomIterations, randomStartSeed, doOnesTape, doZerosTape, startIndex, indexesConsidered, workers);
 
+    // printf("merging into sql table...\n");
     sql_merge_slicecountmap_into_str_count_table(sqlenv, statementBuffer, tablename, slicecount_map);
 
     hashmap_free(slicecount_map);

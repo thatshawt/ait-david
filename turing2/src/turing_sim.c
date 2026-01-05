@@ -397,15 +397,18 @@ void tm_step(tm_t* tm)
     tm_mutex_unlock(tm);
 }
 
+// extern int trivialNonHalters;
+
 void tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt, mpz_t* result)
 {
     //check trivial nonhalting
-    //it never works bruh idk why
     if(opt.trivialNonhaltingCheck){
         // printf("checked");
+
+        // check if it has a transition to the halting state
         bool hasHaltingTrans = false;
         for(int sym=0;sym<TM_SYMBOLS;sym++){
-            for(int state=1;state<TM_MAX_STATES;state++){
+            for(int state=1;state<=tm->states;state++){
                 if(hasHaltingTrans)break;
                 if(tm_get_entry(tm,sym,state).next_state == 0){
                     hasHaltingTrans = true;
@@ -413,19 +416,40 @@ void tm_step_until_halt_or_max(tm_t* tm, tm_run_opt_t opt, mpz_t* result)
                 }
             }
         }
-        if(hasHaltingTrans == false){
-            tm_mutex_lock(tm);
-            tm->halted = true;
-            tm->haltReason = HALT_TRIVIAL_NONHALTING;
-            tm->state = 0;
-            tm_mutex_unlock(tm);
-            // printf("actually did it");
-            // return 0;
-            if(result)mpz_set_ui(*result,0);
-            return;
+        // if it never transitions to the halting state, then its not going to halt.
+        if(hasHaltingTrans == false) goto TRIVIAL_NONHALT;
+
+
+        // check if it possibly leaves the first transition
+        bool neverExitsFirstTransition = true;
+        for(int sym=0;sym<TM_SYMBOLS;sym++){
+            tm_transition_table_entry_t entry = tm_get_entry(tm,sym,1);
+            if(entry.next_state != 1){
+                neverExitsFirstTransition = false;
+            }
         }
+        if(neverExitsFirstTransition == true) goto TRIVIAL_NONHALT;
+
+
+
+        // if none of the checks worked we just run the machine
+        goto RUN_IT;
+
+        TRIVIAL_NONHALT:
+        // trivialNonHalters++;
+
+        tm_mutex_lock(tm);
+        tm->halted = true;
+        tm->haltReason = HALT_TRIVIAL_NONHALTING;
+        tm->state = 0;
+        tm_mutex_unlock(tm);
+        // printf(":) ");
+        // return 0;
+        if(result)mpz_set_ui(*result,0);
+        return;
     }
 
+    RUN_IT:
     mpz_t i; mpz_init_set_ui(i, 0);
     for(;mpz_cmp(i,opt.max_steps) < 0; mpz_add_ui(i, i, 1)){
         // tm_print_state(tm);
