@@ -12,44 +12,46 @@
 #define MAX(a,b) ((a)>(b) ? (a):(b))
 
 uint64_t current_timestamp() {
-    struct timeval te; 
+    struct timeval te;
     gettimeofday(&te, NULL); // get current time
     long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
     // printf("milliseconds: %lld\n", milliseconds);
     return (uint64_t)milliseconds;
 }
 
-// rework gonna remove these grimy greasy global variables
-tm_symbol_t fillSymbol[TM_MAX_THREADS] = {0};
-bool fillRandom[TM_MAX_THREADS] = {false};
-int fillSeed[TM_MAX_THREADS] = {0};
-int fillMaxSteps[TM_MAX_THREADS] = {0};
+typedef struct{
+    tm_symbol_t fillSymbol[TM_MAX_THREADS];
+    bool fillRandom[TM_MAX_THREADS];
+    int fillSeed[TM_MAX_THREADS];
+    int fillMaxSteps[TM_MAX_THREADS];
+} fillTapeAlgoState_t;
+
+//at least its static ¯\_(ツ)_/¯
+static fillTapeAlgoState_t theFillTapeAlgoState;
+
 // and this too i think?
 void resetFillTapeAlgorithm(){
     for(int i=0;i<TM_MAX_THREADS;i++){
-        fillSymbol[i] = 0;
-        fillRandom[i] = false;
-        fillSeed[i] = 0;
-        fillMaxSteps[i] = 0;
+        theFillTapeAlgoState.fillSymbol[i] = 0;
+        theFillTapeAlgoState.fillRandom[i] = false;
+        theFillTapeAlgoState.fillSeed[i] = 0;
+        theFillTapeAlgoState.fillMaxSteps[i] = 0;
     }
 }
 
-// make it so this gets passed a "void* data" so it can have a proper state
-// and we can also split this into multiple functions easier.
-// also to remove all those nasty global variables up there >:)
-// text search for "rework" to find the clues i left how to do this. 
-// O_O grimy greasy ahh global vars...
-void fill_tm_with_symbol(tm_t* tm)
+void fill_tm_with_symbol(tm_t* tm, void* data)
 {
     const int selfid = turing_threading_self_index();
 
-    const int maxSteps = fillMaxSteps[selfid];
+    fillTapeAlgoState_t *fillTapeAlgoState = (fillTapeAlgoState_t*)data;
+
+    const int maxSteps = fillTapeAlgoState->fillMaxSteps[selfid];
     const int startTapeI = TM_TAPE_SIZE/2 - maxSteps - 1;
     const int endTapeI = TM_TAPE_SIZE/2 + maxSteps + 1;
-    if(fillRandom[selfid]){
-        tm_fill_tape_with_random_range(tm, fillSeed[selfid], startTapeI, endTapeI);
+    if(fillTapeAlgoState->fillRandom[selfid]){
+        tm_fill_tape_with_random_range(tm, fillTapeAlgoState->fillSeed[selfid], startTapeI, endTapeI);
     }else{
-        tm_fill_tape_range(tm, fillSymbol[selfid], startTapeI, endTapeI);
+        tm_fill_tape_range(tm, fillTapeAlgoState->fillSymbol[selfid], startTapeI, endTapeI);
     }
 }
 
@@ -89,7 +91,7 @@ void* enumerate_job_per_thread(void* a){
     mpz_t indexesConsidered; mpz_init_set(indexesConsidered,args->opt.length);// indexesConsidered = args->opt.length;
     mpz_t randomIterations; mpz_init_set(randomIterations,args->opt.randomIterations);// randomIterations = args->opt.randomIterations;
 
-    fillMaxSteps[selfid] = mpz_get_ui(max_steps);
+    theFillTapeAlgoState.fillMaxSteps[selfid] = mpz_get_ui(max_steps);
     
     // printf("thread job %d:\n", selfid);
     // gmp_printf("    states %d\n", args->opt.states);
@@ -104,33 +106,36 @@ void* enumerate_job_per_thread(void* a){
     
     // 1 enumeration with 0s on the tape
     if(args->opt.doZerosTape){
-        fillSymbol[selfid] = 0;
+        theFillTapeAlgoState.fillSymbol[selfid] = 0;
         tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
             args->slice_count_map,
-            fill_tm_with_symbol
+            fill_tm_with_symbol,
+            &theFillTapeAlgoState
         );
     }
 
     // 1 enumeration with 1s on the tape
     if(args->opt.doOnesTape){
-        fillSymbol[selfid] = 1;
+        theFillTapeAlgoState.fillSymbol[selfid] = 1;
         tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
             args->slice_count_map,
-            fill_tm_with_symbol
+            fill_tm_with_symbol,
+            &theFillTapeAlgoState
         );
     }
 
     // randomIterations enumerations with random 1s and 0s on tape 
-    fillSeed[selfid] = mpz_get_ui(args->opt.randomStartSeed);
-    fillRandom[selfid] = true;
+    theFillTapeAlgoState.fillSeed[selfid] = mpz_get_ui(args->opt.randomStartSeed);
+    theFillTapeAlgoState.fillRandom[selfid] = true;
     mpz_t i; mpz_init_set_ui(i, 0);
     for( ; mpz_cmp(i,randomIterations)<0; mpz_add_ui(i,i,1)){
         // gmp_printf("on i %Zd. selfid %d\n", i, selfid);
         tm_enumerate_index_length_with_hashmap(states, startIndex, indexesConsidered, max_steps,
             args->slice_count_map,
-            fill_tm_with_symbol
+            fill_tm_with_symbol,
+            &theFillTapeAlgoState
         );
-        fillSeed[selfid]++;
+        theFillTapeAlgoState.fillSeed[selfid]++;
         // printf("completed i %d, selfid %d\n", i, selfid);
     }
 
@@ -169,15 +174,6 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     struct hashmap* slice_count_map[TM_MAX_THREADS] = {0};
 
     const int workthreads = opt->workthreads;
-    for(int i=0;i<workthreads;i++){
-        slice_count_map[i] = hashmap_new(
-            sizeof(tm_slice_counter_t), 0, tm_rand(selfid), tm_rand(selfid), 
-            tm_slicecounter_hashmap_hash,
-            tm_slicecounter_hashmap_compare,
-            tm_slicecounter_hashmap_free,
-            NULL
-        );
-    }
 
     int states = opt->states;
 
@@ -217,6 +213,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     pthread_t workthread_handles[TM_MAX_THREADS];
     enumerate_job_args_t* thread_args[TM_MAX_THREADS];
 
+    //calculate arguments for jobs
     mpz_t startIndexCounter, indexesPerThread, indexRemainder;
     mpz_inits(indexesPerThread, indexRemainder, NULL);
     mpz_init_set(startIndexCounter,startIndex); // startIndexCounter = startIndex;
@@ -224,45 +221,69 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
     mpz_fdiv_q_ui(indexesPerThread, indexesConsidered, workthreads); // indexesPerThread = indexesConsidered/workthreads;
     mpz_fdiv_r_ui(indexRemainder, indexesConsidered, workthreads);
 
-    //spawn threads
+    // setting and calculating arguments, still.
     for(int i=0;i<workthreads;i++){
         thread_args[i] = malloc(sizeof(enumerate_job_args_t));
         enumerate_job_args_t* args = thread_args[i];
         
         tm_enumerate_job_opt_init(&args->opt);
-        // args->opt = *opt;
-        args->slice_count_map = slice_count_map[i];
 
         args->opt.doOnesTape = opt->doOnesTape;
         args->opt.doZerosTape = opt->doZerosTape;
         args->opt.states = opt->states;
+
         mpz_set(args->opt.max_steps,opt->max_steps);
         mpz_set(args->opt.randomIterations,opt->randomIterations);
         mpz_set(args->opt.randomStartSeed, randomStartSeed);
-        mpz_set(args->opt.start,startIndexCounter); //args->opt.start = startIndexCounter;
-        mpz_set(args->opt.length,indexesPerThread); //args->opt.length = indexesPerThread;
+        mpz_set(args->opt.start,startIndexCounter);
+        mpz_set(args->opt.length,indexesPerThread);
 
-        // if we are on the last one check if we need the last thread to pick up the slack
+        // last thread picks up the slack, if indexes didnt divide evenly
         if(i==workthreads-1 && mpz_cmp_ui(indexRemainder,0) != 0){
             // gmp_printf("added slack %Zd\n", indexRemainder);
             mpz_add(args->opt.length,args->opt.length,indexRemainder);
         }
 
         mpz_add(startIndexCounter,startIndexCounter,indexesPerThread); //startIndexCounter += indexesPerThread;
+    }
+
+    // TODO, submit jobs to get queued up or smth
+    // workthreads is analogous to jobs
+    // for(){
+
+    // }
+
+    //TODO rest of this gets put into a separate function that picks jobs and runs them.
+
+    // get the stuff ready before enumerating
+    resetFillTapeAlgorithm();
+
+    // spawn threads to do the jobs
+    for(int i=0;i<workthreads;i++){
+        enumerate_job_args_t* args = thread_args[i];
+        // enumerate_job_args_t* args = turing_job_sql_pop_job();
+
+        slice_count_map[i] = hashmap_new(
+            sizeof(tm_slice_counter_t), 0, tm_rand(selfid), tm_rand(selfid), 
+            tm_slicecounter_hashmap_hash,
+            tm_slicecounter_hashmap_compare,
+            tm_slicecounter_hashmap_free,
+            NULL
+        );
+        args->slice_count_map = slice_count_map[i];
+
 
         pthread_create(&workthread_handles[i], NULL, enumerate_job_per_thread, (void*)args);
     }
 
+
     //wait for all the threads to finish
     for(int i=0;i<workthreads;i++){
-        // sleep(10);
         pthread_join(workthread_handles[i], NULL);
     }
 
     // gotta do this :skull: i think.
     resetFillTapeAlgorithm();
-
-    // printf("merge and destroy\n");
 
     //merge and destroy all the maps into the 0th one
     for(int i=1;i<workthreads;i++){
@@ -300,7 +321,7 @@ void tm_print_enumerate_performance_stats(int states, mpz_t max_steps)
     mpz_init_set_ui(start, 0);
 
     uint64_t milliStart = current_timestamp();
-    tm_enumerate_index_length_generic(states, start, num_machines, max_steps, NULL, NULL);
+    tm_enumerate_index_length_generic(states, start, num_machines, max_steps, NULL, NULL, NULL);
     uint64_t milliEnd = current_timestamp();
 
     mpz_clears(start, NULL);
@@ -327,8 +348,8 @@ void tm_enumerate_index_length_generic(
     mpz_t length,
     mpz_t max_steps,
     void(*halt_receiver)(tm_t* tm),
-    void(*before_stepping)(tm_t* tm)
-    //rework, probaby gonna add a "void* data" here...
+    void(*before_stepping)(tm_t* tm, void* data),
+    void* data
 )
 {
     // gmp_printf("called enumerate with args: (states, %d), (start, %Zd), (length, %Zd), (max_steps, %Zd)\n", states, start, length, max_steps);
@@ -352,8 +373,7 @@ void tm_enumerate_index_length_generic(
     for(;mpz_cmp(i,length)<0;mpz_add_ui(i,i,1)){
         tm_reset_keep_table_and_states(&tm);
 
-        //rework, gonna put "before_stepping(&tm, data)" instead.
-        if(before_stepping)before_stepping(&tm);
+        if(before_stepping)before_stepping(&tm, data);
 
         tm_step_until_halt_or_max(&tm, runopt, NULL);
 
@@ -441,15 +461,16 @@ void tm_enumerate_index_length_with_hashmap(
     mpz_t length,
     mpz_t max_steps,
     struct hashmap* map,
-    void(*before_stepping)(tm_t* tm)
-    //rework, probaby gonna add a "void* data" here...
+    void(*before_stepping)(tm_t* tm, void* data),
+    void* data
 )
 {
     const int selfid = turing_threading_self_index();
     counter_map[selfid] = map;
     tm_enumerate_index_length_generic(states, start, length, max_steps,
         halt_receiver_hashmap,
-        before_stepping
+        before_stepping,
+        data
     );
 }
 

@@ -7,6 +7,7 @@
 #include "sqlenv.h"
 
 //wowzahipitatious. skib skib?
+// skib SKIB SKIB
 
 typedef struct{
     tape_slice_t slice;
@@ -73,7 +74,8 @@ void tm_enumerate_index_length_generic(
     mpz_t length,
     mpz_t max_steps,
     void(*halt_receiver)(tm_t* tm),
-    void(*before_stepping)(tm_t* tm)
+    void(*before_stepping)(tm_t* tm, void* data),
+    void* data
 );
 
 void tm_enumerate_index_length_with_hashmap(
@@ -82,7 +84,8 @@ void tm_enumerate_index_length_with_hashmap(
     mpz_t length,
     mpz_t max_steps,
     struct hashmap* map,
-    void(*before_stepping)(tm_t* tm)
+    void(*before_stepping)(tm_t* tm, void* data),
+    void* data
 );
 
 #endif
