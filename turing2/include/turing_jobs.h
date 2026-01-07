@@ -4,31 +4,101 @@
 #include "sqlenv.h"
 #include "turing_enumerate.h"
 
-void tj_delete_job_table(sqlenv_t *sqlenv, char *jobname);
-void tj_queue_job(sqlenv_t *sqlenv, char * enumerationName, enumerate_job_opt_t jobArgs);
+// "exported" user friendly api:
+    void turing_jobs_start();
+    void turing_jobs_end();
 
-// job_results
-// job_id | string_count_table_name | validation_value
+    // max steps allowed per job
+    //TODO: implement simple formula in turing_enumerate.c/h that calculates steps of an enumerate_job_opt_t
+    void turing_jobs_set_maximum_steps_per_job(char* maxSteps);
 
-//  job_mapping
-//  job_mapping_id | job_id | enumeration_id | job_args_id
+    // the "enumeration" job gets split into children jobs that are under or equal to
+    // the max steps allowed per job.
+    // returns the job_id of the enumeration job.
+    int turing_jobs_queue_enumeration(sqlenv_t *sqlenv, enumerate_job_opt_t jobArgs);
 
-// enumerations
-// enumeration_id | job_args_id
+    // picks the oldest job from the "queue".
+    // returns true if worked, false otherwise.
+    // 'int* jobId' is loaded with the job's id.
+    // 'enumerate_job_opt_t *jobArgs' is loaded with the job's enumeration arguments.
+    bool turing_jobs_accept_oldest_job(sqlenv_t *sqlenv, int* jobId, enumerate_job_opt_t *jobArgs);
 
-// jobs
-// job_id | job_args_id
+    // submit results for a job
+    void turing_jobs_submit_job_results(sqlenv_t *sqlenv, int jobId, struct hashmap* slicecounter_hashmap);
 
-// job_args
-// job_args_id | arg1 | arg2 | arg3 | ...
+    // returns new slicecounter hashmap from job results from jobId or jobArgs.
+    // returns null pointer if it cant find the results or there are none.
+    struct hashmap* turing_jobs_get_job_results(sqlenv_t *sqlenv, int jobId, enumerate_job_opt_t jobArgs);
 
-void tj_define_enumeration_jobs_mapping(sqlenv_t *sqlenv, char * enumerationName, char **jobNames);
+    // returns true if worked, false otherwise.
+    // 'int* jobId' is loaded with the jobId that matches the supplied 'enumerate_job_opt_t jobArgs'.
+    // this can be used to check if an enumeration has already been added to the database.
+    bool turing_jobs_get_jobid_from_args(sqlenv_t *sqlenv, enumerate_job_opt_t jobArgs, int* jobId);
 
-void turing_jobs_submit_job_results(sqlenv_t *sqlenv, char *jobname, char *resultsStrCountTableName);
-void turing_jobs_accept_most_recent_job(sqlenv_t *sqlenv, enumerate_job_opt_t *jobArgs);
-void turing_jobs_queue_enumeration(sqlenv_t *sqlenv, char * enumerationName, enumerate_job_opt_t jobArgs);
 
-void turing_jobs_start();
-void turing_jobs_end();
+// "low level" functions:
+    // these are crucial to ensure thread-safety.
+    void tj_lock();
+    void tj_unlock();
+
+    //sql stuff below here
+
+    // this creates the tables below if they arent already created.
+    void tj_create_tables(sqlenv_t* sqlenv);
+
+    // this deletes the below tables...
+    // dangerous...
+    void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv);
+
+    // jobs
+    // AUTO UNIQUE INT job_id | PRIMARY(arg1 | arg2 | arg3 | ...)
+        // returns job_id, -1 otherwise
+        int tj_create_job_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs);
+
+        // returns job_id, -1 otherwise
+        int tj_get_job_id_from_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs);
+
+        // loads job's args into 'enumerate_job_opt_t* jobArgs'.
+        // returns true if worked, false otherwise.
+        bool tj_get_job_args(sqlenv_t* sqlenv, int jobId, enumerate_job_opt_t* jobArgs);
+
+    // enumeration_job_mapping
+    // AUTO UNIQUE INT enumeration_job_map_id | PRIMARY(FOREIGN INT jobs.job_id as enumeration_id(one) | FOREIGN INT jobs.job_id(many))
+        // maps one 'enumerationId' to array of job ids 'jobIds'.
+        // 'jobCount' needs to be set to how many job ids are in the 'jobIds' variable.
+        void tj_map_enumeration_to_children_jobs(sqlenv_t* sqlenv, int enumerationId, int jobCount, int* jobIds);
+
+        // returns true if it worked false otherwise.
+        // jobs loaded into the 'int** jobIds' variable.
+        // amount of jobs loaded into 'int* jobCount' variable.
+        bool tj_get_enumeration_jobs(sqlenv_t* sqlenv, int enumerationId, int* jobCount, int** jobIds);
+
+        // returns a job's parent job id or -1.
+        int tj_get_job_parent_enumeration(sqlenv_t* sqlenv, int jobId);
+
+    // enumeration_job_merge_tracker
+    // PRIMARY(FOREIGN INT jobs.job_id as enumeration_id(one) | FOREIGN INT jobs.job_id(many))
+    // this is supposed to be incremental and keep track of which job results have 
+    // been merged into the parent enumeration job.
+        // if job is not merged, merges job into its parent enumeration.
+        // returns true if it did the merge.
+        bool tj_try_merge_job_into_parent_job(sqlenv_t* sqlenv, int jobId);
+
+        // returns true if all the enumeration's children have been merged into the enumeration.
+        bool tj_is_enumeration_fully_merged(sqlenv_t* sqlenv, int enumerationId);
+
+        // returns true if the job has been merged into its parent enumeration.
+        bool tj_has_job_been_merged_into_parent_enumeration(sqlenv_t* sqlenv, int jobId);
+
+    // job_results
+    // PRIMARY(FOREIGN INT jobs.job_id | NOT_NULL STR lstring) | NOT_NULL STR rcount
+
+        // calls tj_try_merge_job_into_parent_job(jobId) after job result is added.
+        void tj_add_single_job_result(sqlenv_t *sqlenv, int jobId, char* lstring, char* rcount);
+        void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, int jobId, struct hashmap* slicecounter_hashmap);
+
+        // true if succeed, false otherwise.
+        // puts results of job_id into 'slicecounter_hashmap'.
+        bool tj_load_job_results_into_slicecount_map(sqlenv_t *sqlenv, int jobId, struct hashmap* slicecounter_hashmap);
 
 #endif

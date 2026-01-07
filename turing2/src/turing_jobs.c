@@ -17,7 +17,7 @@ void turing_jobs_end()
     pthread_mutex_destroy(&tjState.mutex);
 }
 
-// lock whenever doing stuff with jobs/enumerations sql or tjState.
+// lock whenever calling sqlenv function or reading/writing tjState.
 void tj_lock()
 {
     pthread_mutex_lock(&tjState.mutex);
