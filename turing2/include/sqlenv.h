@@ -11,7 +11,7 @@ enum SQL_RT{
     SQL_RT_EXEC, SQL_RT_OPEN, SQL_RT_CLOSE
 };
 
-#define SQL_CALLBACK_FUNC_ARG_PROTO void *data, int argc, char **argv, char **columnName
+#define SQL_CALLBACK_FUNC_ARG_PROTO void *data, int count, char **values, char **columnNames
 
 typedef struct{
     sqlite3 *db;    // sqlite3 database handle
@@ -39,6 +39,11 @@ void sql_resultHandler_print(void *sqlenv_void, enum SQL_RT resultType);
 // callback to specifically load a text 'COUNT' column value into an mpz_t variable.
 // used by sql_load_str_count_into_mpz
 int sql_callback_load_countCol_into_mpz(SQL_CALLBACK_FUNC_ARG_PROTO);
+
+// loads first result into (mpz_t*)data
+int sql_callback_load_firstcol_into_mpz(SQL_CALLBACK_FUNC_ARG_PROTO);
+
+unsigned long sqlenv_get_last_insert_rowid(sqlenv_t* sqlenv);
 
 // sql str_count functions
 void sql_set_str_count(sqlenv_t *sqlenv, char *statementBuffer, char *tableName, char *stringID, char *countStr);

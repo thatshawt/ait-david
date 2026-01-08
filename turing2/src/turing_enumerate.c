@@ -165,6 +165,8 @@ void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt)
 void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt)
 {
     mpz_clears(opt->start, opt->length, opt->max_steps, opt->randomIterations, opt->randomStartSeed, NULL);
+
+
 }
 
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
@@ -474,19 +476,11 @@ void tm_enumerate_index_length_with_hashmap(
     );
 }
 
-struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
-    tm_enumerate_options_simple_t enumerate_simple_opt
-)
+// returns true if worked.
+// reads 'simpleArgs' and outputs into 'hardArgs'.
+bool tm_resolve_simple_args_to_hard_args(tm_enumerate_options_simple_t enumerate_simple_opt, enumerate_job_opt_t* enumerateOpt)
 {
-    // int states = 2;
-    // char *max_steps = "300";
-    // char *randomIterations = "10";
-    // char *startIndex = "0";
-    // char *indexesConsidered = NULL;
-    // int workers = 4;
-
-    struct hashmap* slice_count_map;
-
+    // resolve length is it is NULL.
     bool mustFree_indexesConsidered = false;
     if(enumerate_simple_opt.indexesConsidered == NULL){
         mpz_t indexesConsidered_z; mpz_init(indexesConsidered_z);
@@ -500,24 +494,94 @@ struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
         mustFree_indexesConsidered = true;
     }
 
-    enumerate_job_opt_t enumerateOpt = (enumerate_job_opt_t){
+    *enumerateOpt = (enumerate_job_opt_t){
         .states=enumerate_simple_opt.states,
         .workthreads=enumerate_simple_opt.workers,
         .doOnesTape=enumerate_simple_opt.doOnesTape,
         .doZerosTape=enumerate_simple_opt.doZerosTape
     };
+
+    mpz_set_str(enumerateOpt->length, enumerate_simple_opt.indexesConsidered, 10);
+    mpz_set_str(enumerateOpt->max_steps, enumerate_simple_opt.max_steps, 10);
+    mpz_set_str(enumerateOpt->randomIterations, enumerate_simple_opt.randomIterations, 10);
+    mpz_set_str(enumerateOpt->randomStartSeed, enumerate_simple_opt.randomStartSeed, 10);
+    mpz_set_str(enumerateOpt->start, enumerate_simple_opt.startIndex, 10);
+
+    if(mustFree_indexesConsidered){
+        free(enumerate_simple_opt.indexesConsidered);
+        enumerate_simple_opt.indexesConsidered = NULL;
+    }
+
+    return true;
+}
+
+
+/*
+typedef struct {
+    int states;
+    char *max_steps;
+    char *randomIterations;
+    char *randomStartSeed;
+    bool doOnesTape;
+    bool doZerosTape;
+    char *startIndex;
+    char *indexesConsidered;
+    int workers;
+} tm_enumerate_options_simple_t;
+
+typedef struct{
+    int states;
+
+    mpz_t start;
+    mpz_t length;
+
+    mpz_t max_steps;
+
+    bool doOnesTape;
+    bool doZerosTape;
+
+    mpz_t randomIterations;
+    mpz_t randomStartSeed;
+
+    int workthreads;
+
+} enumerate_job_opt_t;
+*/
+bool tm_revert_hard_args_to_simple_args(enumerate_job_opt_t enumerateOpt, tm_enumerate_options_simple_t* enumerate_simple_opt)
+{
+    enumerate_simple_opt->states = enumerateOpt.states;
+    enumerate_simple_opt->doOnesTape = enumerateOpt.doOnesTape;
+    enumerate_simple_opt->doZerosTape = enumerateOpt.doZerosTape;
+
+    enumerate_simple_opt->max_steps = mpz_get_str(NULL,10, enumerateOpt.max_steps);
+    enumerate_simple_opt->randomIterations = mpz_get_str(NULL,10, enumerateOpt.randomIterations);
+    enumerate_simple_opt->randomStartSeed = mpz_get_str(NULL,10, enumerateOpt.randomStartSeed);
+    enumerate_simple_opt->startIndex = mpz_get_str(NULL,10, enumerateOpt.start);
+    enumerate_simple_opt->indexesConsidered = mpz_get_str(NULL,10, enumerateOpt.length);
+
+    return true;
+}
+
+bool tm_free_simple_args_made_from_revert_thing(tm_enumerate_options_simple_t* enumerate_simple_opt)
+{
+    free(enumerate_simple_opt->max_steps);
+    free(enumerate_simple_opt->randomIterations);
+    free(enumerate_simple_opt->randomStartSeed);
+    free(enumerate_simple_opt->startIndex);
+    free(enumerate_simple_opt->indexesConsidered);
+}
+
+struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
+    tm_enumerate_options_simple_t enumerate_simple_opt
+)
+{
+    enumerate_job_opt_t enumerateOpt;
     tm_enumerate_job_opt_init(&enumerateOpt);
-
-    mpz_set_str(enumerateOpt.length, enumerate_simple_opt.indexesConsidered, 10);
-    mpz_set_str(enumerateOpt.max_steps, enumerate_simple_opt.max_steps, 10);
-    mpz_set_str(enumerateOpt.randomIterations, enumerate_simple_opt.randomIterations, 10);
-    mpz_set_str(enumerateOpt.randomStartSeed, enumerate_simple_opt.randomStartSeed, 10);
-    mpz_set_str(enumerateOpt.start, enumerate_simple_opt.startIndex, 10);
-
-    slice_count_map = do_tm_enumerate_job(&enumerateOpt);
+    tm_resolve_simple_args_to_hard_args(enumerate_simple_opt, &enumerateOpt);
+    
+    struct hashmap* slice_count_map = do_tm_enumerate_job(&enumerateOpt);
 
     tm_enumerate_job_opt_destroy(&enumerateOpt);
-    if(mustFree_indexesConsidered)free(enumerate_simple_opt.indexesConsidered);
 
     return slice_count_map;
 }

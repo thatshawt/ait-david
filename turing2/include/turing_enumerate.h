@@ -37,6 +37,7 @@ typedef struct{
     mpz_t randomStartSeed;
 
     int workthreads;
+
 } enumerate_job_opt_t;
 
 void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt);
@@ -53,6 +54,16 @@ typedef struct {
     char *indexesConsidered; 
     int workers;
 } tm_enumerate_options_simple_t;
+
+// returns true if worked.
+// reads 'simpleArgs' and outputs into 'hardArgs'.
+bool tm_resolve_simple_args_to_hard_args(tm_enumerate_options_simple_t simpleArgs, enumerate_job_opt_t* hardArgs);
+
+// turns an enumerate_job_opt_t into a tm_enumerate_options_simple_t.
+// reverse of tm_resolve_simple_args_to_hard_args function.
+bool tm_revert_hard_args_to_simple_args(enumerate_job_opt_t enumerateOpt, tm_enumerate_options_simple_t* enumerate_simple_opt)
+// you need to do this to free the resources used when calling tm_revert_hard_args_to_simple_args function.
+bool tm_free_simple_args_made_from_revert_thing(tm_enumerate_options_simple_t* enumerate_simple_opt);
 
 struct hashmap* do_tm_enumerate_hashmap_job_wrapped(
     tm_enumerate_options_simple_t enumerate_simple_opt

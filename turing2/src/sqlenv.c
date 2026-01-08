@@ -109,6 +109,35 @@ void sql_resultHandler_print(void *sqlenv_void, enum SQL_RT resultType){
     }
 }
 
+
+int sql_callback_load_firstcol_into_mpz(void *data, int argc, char **argv, char **azColName)
+{
+    int i=0;
+    const char* colName = azColName[i];
+    const char* val = argv[i];
+
+    mpz_set_str(*(mpz_t*)data, val, 10);
+
+    return 0;
+}
+
+unsigned long sqlenv_get_last_insert_rowid(sqlenv_t* sqlenv)
+{
+    mpz_t theMpz; mpz_init(theMpz);
+
+    sqlenv_exec_with_callback(sqlenv, "SELECT last_insert_rowid();",
+        &theMpz,
+        &sql_callback_load_firstcol_into_mpz
+    );
+    
+    unsigned long result = mpz_get_ui(theMpz);
+    
+    mpz_clear(theMpz);
+
+    return result;
+}
+
+
 int sql_callback_load_countCol_into_mpz(void *data, int argc, char **argv, char **azColName){
     for(int i = 0; i<argc; i++){
         const char* colName = azColName[i];
