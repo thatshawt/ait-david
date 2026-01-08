@@ -32,12 +32,13 @@ void tj_unlock()
 // AUTO UNIQUE INT job_id | PRIMARY(arg1 | arg2 | arg3 | ...)
 static void tj_create_jobs_table(sqlenv_t* sqlenv)
 {
+    tj_lock();
     sprintf(tjState.statementBuffer,
         "CREATE TABLE jobs("
-            "job_id INTEGER PRIMARY KEY," // sqlite assigns a value automagically if we dont
+            "job_id INTEGER PRIMARY KEY," // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
             "states INTEGER NOT NULL,"
             "start TEXT NOT NULL,"
-            "length TEXT," // if its NULL it gets resolved eventually i think
+            "length TEXT NOT NULL,"
             "max_steps TEXT NOT NULL,"
             "doOnesTape INTEGER NOT NULL," // this is a boolean
             "doZerosTape INTEGER NOT NULL," // this is a boolean
@@ -51,6 +52,7 @@ static void tj_create_jobs_table(sqlenv_t* sqlenv)
         NULL,
         NULL
     );
+    tj_unlock();
 }
 
 void tj_create_tables(sqlenv_t* sqlenv)
@@ -60,6 +62,7 @@ void tj_create_tables(sqlenv_t* sqlenv)
 
 void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv)
 {
+    tj_lock();
     sprintf(tjState.statementBuffer,
         "DROP TABLE jobs;"
         // "DROP TABLE otherTable;"
@@ -70,39 +73,21 @@ void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv)
         NULL,
         NULL
     );
+    tj_unlock();
 }
 
 // returns job_id, -1 otherwise
-unsigned long tj_create_job_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs);
-//TODO: change function so its like this: "return tj_create_job_args(sqlenv, change_simple_to_hard_args(userJobArgs));"
-unsigned long tj_create_job_simple_args(sqlenv_t* sqlenv, tm_enumerate_options_simple_t userJobArgs)
+unsigned long tj_create_job_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs)
 {
-    tm_enumerate_options_simple_t jobArgs = userJobArgs;
-    
-    // make sure jobArgs is properly "resolved". (no NULL for the length).
-    {
-        // intermediate hard args
-        enumerate_job_opt_t resolvedArgs;
-        tm_enumerate_job_opt_init(&resolvedArgs);
-        tm_resolve_simple_args_to_hard_args(jobArgs, &resolvedArgs);
-
-        // turn the resolved "hard args" back into "simple args" that we can easily parse.
-        tm_revert_hard_args_to_simple_args(resolvedArgs, &jobArgs);
-        
-        // we dont need these anymore
-        tm_enumerate_job_opt_destroy(&resolvedArgs);
-    }
-
     unsigned long result;
     tj_lock();
     // the curly braces are purely visual.
     { // the two sql calls need to execute one after another, hence the locking.
-        sprintf(tjState.statementBuffer,
+        gmp_sprintf(tjState.statementBuffer,
             "INSERT INTO"
             "jobs(states,start,length,max_steps,doOnesTape,doZerosTape,randomIterations,randomStartSeed)"
-            "VALUES (%d, %s, %s, %s, %d, %d, %s, %s);",
-            jobArgs.states, jobArgs.startIndex,
-            jobArgs.indexesConsidered == NULL ? "NULL":jobArgs.indexesConsidered,
+            "VALUES (%d, %Zd, %Zd, %Zd, %d, %d, %Zd, %Zd);",
+            jobArgs.states, jobArgs.start, jobArgs.length,
             jobArgs.max_steps, jobArgs.doOnesTape, jobArgs.doZerosTape,
             jobArgs.randomIterations, jobArgs.randomStartSeed
         );
@@ -111,32 +96,41 @@ unsigned long tj_create_job_simple_args(sqlenv_t* sqlenv, tm_enumerate_options_s
         result = sqlenv_get_last_insert_rowid(sqlenv);
     }
     tj_unlock();
+
+    return result;
+}
+
+unsigned long tj_create_job_simple_args(sqlenv_t* sqlenv, tm_enumerate_options_simple_t jobArgs)
+{   
+    enumerate_job_opt_t resolvedArgs;
+    tm_enumerate_job_opt_init(&resolvedArgs);
+
+    // make sure jobArgs is properly "resolved".
+    tm_resolve_simple_args_to_hard_args(jobArgs, &resolvedArgs);
+
+    unsigned long result = tj_create_job_args(sqlenv, resolvedArgs);
     
-    // free the jobArgs cus we used tm_revert_hard_args_to_simple_args.
-    tm_free_simple_args_made_from_revert_thing(&jobArgs);
+    tm_enumerate_job_opt_destroy(&resolvedArgs);
     
     return result;
 }
 
 // returns job_id, -1 otherwise
-unsigned long tj_get_job_id_from_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs);
-
-// TODO; change this functoin so its like this:
-// return tj_get_job_id_from_args(sqlenv, convert_simple_to_hard_args(jobArgs));
-unsigned long tj_get_job_id_from_simple_args(sqlenv_t* sqlenv, tm_enumerate_options_simple_t jobArgs)
+unsigned long tj_get_job_id_from_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs)
 {
     mpz_t theMpz; mpz_init_set_ui(theMpz, -1);
 
-    sprintf(tjState.statementBuffer,
+    tj_lock();
+    gmp_sprintf(tjState.statementBuffer,
         "SELECT job_id FROM jobs WHERE"
-        "states=%d AND start=%s AND length=%s AND max_steps=%s AND doOnesTape=%d AND doZerosTape=%d AND randomIterations=%s AND randomStartSeed=%s;",
-        jobArgs.states, jobArgs.startIndex,
-        jobArgs.indexesConsidered == NULL ? "NULL":jobArgs.indexesConsidered,
+        "states=%d AND start=%Zd AND length=%Zd AND max_steps=%Zd AND doOnesTape=%d AND doZerosTape=%d AND randomIterations=%Zd AND randomStartSeed=%Zd;",
+        jobArgs.states, jobArgs.start, jobArgs.length,
         jobArgs.max_steps, jobArgs.doOnesTape, jobArgs.doZerosTape,
         jobArgs.randomIterations, jobArgs.randomStartSeed
     );
     sqlenv_exec_with_callback(sqlenv, tj.statementBuffer,
         &theMpz, &sql_callback_load_firstcol_into_mpz);
+    tj_unlock();
 
     unsigned long result = mpz_get_ui(theMpz);
 
@@ -145,7 +139,23 @@ unsigned long tj_get_job_id_from_simple_args(sqlenv_t* sqlenv, tm_enumerate_opti
     return sqlenv->rq == SQLITE_OK ? result : -1;
 }
 
-int tj_sql_callback_load_into_jobargs(void *data, int count, char **values, char **columnNames){
+unsigned long tj_get_job_id_from_simple_args(sqlenv_t* sqlenv, tm_enumerate_options_simple_t jobArgs)
+{
+    enumerate_job_opt_t resolvedArgs;
+    tm_enumerate_job_opt_init(&resolvedArgs);
+
+    // make sure jobArgs is properly "resolved".
+    tm_resolve_simple_args_to_hard_args(jobArgs, &resolvedArgs);
+
+    unsigned long result = tj_get_job_id_from_args(sqlenv, resolvedArgs);
+    
+    tm_enumerate_job_opt_destroy(&resolvedArgs);
+    
+    return result;
+}
+
+int tj_sql_callback_load_into_jobargs(void *data, int count, char **values, char **columnNames)
+{
     enumerate_job_opt_t* jobArgs = (enumerate_job_opt_t*)data;
 
     mpz_t anMpz; mpz_init(anMpz);
@@ -190,5 +200,20 @@ int tj_sql_callback_load_into_jobargs(void *data, int count, char **values, char
 
 bool tj_get_job_args(sqlenv_t* sqlenv, unsigned long jobId, enumerate_job_opt_t* jobArgs)
 {
+    bool jobIdExists = tj_get_job_id_from_args(*jobArgs) != -1;
 
+    if(!jobIdExists){
+        tj_lock();
+
+        sprintf(tjState.statementBuffer, "SELECT * FROM jobs WHERE job_id=%ld;", jobId);
+
+        sqlenv_exec_with_callback(sqlenv, tjState.statementBuffer,
+            (void*)jobArgs, &tj_sql_callback_load_into_jobargs);
+
+        tj_unlock();
+
+        return true;
+    }else{
+        return false;
+    }
 }
