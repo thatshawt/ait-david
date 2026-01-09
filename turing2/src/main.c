@@ -3,6 +3,7 @@
 #include "turing_mapping.h"
 #include "turing_utils.h"
 #include "turing_enumerate.h"
+#include "turing_jobs.h"
 
 #include "hashmap.h"
 
@@ -17,16 +18,15 @@
 
 // int trivialNonHalters = 0;
 
+// how do we catch more non halters o.O
+
 int main(){
 
     // print various messages.
     // run tests.
     {
         printf("\nhello turing\n\n");
-
-        printf("main pthread_self() %d\n", pthread_self());
-        printf("sizeof(tm_slice_counter_t) %d\n", sizeof(tm_slice_counter_t));
-        printf("sizeof(tape_slice_t) %d\n", sizeof(tape_slice_t));
+        printf("SQLITE_OK %d\n", SQLITE_OK);
 
         turing_threading_init_global();
 
@@ -51,24 +51,24 @@ int main(){
     sqlenv_t sqlenv;
     if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
     char statementBuffer[2000];
+
+    tm_enumerate_options_simple_t enumerate_simple_opt = {
+        .states = 2,
+        .max_steps = "100",
+        .startIndex = "0",
+        .indexesConsidered = NULL,
+
+        .randomStartSeed = "1",
+        .randomIterations = "0",
+
+        .doZerosTape = true,
+        .doOnesTape = true,
+
+        .workers = 4
+    };
     
     // populate tables with enumeration results
     {
-        tm_enumerate_options_simple_t enumerate_simple_opt = {
-            .states = 2,
-            .max_steps = "100",
-            .startIndex = "0",
-            .indexesConsidered = NULL,
-
-            .randomStartSeed = "1",
-            .randomIterations = "0",
-
-            .doZerosTape = true,
-            .doOnesTape = true,
-
-            .workers = 4
-        };
-
         // int states = 2;
         // TODO:
         // try to capture up to 99.999% of the theoretical number of predicted
@@ -162,6 +162,44 @@ int main(){
 
         // sprintf(statementBuffer, "SELECT * FROM %s;", halfATableName);
         // sqlenv_exec_with_callback(&sqlenv, statementBuffer, NULL, &sql_callback_print);
+    }
+
+    // some jobs tests
+    {
+        tj_DANGEROUS_delete_tables(&sqlenv);
+        tj_create_tables(&sqlenv);
+
+        unsigned long jobId;
+
+        jobId = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
+        printf("jobId is %ld\n\n", jobId);
+
+        printf("called tj_delete_job, rc=%d\n\n", tj_delete_job(&sqlenv, jobId));
+
+        jobId = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
+        printf("jobId is %ld\n\n", jobId);
+
+        jobId = tj_get_job_id_from_simple_args(&sqlenv, enumerate_simple_opt);
+        printf("jobId is %ld\n\n", jobId);
+
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
+
+        enumerate_job_opt_t enumOpt;
+        tm_enumerate_job_opt_init(&enumOpt);
+
+        tj_get_job_args(&sqlenv, jobId, &enumOpt);
+        tm_enumerate_print_opt(&enumOpt);
+
+        tm_enumerate_job_opt_destroy(&enumOpt);
+
+        enumerate_simple_opt.indexesConsidered = "123";
+        unsigned long newJobId = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
+        printf("new jobId is %ld\n\n", newJobId);
+
+        tj_map_enumeration_to_children_jobs(&sqlenv, jobId, 1, &newJobId);
+
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from enumeration_job_mapping;", NULL, &sql_callback_print);
+
     }
 
     // "full index" enumeration = enumerating every machine with the desired tapes

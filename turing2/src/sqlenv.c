@@ -62,6 +62,19 @@ void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data
     sqlenv->resultHandler = temp_resulthandler;
 }
 
+void sqlenv_exec_with_callback_resulthandler(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO), void(*resultHandler)(void *sqlenv, enum SQL_RT resultType))
+{
+    void* temp_callback = sqlenv->exec_callback; sqlenv->exec_callback = 0;
+    void* temp_resulthandler = sqlenv->resultHandler; sqlenv->resultHandler = 0;
+
+    sqlenv->resultHandler = resultHandler;
+    sqlenv->exec_callback = exec_callback;
+    sqlenv_exec(sqlenv, sql_statement, data);
+    
+    sqlenv->exec_callback = temp_callback;
+    sqlenv->resultHandler = temp_resulthandler;
+}
+
 void sqlenv_close(sqlenv_t *sqlenv)
 {
     sqlenv->rc = sqlite3_close(sqlenv->db);

@@ -74,6 +74,20 @@ void tm_slicecounter_hashmap_merge(struct hashmap* mapA, struct hashmap* mapB)
     }
 }
 
+void tm_enumerate_print_opt(enumerate_job_opt_t* opt)
+{
+    printf("enumerate_job_opt_t:\n");
+    gmp_printf("    states %d\n", opt->states);
+    gmp_printf("    doZerosTape %d\n", opt->doZerosTape);
+    gmp_printf("    doOnesTape %d\n", opt->doOnesTape);
+    gmp_printf("    max_steps %Zd\n", opt->max_steps);
+    gmp_printf("    randomIters %Zd\n", opt->randomIterations);
+    gmp_printf("    randomStartSeed %Zd\n", opt->randomStartSeed);
+    gmp_printf("    startIndex %Zd\n", opt->start);
+    gmp_printf("    indexesConsidered %Zd\n", opt->length);
+    printf("\n");
+}
+
 typedef struct{
     enumerate_job_opt_t opt;
     struct hashmap* slice_count_map;
@@ -93,16 +107,8 @@ void* enumerate_job_per_thread(void* a){
 
     theFillTapeAlgoState.fillMaxSteps[selfid] = mpz_get_ui(max_steps);
     
-    // printf("thread job %d:\n", selfid);
-    // gmp_printf("    states %d\n", args->opt.states);
-    // gmp_printf("    doZerosTape %d\n", args->opt.doZerosTape);
-    // gmp_printf("    doOnesTape %d\n", args->opt.doOnesTape);
-    // gmp_printf("    max_steps %Zd\n", args->opt.max_steps);
-    // gmp_printf("    randomIters %Zd\n", args->opt.randomIterations);
-    // gmp_printf("    randomStartSeed %Zd\n", args->opt.randomStartSeed);
-    // gmp_printf("    startIndex %Zd\n", args->opt.start);
-    // gmp_printf("    indexesConsidered %Zd\n", args->opt.length);
-    // printf("\n");
+    // printf("thread job, %d\n", selfid);
+    // tm_enumerate_print_opt(&args->opt);
     
     // 1 enumeration with 0s on the tape
     if(args->opt.doZerosTape){

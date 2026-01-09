@@ -22,6 +22,7 @@ int tm_slicecounter_hashmap_compare(const void *a, const void *b, void *udata);
 
 void tm_print_enumerate_performance_stats(int states, mpz_t max_steps);
 
+
 typedef struct{
     int states;
 
@@ -39,6 +40,8 @@ typedef struct{
     int workthreads;
 
 } enumerate_job_opt_t;
+
+void tm_enumerate_print_opt(enumerate_job_opt_t* opt);
 
 void tm_enumerate_job_opt_init(enumerate_job_opt_t* opt);
 void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt);
@@ -61,7 +64,7 @@ bool tm_resolve_simple_args_to_hard_args(tm_enumerate_options_simple_t simpleArg
 
 // turns an enumerate_job_opt_t into a tm_enumerate_options_simple_t.
 // reverse of tm_resolve_simple_args_to_hard_args function.
-bool tm_revert_hard_args_to_simple_args(enumerate_job_opt_t enumerateOpt, tm_enumerate_options_simple_t* enumerate_simple_opt)
+bool tm_revert_hard_args_to_simple_args(enumerate_job_opt_t enumerateOpt, tm_enumerate_options_simple_t* enumerate_simple_opt);
 // you need to do this to free the resources used when calling tm_revert_hard_args_to_simple_args function.
 bool tm_free_simple_args_made_from_revert_thing(tm_enumerate_options_simple_t* enumerate_simple_opt);
 

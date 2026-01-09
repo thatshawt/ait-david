@@ -30,6 +30,7 @@ int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
 
 void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data);
 void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO));
+void sqlenv_exec_with_callback_resulthandler(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO), void(*resultHandler)(void *sqlenv, enum SQL_RT resultType));
 void sqlenv_close(sqlenv_t *sqlenv);
 
 // simplest complete callbacks that print stuff
