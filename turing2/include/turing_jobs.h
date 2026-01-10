@@ -48,8 +48,7 @@
     // dangerous...
     void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv);
 
-    // jobs
-    // AUTO UNIQUE INT job_id | PRIMARY(arg1 | arg2 | arg3 | ...)
+    // jobs table
     // returns job_id, -1 otherwise
         unsigned long tj_create_job_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs);
         unsigned long tj_create_job_simple_args(sqlenv_t* sqlenv, tm_enumerate_options_simple_t jobArgs);
@@ -72,22 +71,30 @@
     // 'jobCount' needs to be set to how many job ids are in the 'jobIds' variable.
         void tj_map_enumeration_to_children_jobs(sqlenv_t* sqlenv, unsigned long enumerationId, int jobCount, unsigned long* jobIds);
 
-        // returns true if it worked false otherwise.
-        // jobs loaded into the 'int** jobIds' variable.
-        // amount of jobs loaded into 'int* jobCount' variable.
-        bool tj_get_enumeration_jobs(sqlenv_t* sqlenv, unsigned long enumerationId, unsigned long* jobCount, unsigned long** jobIds);
-
-        // returns a job's parent job id or -1.
-        unsigned long tj_get_job_parent_enumeration(sqlenv_t* sqlenv, unsigned long jobId);
-
         // deletes the single mapping of the parentId and childId
         int tj_delete_single_enumeration_job_mapping(sqlenv_t* sqlenv, unsigned long parentId, unsigned long childId);
 
         // deletes all mapping with the enumerationId as the parent.
         int tj_delete_all_enumeration_mapping(sqlenv_t* sqlenv, unsigned long enumerationId);
 
-    // enumeration_job_merge_tracker
-    // PRIMARY(FOREIGN INT jobs.job_id as enumeration_id(one) | FOREIGN INT jobs.job_id(many))
+        // returns true if it worked false otherwise.
+        // jobs loaded into the 'int** jobIds' variable.
+        // amount of jobs loaded into 'int* jobCount' variable.
+        bool tj_get_enumeration_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds);
+
+        // supply the child job id as childId.
+        // loads all the parents of a child job into parentIds.
+        // loads the number of parents into jobCount.
+        void tj_get_enumeration_parents(sqlenv_t* sqlenv, unsigned long childId, int* jobCount, unsigned long* parentIds);
+
+    /*
+    CREATE TABLE merged_jobs(
+        the_parent_id INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE,
+        the_child_id INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE
+    );
+    */
+
+    void tj_does_job_need_merging();
     // this is supposed to be incremental and keep track of which job results have 
     // been merged into the parent enumeration job.
     // if job is not merged, merges job into its parent enumeration.

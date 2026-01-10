@@ -67,6 +67,15 @@ int main(){
 
         .workers = 4
     };
+
+    tm_enumerate_options_simple_t enumerate_simple_opt_halfA = enumerate_simple_opt;
+    enumerate_simple_opt_halfA.startIndex = "0";
+    enumerate_simple_opt_halfA.indexesConsidered = "10369";
+
+    tm_enumerate_options_simple_t enumerate_simple_opt_halfB = enumerate_simple_opt;
+    enumerate_simple_opt_halfB.startIndex = "10369";
+    enumerate_simple_opt_halfB.indexesConsidered = NULL;
+    
     
     // populate tables with enumeration results
     {
@@ -81,19 +90,13 @@ int main(){
             &sqlenv, statementBuffer, originalTableName
         );
 
-        enumerate_simple_opt.startIndex = "0";
-        enumerate_simple_opt.indexesConsidered = "10369";
-
         sql_drop_table_if_exists(&sqlenv, statementBuffer, halfATableName);
-        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt,
+        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt_halfA,
             &sqlenv, statementBuffer, halfATableName
         );
 
-        enumerate_simple_opt.startIndex = "10369";
-        enumerate_simple_opt.indexesConsidered = NULL;
-
         sql_drop_table_if_exists(&sqlenv, statementBuffer, halfBTableName);
-        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt,
+        do_tm_enumerate_sql_merge_job_wrapped(enumerate_simple_opt_halfB,
             &sqlenv, statementBuffer, halfBTableName
         );
     }
@@ -170,49 +173,44 @@ int main(){
         tj_DANGEROUS_delete_tables(&sqlenv);
         tj_create_tables(&sqlenv);
 
-        unsigned long jobId;
-
-        jobId = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
-        printf("jobId is %ld\n\n", jobId);
-
-        printf("called tj_delete_job, rc=%d\n\n", tj_delete_job(&sqlenv, jobId));
-
-        jobId = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
-        printf("jobId is %ld\n\n", jobId);
-
-        jobId = tj_get_job_id_from_simple_args(&sqlenv, enumerate_simple_opt);
-        printf("jobId is %ld\n\n", jobId);
+        unsigned long jobIdOriginal = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
+        unsigned long jobIdHalfA = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt_halfA);
+        unsigned long jobIdHalfB = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt_halfB);
+        unsigned long childrenIds[] = { jobIdHalfA, jobIdHalfB };
 
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
 
         enumerate_job_opt_t enumOpt;
         tm_enumerate_job_opt_init(&enumOpt);
 
-        tj_get_job_args(&sqlenv, jobId, &enumOpt);
+        tj_get_job_args(&sqlenv, jobIdOriginal, &enumOpt);
         tm_enumerate_print_opt(&enumOpt);
 
         tm_enumerate_job_opt_destroy(&enumOpt);
 
-        enumerate_simple_opt.indexesConsidered = "123";
-        unsigned long newJobId = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
-        printf("new jobId is %ld\n\n", newJobId);
+        tj_map_enumeration_to_children_jobs(&sqlenv, jobIdOriginal, 2, childrenIds);
 
-        tj_map_enumeration_to_children_jobs(&sqlenv, jobId, 1, &newJobId);
+        tj_delete_all_enumeration_mapping(&sqlenv, 1);
 
+        
         printf("print all enum maps\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from enumeration_job_mapping;", NULL, &sql_callback_print);
-
+        
         printf("print all jobs\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
 
-        printf("deleted jobs.job_id=1;\n");
-        sqlenv_exec_with_callback(&sqlenv, "DELETE FROM jobs WHERE job_id=1;", NULL, NULL);
 
-        printf("print all enum maps\n");
-        sqlenv_exec_with_callback(&sqlenv, "SELECT * from enumeration_job_mapping;", NULL, &sql_callback_print);
+        tj_map_enumeration_to_children_jobs(&sqlenv, jobIdOriginal, 2, childrenIds);
+        childrenIds[0] = 0;
+        childrenIds[1] = 0;
+        printf("childrenIds array: ");for(int i=0;i<2;i++){printf("%ld, ",childrenIds[i]);}printf("\n");
+        int jobCountLoaded = 0;
 
-        printf("print all jobs\n");
-        sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
+        tj_get_enumeration_parents(&sqlenv, jobIdHalfA, &jobCountLoaded, childrenIds);
+
+        printf("childrenIds array after loading %d jobs: ", jobCountLoaded);
+        for(int i=0;i<jobCountLoaded;i++){printf("%ld, ",childrenIds[i]);}printf("\n");
+
     }
 
     // "full index" enumeration = enumerating every machine with the desired tapes

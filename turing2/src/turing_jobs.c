@@ -42,21 +42,25 @@ void tj_create_tables(sqlenv_t* sqlenv)
 
 void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv)
 {
-    tj_lock();
-    sprintf(tjState.statementBuffer,
-        "DROP TABLE jobs;"
-        "DROP TABLE enumeration_job_mapping;"
-        // ...
-    );
-    sqlenv_exec_with_callback(sqlenv, tjState.statementBuffer,
-        NULL,
-        NULL
-    );
-    tj_unlock();
+    char* tables[] = {"jobs", "enumeration_job_mapping"};
+
+    for(int i=0;i< sizeof(tables)/sizeof(tables[0]);i++){
+        char* table = tables[i];
+        tj_lock();
+        sprintf(tjState.statementBuffer,
+            "DROP TABLE %s;",
+            table
+        );
+        sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+            NULL, NULL,
+            // NULL
+            &sql_resultHandler_print
+        );
+        tj_unlock();
+    }
+
 }
 
-// jobs
-// AUTO UNIQUE INT job_id | PRIMARY(arg1 | arg2 | arg3 | ...)
 void tj_create_jobs_table(sqlenv_t* sqlenv)
 {
     tj_lock();
@@ -71,12 +75,15 @@ void tj_create_jobs_table(sqlenv_t* sqlenv)
             "doZerosTape INTEGER NOT NULL," // this is a boolean
             "randomIterations TEXT NOT NULL,"
             "randomStartSeed TEXT NOT NULL,"
+            "unixepoch_timestamp INTEGER NOT NULL,"
             "UNIQUE(states,start,length,max_steps,doOnesTape,doZerosTape,randomIterations,randomStartSeed)"
         ");"
     );
-    sqlenv_exec_with_callback(sqlenv, tjState.statementBuffer,
-        NULL,
-        NULL //&sql_callback_print
+    // printf("did '%s'", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        NULL, NULL,
+        NULL
+        // &sql_resultHandler_print
     );
     tj_unlock();
     // printf("created table?\n");
@@ -98,8 +105,8 @@ unsigned long tj_create_job_args(sqlenv_t* sqlenv, enumerate_job_opt_t jobArgs)
     { // the two sql calls need to execute one after another, hence the locking.
         gmp_sprintf(tjState.statementBuffer,
             "INSERT INTO"
-            " jobs(states,start,length,max_steps,doOnesTape,doZerosTape,randomIterations,randomStartSeed)"
-            " VALUES (%d, %Zd, %Zd, %Zd, %d, %d, %Zd, %Zd);",
+            " jobs(states,start,length,max_steps,doOnesTape,doZerosTape,randomIterations,randomStartSeed,unixepoch_timestamp)"
+            " VALUES (%d, %Zd, %Zd, %Zd, %d, %d, %Zd, %Zd, unixepoch());",
             jobArgs.states, jobArgs.start, jobArgs.length,
             jobArgs.max_steps, jobArgs.doOnesTape, jobArgs.doZerosTape,
             jobArgs.randomIterations, jobArgs.randomStartSeed
@@ -259,8 +266,6 @@ int tj_delete_job(sqlenv_t* sqlenv, unsigned long jobId)
     return rc;
 }
 
-// enumeration_job_mapping
-// PRIMARY INTEGER enumeration_job_map_id | UNIQUE(FOREIGN INT jobs.job_id as parent_id(one) | FOREIGN INT jobs.job_id as child_id(many))
 void tj_create_enumeration_job_mapping_table(sqlenv_t* sqlenv)
 {
     tj_lock();
@@ -306,7 +311,6 @@ void tj_map_enumeration_to_children_jobs(sqlenv_t* sqlenv, unsigned long enumera
     }
 }
 
-//TODO needs testing.
 // deletes the single mapping of the parentId and childId
 int tj_delete_single_enumeration_job_mapping(sqlenv_t* sqlenv, unsigned long parentId, unsigned long childId)
 {
@@ -329,7 +333,6 @@ int tj_delete_single_enumeration_job_mapping(sqlenv_t* sqlenv, unsigned long par
     return rc;
 }
 
-//TODO needs testing.
 // deletes all mapping with the enumerationId as the parent.
 int tj_delete_all_enumeration_mapping(sqlenv_t* sqlenv, unsigned long enumerationId)
 {
@@ -352,11 +355,85 @@ int tj_delete_all_enumeration_mapping(sqlenv_t* sqlenv, unsigned long enumeratio
     return rc;
 }
 
+
+typedef struct{
+    int counter;
+    unsigned long* currentJobPointer;
+    mpz_t anMpz;
+} tj_get_enumeration_jobs_state_t;
+int sql_callback_tj_load_id_into_state_thing_array(void *data, int count, char **values, char **columnNames)
+{
+    tj_get_enumeration_jobs_state_t* state = (tj_get_enumeration_jobs_state_t*)data;
+
+    // printf("child_id=%s\n", values[0]);
+
+    mpz_set_str(state->anMpz, values[0], 10);
+
+    *(state->currentJobPointer) = mpz_get_ui(state->anMpz);
+    state->currentJobPointer++;
+    state->counter++;
+
+    return 0;
+}
 // returns true if it worked false otherwise.
 // jobs loaded into the 'int** jobIds' variable.
 // amount of jobs loaded into 'int* jobCount' variable.
-bool tj_get_enumeration_jobs(sqlenv_t* sqlenv, unsigned long enumerationId, unsigned long* jobCount, unsigned long** jobIds);
+bool tj_get_enumeration_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds)
+{
+    tj_get_enumeration_jobs_state_t state = {
+        .counter=0,
+        .currentJobPointer=jobIds
+    };
+    mpz_init(state.anMpz);
 
-// returns a job's parent job id or -1.
-unsigned long tj_get_job_parent_enumeration(sqlenv_t* sqlenv, unsigned long jobId);
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "SELECT child_id FROM enumeration_job_mapping"
+        " WHERE parent_id=%ld;",
+        enumerationId
+    );
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        &state, &sql_callback_tj_load_id_into_state_thing_array,
+        // &sql_resultHandler_print
+        NULL
+    );
+    tj_unlock();
+
+    mpz_clear(state.anMpz);
+
+    *jobCount = state.counter;
+
+    return true;
+}
+
+// supply the child job id as childId.
+// loads all the parents of a child job into parentIds.
+// loads the number of parents into jobCount.
+void tj_get_enumeration_parents(sqlenv_t* sqlenv, unsigned long childId, int* jobCount, unsigned long* parentIds)
+{
+    tj_get_enumeration_jobs_state_t state = {
+        .counter=0,
+        .currentJobPointer=parentIds
+    };
+    mpz_init(state.anMpz);
+
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "SELECT parent_id FROM enumeration_job_mapping"
+        " WHERE child_id=%ld;",
+        childId
+    );
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        &state, &sql_callback_tj_load_id_into_state_thing_array,
+        // &sql_resultHandler_print
+        NULL
+    );
+    tj_unlock();
+
+    mpz_clear(state.anMpz);
+
+    *jobCount = state.counter;
+
+    // return true;
+}
 
