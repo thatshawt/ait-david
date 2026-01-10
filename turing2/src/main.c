@@ -50,6 +50,7 @@ int main(){
 
     sqlenv_t sqlenv;
     if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
+
     char statementBuffer[2000];
 
     tm_enumerate_options_simple_t enumerate_simple_opt = {
@@ -198,8 +199,20 @@ int main(){
 
         tj_map_enumeration_to_children_jobs(&sqlenv, jobId, 1, &newJobId);
 
+        printf("print all enum maps\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from enumeration_job_mapping;", NULL, &sql_callback_print);
 
+        printf("print all jobs\n");
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
+
+        printf("deleted jobs.job_id=1;\n");
+        sqlenv_exec_with_callback(&sqlenv, "DELETE FROM jobs WHERE job_id=1;", NULL, NULL);
+
+        printf("print all enum maps\n");
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from enumeration_job_mapping;", NULL, &sql_callback_print);
+
+        printf("print all jobs\n");
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
     }
 
     // "full index" enumeration = enumerating every machine with the desired tapes

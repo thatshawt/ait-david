@@ -26,7 +26,10 @@ typedef struct{
 
 int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
     int(*exec_callback)(void *data, int argc, char **argv, char **columnName),
-    void(*resultHandler)(void *sqlenv, enum SQL_RT resultType));
+    void(*resultHandler)(void *sqlenv, enum SQL_RT resultType)
+);
+
+void sqlenv_enable_foreign_keys(sqlenv_t* sqlenv);
 
 void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data);
 void sqlenv_exec_with_callback(sqlenv_t *sqlenv, char *sql_statement, void* data, int(*exec_callback)(SQL_CALLBACK_FUNC_ARG_PROTO));

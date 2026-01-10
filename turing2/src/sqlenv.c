@@ -27,8 +27,14 @@ int sqlenv_open(sqlenv_t *sqlenv, char *databaseFile,
     } else {
         // fprintf(stderr, "Opened database successfully\n");
         if(sqlenv->resultHandler) sqlenv->resultHandler((void*)sqlenv, SQL_RT_OPEN);
+        sqlenv_enable_foreign_keys(sqlenv);
         return 0;
     }
+}
+
+void sqlenv_enable_foreign_keys(sqlenv_t* sqlenv)
+{
+    sqlenv_exec(sqlenv, "PRAGMA foreign_keys = ON;", NULL);
 }
 
 void sqlenv_exec(sqlenv_t *sqlenv, char *sql_statement, void* data)
