@@ -213,16 +213,6 @@ int main(){
 
     }
 
-    // "full index" enumeration = enumerating every machine with the desired tapes
-    // split an enumeration into "jobs".
-    // each job has their parameters specified so the
-    // runner knows what to do with it.
-    // there is a job queue...
-    // runners go in there and pick a job.
-    // after a job is finished the runner submits their job results.
-    // there should be a verification thing where two runners submit the same job result
-    // just to make sure they are both the same.
-
     sqlenv_close(&sqlenv);
 
     turing_threading_destroy();
@@ -231,22 +221,3 @@ int main(){
 
     return 0;
 }
-
-/*
-turing simulation:
-    variable tape.
-    variable states/alphabet/transitions.
-    step function.
-    halting check.
-    error results.
-
-turing index language:
-    dense mapping from integers to turing machines.
-    n+1th permutation by simple algorithm.
-    nth_permutation()
-    next_permutation()
-
-turing index enumeration:
-    enumerate the turing index language for halting machines and their tape results.
-    put each resulting string into the hashmap
-*/

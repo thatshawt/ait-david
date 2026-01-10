@@ -13,6 +13,9 @@
     // the "enumeration" job gets split into children jobs that are under or equal to
     // the max steps allowed per job.
     // returns the job_id of the enumeration job.
+    // CONDITION: always submits two jobs at a minimum. one for the "parent" and one at least for the "child".
+    // the enumeration jobs are only used to get merged into, the children are like the "worker" jobs
+    // that get enumerated. the original main parent enumeration job only gets merged the results from the children jobs.
     unsigned long turing_jobs_queue_enumeration(sqlenv_t *sqlenv, char* maxStepsPerJob, enumerate_job_opt_t jobArgs);
 
     // picks the oldest job from the "queue".
@@ -41,7 +44,7 @@
 
     //sql stuff below here
 
-    // this creates the tables below if they arent already created.
+    // this creates the tables below if they arent already created. 
     void tj_create_tables(sqlenv_t* sqlenv);
 
     // this deletes the below tables...
@@ -89,29 +92,35 @@
 
     /*
     CREATE TABLE merged_jobs(
-        the_parent_id INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE,
-        the_child_id INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE
+        the_parent_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+        the_child_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE
     );
     */
+        // call this when you merge a child into a parent job so it gets tracked properly.
+        void tj_add_child_merged_into_parent(sqlenv_t* sqlenv, unsigned long parentId, unsigned childId);
 
-    void tj_does_job_need_merging();
-    // this is supposed to be incremental and keep track of which job results have 
-    // been merged into the parent enumeration job.
-    // if job is not merged, merges job into its parent enumeration.
-    // returns true if it did the merge.
-        bool tj_try_merge_job_into_parent_job(sqlenv_t* sqlenv, unsigned long jobId);
+        // gets the children of an enumeration job that are not merged yet.
+        void tj_get_children_that_need_merging_of_parent(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds);
+        
+        // returns id of job added earliest that still needs to be merged.
+        unsigned long tj_oldest_job_that_needs_merging(sqlenv_t* sqlenv);
 
-        // returns true if all the enumeration's children have been merged into the enumeration.
+        // returns true if all the enumeration job's children have been merged,
+        // false otherwise.
         bool tj_is_enumeration_fully_merged(sqlenv_t* sqlenv, unsigned long enumerationId);
 
-        // returns true if the job has been merged into its parent enumeration.
-        bool tj_has_job_been_merged_into_parent_enumeration(sqlenv_t* sqlenv, unsigned long jobId);
 
-    // job_results
-    // PRIMARY(FOREIGN INT jobs.job_id | NOT_NULL STR lstring) | NOT_NULL STR rcount
+    /*
+    CREATE TABLE job_results(
+        job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+        lstring TEXT NOT NULL,
+        rcount TEXT NOT NULL,
+        PRIMARY KEY (job_id, lstring)
+    );
+    */
+        void tj_add_n_job_results(sqlenv_t *sqlenv, unsigned long jobId, int n, char* lstringFirst, char* rcountFirst);
 
         // calls tj_try_merge_job_into_parent_job(jobId) after job result is added.
-        void tj_add_single_job_result(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount);
         void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
 
         // true if succeed, false otherwise.

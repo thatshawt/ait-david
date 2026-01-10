@@ -66,7 +66,7 @@ void tj_create_jobs_table(sqlenv_t* sqlenv)
     tj_lock();
     sprintf(tjState.statementBuffer,
         "CREATE TABLE jobs("
-            "job_id INTEGER PRIMARY KEY," // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
+            "job_id INTEGER NOT NULL PRIMARY KEY," // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
             "states INTEGER NOT NULL,"
             "start TEXT NOT NULL,"
             "length TEXT NOT NULL,"
@@ -271,7 +271,7 @@ void tj_create_enumeration_job_mapping_table(sqlenv_t* sqlenv)
     tj_lock();
     sprintf(tjState.statementBuffer,
         "CREATE TABLE enumeration_job_mapping("
-            "enumeration_job_map_id INTEGER PRIMARY KEY," // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
+            "enumeration_job_map_id INTEGER NOT NULL PRIMARY KEY," // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
             "parent_id INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE,"
             "child_id INTEGER REFERENCES jobs(job_id) ON DELETE CASCADE,"
             "UNIQUE(parent_id, child_id)"
