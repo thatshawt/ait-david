@@ -173,9 +173,11 @@ int main(){
         tj_DANGEROUS_delete_tables(&sqlenv);
         tj_create_tables(&sqlenv);
 
+        //TODO make this split by into the children with a function by itself
         unsigned long jobIdOriginal = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt);
         unsigned long jobIdHalfA = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt_halfA);
         unsigned long jobIdHalfB = tj_create_job_simple_args(&sqlenv, enumerate_simple_opt_halfB);
+
         unsigned long childrenIds[] = { jobIdHalfA, jobIdHalfB };
 
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
@@ -183,23 +185,31 @@ int main(){
         enumerate_job_opt_t enumOpt;
         tm_enumerate_job_opt_init(&enumOpt);
 
+        // print it out cus yea
         tj_get_job_args(&sqlenv, jobIdOriginal, &enumOpt);
         tm_enumerate_print_opt(&enumOpt);
 
         tm_enumerate_job_opt_destroy(&enumOpt);
 
+        // map parent jobs to children jobs first time
         tj_map_enumeration_to_children_jobs(&sqlenv, jobIdOriginal, 2, childrenIds);
 
+        printf("jobId %ld has %d children.\n", jobIdOriginal, tj_number_of_children(&sqlenv, jobIdOriginal));
+        printf("jobId %ld has %d children.\n", jobIdHalfA, tj_number_of_children(&sqlenv, jobIdHalfA));
+        printf("jobId %ld has %d children.\n", jobIdHalfB, tj_number_of_children(&sqlenv, jobIdHalfB));
+
+        printf("delete all job mappings\n");
         tj_delete_all_enumeration_mapping(&sqlenv, 1);
 
         
         printf("print all enum maps\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from enumeration_job_mapping;", NULL, &sql_callback_print);
-        
+
         printf("print all jobs\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from jobs;", NULL, &sql_callback_print);
 
 
+        // map parent jobs to children jobs second time? but zero it right after O.o
         tj_map_enumeration_to_children_jobs(&sqlenv, jobIdOriginal, 2, childrenIds);
         childrenIds[0] = 0;
         childrenIds[1] = 0;
@@ -211,6 +221,36 @@ int main(){
         printf("childrenIds array after loading %d jobs: ", jobCountLoaded);
         for(int i=0;i<jobCountLoaded;i++){printf("%ld, ",childrenIds[i]);}printf("\n");
 
+        // mark some children merged into parent job
+        tj_add_child_merged_into_parent(&sqlenv, jobIdOriginal, jobIdHalfA);
+        tj_add_child_merged_into_parent(&sqlenv, jobIdOriginal, jobIdHalfB);
+
+        printf("print all merged_jobs\n");
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from merged_jobs;", NULL, &sql_callback_print);
+
+        // print merged children
+        childrenIds[0] = -1;
+        childrenIds[1] = -1;
+        tj_get_merged_children(&sqlenv, jobIdOriginal, &jobCountLoaded, childrenIds);
+        printf("%d merged jobs into %d: ", jobCountLoaded, jobIdOriginal);
+        for(int i=0;i<jobCountLoaded;i++){printf("%ld, ",childrenIds[i]);}printf("\n");
+
+        // get unmerged children
+        childrenIds[0] = -1;
+        childrenIds[1] = -1;
+        tj_get_unmerged_children(&sqlenv, jobIdOriginal, &jobCountLoaded, childrenIds);
+        printf("%d unmerged jobs into %d: ", jobCountLoaded, jobIdOriginal);
+        for(int i=0;i<jobCountLoaded;i++){printf("%ld, ",childrenIds[i]);}printf("\n");
+
+        printf("jobid %ld has %d merged children\n", jobIdOriginal, tj_number_merged_children(&sqlenv, jobIdOriginal));
+        printf("jobid %ld has %d merged children\n", jobIdHalfA, tj_number_merged_children(&sqlenv, jobIdHalfA));
+        printf("jobid %ld has %d merged children\n", jobIdHalfB, tj_number_merged_children(&sqlenv, jobIdHalfB));
+
+        printf("jobid %ld has %d unmerged children\n", jobIdOriginal, tj_number_unmerged_children(&sqlenv, jobIdOriginal));
+        printf("jobid %ld has %d unmerged children\n", jobIdHalfA, tj_number_unmerged_children(&sqlenv, jobIdHalfA));
+        printf("jobid %ld has %d unmerged children\n", jobIdHalfB, tj_number_unmerged_children(&sqlenv, jobIdHalfB));
+
+        printf("oldest unmerged job: %ld\n", tj_get_oldest_unmerged_child_job(&sqlenv));
     }
 
     sqlenv_close(&sqlenv);

@@ -131,10 +131,13 @@ void sql_resultHandler_print(void *sqlenv_void, enum SQL_RT resultType){
 
 int sql_callback_load_firstcol_into_mpz(void *data, int argc, char **argv, char **azColName)
 {
+    if(argc<=0)return 0;
     int i=0;
     const char* colName = azColName[i];
     const char* val = argv[i];
+    if(val == NULL)return 0;
 
+    // printf("loaded mpz string '%s'\n", val);
     mpz_set_str(*(mpz_t*)data, val, 10);
 
     return 0;
