@@ -63,10 +63,14 @@
         // loads job's args into 'enumerate_job_opt_t* jobArgs'.
         // returns true if worked, false otherwise.
         bool tj_get_job_args(sqlenv_t* sqlenv, unsigned long jobId, enumerate_job_opt_t* jobArgs);
+        // bool tj_get_job_simple_args(sqlenv_t* sqlenv, unsigned long jobId, enumerate_job_opt_t* jobArgs);
 
         // removes job from database as well as any mappings to it.
         // returns sql return code.
         int tj_delete_job(sqlenv_t* sqlenv, unsigned long jobId);
+
+        // this will create a new child job
+        // bool tj_split_child_job_into_workable_job();
 
     // enumeration_job_mapping
     // maps one 'enumerationId' to array of job ids 'jobIds'.
@@ -92,26 +96,27 @@
         void tj_get_enumeration_parents(sqlenv_t* sqlenv, unsigned long childId, int* jobCount, unsigned long* parentIds);
 
         // call this when you merge a child into a parent job so it gets tracked properly.
-        void tj_add_child_merged_into_parent(sqlenv_t* sqlenv, unsigned long parentId, unsigned childId);
+        void tj_mark_job_completed_results(sqlenv_t* sqlenv, unsigned long jobId);
 
         // returns number of merged children into parent job.
-        int tj_number_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId);
-
-        int tj_number_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId);
+        int tj_number_children_with_results(sqlenv_t* sqlenv, unsigned long enumerationId);
 
         // gets the merged children
-        void tj_get_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds);
+        void tj_get_children_with_results(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds);
 
         // gets the children of an enumeration job that are not merged yet.
-        void tj_get_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds);
+        void tj_get_children_without_results(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds);
+
+        int tj_number_children_without_results(sqlenv_t* sqlenv, unsigned long enumerationId);
         
         // returns id of job added earliest that still needs to be merged.
         // -1 if there are no more unmerged jobs.
-        unsigned long tj_get_oldest_unmerged_child_job(sqlenv_t* sqlenv);
+        unsigned long tj_get_oldest_child_job_without_results(sqlenv_t* sqlenv);
+        unsigned long tj_get_oldest_parent_job_without_results(sqlenv_t* sqlenv);
 
         // returns true if all the enumeration job's children have been merged,
         // false otherwise.
-        bool tj_is_enumeration_fully_merged(sqlenv_t* sqlenv, unsigned long enumerationId);
+        // bool tj_is_enumeration_fully_merged(sqlenv_t* sqlenv, unsigned long enumerationId);
 
 
     /*
@@ -122,13 +127,16 @@
         PRIMARY KEY (job_id, lstring)
     );
     */
-        void tj_add_n_job_results(sqlenv_t *sqlenv, unsigned long jobId, int n, char* lstringFirst, char* rcountFirst);
+        void tj_add_job_result(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount);
 
-        // calls tj_try_merge_job_into_parent_job(jobId) after job result is added.
         void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
+
+        bool tj_do_tm_enumerate_job(sqlenv_t *sqlenv, unsigned long jobId, int workers);
 
         // true if succeed, false otherwise.
         // puts results of job_id into 'slicecounter_hashmap'.
         bool tj_load_job_results_into_slicecount_map(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
+
+        void tj_merge_children_into_parent_job(sqlenv_t *sqlenv, unsigned long jobId);
 
 #endif

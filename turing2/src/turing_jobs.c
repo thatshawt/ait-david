@@ -33,18 +33,25 @@ void tj_unlock()
 
 void tj_create_jobs_table(sqlenv_t* sqlenv);
 void tj_create_enumeration_job_mapping_table(sqlenv_t* sqlenv);
-void tj_create_merged_jobs_table(sqlenv_t* sqlenv);
+// void tj_create_merged_jobs_table(sqlenv_t* sqlenv);
+void create_job_results_table(sqlenv_t* sqlenv);
 
 void tj_create_tables(sqlenv_t* sqlenv)
 {
     tj_create_jobs_table(sqlenv);
     tj_create_enumeration_job_mapping_table(sqlenv);
     // tj_create_merged_jobs_table(sqlenv);
+    create_job_results_table(sqlenv);
 }
 
 void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv)
 {
-    char* tables[] = {"jobs", "enumeration_job_mapping"};
+    const char* tables[] = {
+        "jobs",
+        "enumeration_job_mapping",
+        // "merged_jobs",
+        "job_results"
+    };
 
     for(int i=0;i< sizeof(tables)/sizeof(tables[0]);i++){
         char* table = tables[i];
@@ -53,11 +60,14 @@ void tj_DANGEROUS_delete_tables(sqlenv_t* sqlenv)
             "DROP TABLE %s;",
             table
         );
+        // printf("%s\n",tjState.statementBuffer);
         sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
             NULL, NULL,
             NULL
             // &sql_resultHandler_print
         );
+        if(sqlenv->rc == SQLITE_OK)printf("dropped table %s\n", table);
+        else printf("failed to drop table %s\n", table);
         tj_unlock();
     }
 
@@ -68,16 +78,21 @@ void tj_create_jobs_table(sqlenv_t* sqlenv)
     tj_lock();
     sprintf(tjState.statementBuffer,
         "CREATE TABLE jobs("
-            "job_id INTEGER NOT NULL PRIMARY KEY," // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
+            // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
+            "job_id INTEGER NOT NULL PRIMARY KEY," 
+            
             "states INTEGER NOT NULL,"
             "start TEXT NOT NULL,"
             "length TEXT NOT NULL,"
             "max_steps TEXT NOT NULL,"
-            "doOnesTape INTEGER NOT NULL," // this is a boolean
-            "doZerosTape INTEGER NOT NULL," // this is a boolean
+            "doOnesTape INTEGER NOT NULL," // boolean
+            "doZerosTape INTEGER NOT NULL," // boolean
             "randomIterations TEXT NOT NULL,"
             "randomStartSeed TEXT NOT NULL,"
-            "unixepoch_timestamp INTEGER NOT NULL,"
+            
+            "unixepoch_timestamp INTEGER NOT NULL," // timestamp when it was created
+            "has_job_results INTEGER NOT NULL DEFAULT 0," // boolean
+            
             "UNIQUE(states,start,length,max_steps,doOnesTape,doZerosTape,randomIterations,randomStartSeed)"
         ");"
     );
@@ -248,6 +263,11 @@ bool tj_get_job_args(sqlenv_t* sqlenv, unsigned long jobId, enumerate_job_opt_t*
     }
 }
 
+bool tj_get_job_simple_args(sqlenv_t* sqlenv, unsigned long jobId, enumerate_job_opt_t* jobArgs)
+{
+
+}
+
 int tj_delete_job(sqlenv_t* sqlenv, unsigned long jobId)
 {
     tj_lock();
@@ -361,7 +381,7 @@ int tj_delete_all_enumeration_mapping(sqlenv_t* sqlenv, unsigned long enumeratio
 
 int tj_number_of_children(sqlenv_t* sqlenv, unsigned long enumerationId)
 {
-    mpz_t anMpz; mpz_init(anMpz);
+    mpz_t anMpz; mpz_init_set_ui(anMpz, 0);
     tj_lock();
     sprintf(tjState.statementBuffer,
         "SELECT COUNT(*) FROM enumeration_job_mapping"
@@ -465,6 +485,7 @@ void tj_get_enumeration_parents(sqlenv_t* sqlenv, unsigned long childId, int* jo
 }
 
 
+// not used
 void tj_create_merged_jobs_table(sqlenv_t* sqlenv)
 {
     tj_lock();
@@ -485,17 +506,17 @@ void tj_create_merged_jobs_table(sqlenv_t* sqlenv)
     // printf("created table?\n");
 }
 
-void tj_add_child_merged_into_parent(sqlenv_t* sqlenv, unsigned long parentId, unsigned childId)
+void tj_mark_job_completed_results(sqlenv_t* sqlenv, unsigned long jobId)
 {
     tj_lock();
     sprintf(tjState.statementBuffer,
         // "INSERT INTO merged_jobs(the_parent_id,the_child_id)"
         // " VALUES (%ld, %ld);"
 
-        "UPDATE enumeration_job_mapping"
-        " SET is_merged=1"
-        " WHERE parent_id=%ld AND child_id=%ld;"
-        ,parentId, childId
+        "UPDATE jobs"
+        " SET has_job_results=1"
+        " WHERE job_id=%ld;"
+        , jobId
     );
     // printf("did '%s'\n", tjState.statementBuffer);
     sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
@@ -506,14 +527,16 @@ void tj_add_child_merged_into_parent(sqlenv_t* sqlenv, unsigned long parentId, u
     tj_unlock();
 }
 
-int tj_number_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId)
+int tj_number_children_with_results(sqlenv_t* sqlenv, unsigned long enumerationId)
 {
-    mpz_t anMpz; mpz_init(anMpz);
+    mpz_t anMpz; mpz_init_set_ui(anMpz, 0);
     tj_lock();
     sprintf(tjState.statementBuffer,
-        // "SELECT COUNT(*) FROM merged_jobs"
-        // " WHERE the_parent_id=%ld;"
-        "SELECT COUNT(*) FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=1;"
+        "SELECT COUNT(*) FROM ("
+            "SELECT child_id FROM enumeration_job_mapping"
+            " INNER JOIN jobs"
+            " ON job_id=child_id AND has_job_results=1 AND parent_id=%ld"
+        ");"
         ,enumerationId
     );
     // printf("%s\n", tjState.statementBuffer);
@@ -531,7 +554,7 @@ int tj_number_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId)
     return result;
 }
 
-void tj_get_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds)
+void tj_get_children_with_results(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds)
 {
     tj_get_enumeration_jobs_state_t state = {
         .counter=0,
@@ -543,7 +566,10 @@ void tj_get_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* 
     sprintf(tjState.statementBuffer,
         // "SELECT the_child_id FROM merged_jobs"
         // " WHERE the_parent_id=%ld;"
-        "SELECT child_id FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=1;"
+        "SELECT child_id FROM enumeration_job_mapping"
+        " INNER JOIN jobs"
+        " ON job_id=child_id AND has_job_results=1 AND parent_id=%ld;"
+        // "SELECT child_id FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=1;"
         ,enumerationId
     );
     // printf("%s\n", tjState.statementBuffer);
@@ -559,7 +585,7 @@ void tj_get_merged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* 
     *jobCount = state.counter;
 }
 
-void tj_get_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds)
+void tj_get_children_without_results(sqlenv_t* sqlenv, unsigned long enumerationId, int* jobCount, unsigned long* jobIds)
 {
     tj_get_enumeration_jobs_state_t state = {
         .counter=0,
@@ -569,12 +595,10 @@ void tj_get_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int
 
     tj_lock();
     sprintf(tjState.statementBuffer,
-        // "SELECT child_id FROM enumeration_job_mapping"
-        // " WHERE parent_id=%ld"
-        // " EXCEPT"
-        // " SELECT the_child_id as child_id FROM merged_jobs"
-        // " WHERE the_parent_id=%ld;"
-        "SELECT child_id FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=0;"
+        "SELECT child_id FROM enumeration_job_mapping"
+        " INNER JOIN jobs"
+        " ON job_id=child_id AND has_job_results=0 AND parent_id=%ld;"
+        // "SELECT child_id FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=0;"
        ,enumerationId
     );
     // printf("%s\n", tjState.statementBuffer);
@@ -590,19 +614,17 @@ void tj_get_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId, int
     *jobCount = state.counter;
 }
 
-int tj_number_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId)
+int tj_number_children_without_results(sqlenv_t* sqlenv, unsigned long enumerationId)
 {
-    mpz_t anMpz; mpz_init(anMpz);
+    mpz_t anMpz; mpz_init_set_ui(anMpz, 0);
     tj_lock();
     sprintf(tjState.statementBuffer,
-        // "SELECT COUNT(*) FROM ("
-        //     "SELECT child_id FROM enumeration_job_mapping"
-        //     " WHERE parent_id=%ld"
-        //     " EXCEPT"
-        //     " SELECT the_child_id as child_id FROM merged_jobs"
-        //     " WHERE the_parent_id=%ld"
-        // ");"
-        "SELECT COUNT(*) FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=0;"
+        "SELECT COUNT(*) FROM ("
+            "SELECT child_id FROM enumeration_job_mapping"
+            " INNER JOIN jobs"
+            " ON job_id=child_id AND has_job_results=0 AND parent_id=%ld"
+        ");"
+        // "SELECT COUNT(*) FROM enumeration_job_mapping WHERE parent_id=%ld AND is_merged=0;"
         , enumerationId
     );
     // printf("%s\n", tjState.statementBuffer);
@@ -620,15 +642,14 @@ int tj_number_unmerged_children(sqlenv_t* sqlenv, unsigned long enumerationId)
     return result;
 }
 
-unsigned long tj_get_oldest_unmerged_child_job(sqlenv_t* sqlenv)
+unsigned long tj_get_oldest_child_job_without_results(sqlenv_t* sqlenv)
 {
     mpz_t anMpz; mpz_init_set_ui(anMpz, -1);
     tj_lock();
     sprintf(tjState.statementBuffer,
-        "SELECT jobs.job_id, MIN(jobs.unixepoch_timestamp) FROM jobs"
+        "SELECT job_id, MIN(unixepoch_timestamp) FROM jobs"
         " INNER JOIN enumeration_job_mapping"
-        " ON jobs.job_id=enumeration_job_mapping.child_id"
-        " AND enumeration_job_mapping.is_merged=0;"
+        " ON job_id=child_id AND has_job_results=0;"
     );
     // printf("%s\n", tjState.statementBuffer);
     sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
@@ -643,4 +664,113 @@ unsigned long tj_get_oldest_unmerged_child_job(sqlenv_t* sqlenv)
     mpz_clear(anMpz);
 
     return result;
+}
+
+unsigned long tj_get_oldest_parent_job_without_results(sqlenv_t* sqlenv)
+{
+    mpz_t anMpz; mpz_init_set_ui(anMpz, -1);
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "SELECT job_id, MIN(unixepoch_timestamp) FROM jobs"
+        " INNER JOIN enumeration_job_mapping"
+        " ON job_id=parent_id AND has_job_results=0;"
+    );
+    // printf("%s\n", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        &anMpz, &sql_callback_load_firstcol_into_mpz,
+        NULL
+        // &sql_resultHandler_print
+    );
+    tj_unlock();
+
+    unsigned long result = mpz_get_ui(anMpz);
+
+    mpz_clear(anMpz);
+
+    return result;
+}
+
+void create_job_results_table(sqlenv_t* sqlenv)
+{
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "CREATE TABLE job_results("
+            "job_id INTEGER NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,"
+            "lstring TEXT NOT NULL,"
+            "rcount TEXT NOT NULL,"
+            "PRIMARY KEY (job_id, lstring)"
+        ");"
+    );
+    // printf("%s\n", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        NULL, NULL,
+        NULL
+        // &sql_resultHandler_print
+    );
+    tj_unlock();
+}
+
+void tj_add_job_result(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount)
+{
+    if(lstring == NULL || rcount == NULL)return;
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "INSERT INTO job_results(job_id, lstring, rcount)"
+        " VALUES (%ld, '%s', '%s');"
+        , jobId, lstring, rcount
+    );
+    // printf("%s\n", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        NULL, NULL,
+        NULL
+        // &sql_resultHandler_print
+    );
+    tj_unlock();
+}
+
+void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* map)
+{
+    size_t iterA = 0;
+    void *itemA;
+    char rcount[1000];
+    char lstring[1000];
+    mpz_t count; mpz_init(count);
+    while (hashmap_iter(map, &iterA, &itemA)) {
+        const tm_slice_counter_t *sliceCounter = itemA;
+
+        tm_slice_sprint(&sliceCounter->slice, lstring);
+        
+        // mpz_set_ui(count, 0);
+        // sql_load_str_count_into_mpz(sqlenv, statementBuffer, tableName, lstring, &count);
+        // mpz_add(count, count, sliceCounter->count);
+        mpz_set(count, sliceCounter->count);
+
+        mpz_get_str(rcount, 10, count);
+
+        // if(strcmp(lstring, "0") == 0)printf("           %s:%s\n", lstring, rcount);
+        
+        tj_add_job_result(sqlenv, jobId, lstring, rcount);
+    }
+    mpz_clear(count);
+}
+
+bool tj_do_tm_enumerate_job(sqlenv_t *sqlenv, unsigned long jobId, int workers)
+{
+    enumerate_job_opt_t enumerateOpt;
+    tm_enumerate_job_opt_init(&enumerateOpt);
+    tj_get_job_args(sqlenv, jobId, &enumerateOpt);
+    
+    enumerateOpt.workthreads = workers;
+
+    // tm_enumerate_print_opt(&enumerateOpt);
+
+    struct hashmap* slicecount_map = do_tm_enumerate_job(&enumerateOpt);
+
+    tm_enumerate_job_opt_destroy(&enumerateOpt);
+
+    tj_add_job_results_from_hashmap(sqlenv, jobId, slicecount_map);
+    
+    tj_mark_job_completed_results(sqlenv, jobId);
+
+    hashmap_free(slicecount_map);
 }
