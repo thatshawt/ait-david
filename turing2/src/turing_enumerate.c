@@ -26,7 +26,7 @@ typedef struct{
     int fillMaxSteps[TM_MAX_THREADS];
 } fillTapeAlgoState_t;
 
-//at least its static ¯\_(ツ)_/¯
+// on foe num grave
 static fillTapeAlgoState_t theFillTapeAlgoState;
 
 // and this too i think?
@@ -175,6 +175,19 @@ void tm_enumerate_job_opt_destroy(enumerate_job_opt_t* opt)
 
 }
 
+struct hashmap* new_slicecounthashmap()
+{
+    const int selfid = turing_threading_self_index();
+
+    return hashmap_new(
+        sizeof(tm_slice_counter_t), 0, tm_rand(selfid), tm_rand(selfid), 
+        tm_slicecounter_hashmap_hash,
+        tm_slicecounter_hashmap_compare,
+        tm_slicecounter_hashmap_free,
+        NULL
+    );
+}
+
 struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
 {
     const int selfid = turing_threading_self_index();
@@ -271,13 +284,7 @@ struct hashmap* do_tm_enumerate_job(enumerate_job_opt_t *opt)
         enumerate_job_args_t* args = thread_args[i];
         // enumerate_job_args_t* args = turing_job_sql_pop_job();
 
-        slice_count_map[i] = hashmap_new(
-            sizeof(tm_slice_counter_t), 0, tm_rand(selfid), tm_rand(selfid), 
-            tm_slicecounter_hashmap_hash,
-            tm_slicecounter_hashmap_compare,
-            tm_slicecounter_hashmap_free,
-            NULL
-        );
+        slice_count_map[i] = new_slicecounthashmap();
         args->slice_count_map = slice_count_map[i];
 
 
@@ -436,7 +443,7 @@ void halt_receiver_hashmap(tm_t* tm)
     const int selfid = turing_threading_self_index();
 
     tm_slice_counter_t sliceCounter;
-    mpz_init_set_ui(sliceCounter.count, 1); // sliceCounter.count = 1;
+    mpz_init_set_ui(sliceCounter.count, 1);
     tm_slice_init_from_written_tape(tm, &sliceCounter.slice);
 
     tm_slice_counter_t* result = hashmap_get(counter_map[selfid], &sliceCounter);
@@ -522,37 +529,6 @@ bool tm_resolve_simple_args_to_hard_args(tm_enumerate_options_simple_t enumerate
 }
 
 
-/*
-typedef struct {
-    int states;
-    char *max_steps;
-    char *randomIterations;
-    char *randomStartSeed;
-    bool doOnesTape;
-    bool doZerosTape;
-    char *startIndex;
-    char *indexesConsidered;
-    int workers;
-} tm_enumerate_options_simple_t;
-
-typedef struct{
-    int states;
-
-    mpz_t start;
-    mpz_t length;
-
-    mpz_t max_steps;
-
-    bool doOnesTape;
-    bool doZerosTape;
-
-    mpz_t randomIterations;
-    mpz_t randomStartSeed;
-
-    int workthreads;
-
-} enumerate_job_opt_t;
-*/
 bool tm_revert_hard_args_to_simple_args(enumerate_job_opt_t enumerateOpt, tm_enumerate_options_simple_t* enumerate_simple_opt)
 {
     enumerate_simple_opt->states = enumerateOpt.states;
@@ -607,3 +583,4 @@ bool do_tm_enumerate_sql_merge_job_wrapped(
 
     hashmap_free(slicecount_map);
 }
+

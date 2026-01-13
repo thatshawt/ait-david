@@ -102,4 +102,6 @@ void tm_enumerate_index_length_with_hashmap(
     void* data
 );
 
+struct hashmap* new_slicecounthashmap();
+
 #endif

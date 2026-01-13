@@ -173,6 +173,7 @@ int main(){
     // some jobs tests
     {
         tj_DANGEROUS_delete_tables(&sqlenv);
+
         tj_create_tables(&sqlenv);
 
         //TODO make this split by into the children with a function by itself
@@ -262,7 +263,7 @@ int main(){
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from job_results;", NULL, &sql_callback_print);
         
         // doing a job
-        tj_do_tm_enumerate_job(&sqlenv, jobIdOriginal, 4);
+        tj_jobresults_do_tm_enumerate_job(&sqlenv, jobIdOriginal, 4);
 
         printf("print job_reuslts\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from job_results;", NULL, &sql_callback_print);
@@ -285,7 +286,7 @@ int main(){
 
         unsigned long twoStateFull100Random_jobId = tj_create_job_simple_args(&sqlenv, twoStateFull100Random_simpleopt);
 
-        tj_do_tm_enumerate_job(&sqlenv, twoStateFull100Random_jobId, 4);
+        tj_jobresults_do_tm_enumerate_job(&sqlenv, twoStateFull100Random_jobId, 4);
 
         printf("print job_reuslts\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from job_results;", NULL, &sql_callback_print);
@@ -301,7 +302,7 @@ int main(){
 
         printf("has 0: %d, has 123: %d\n", tj_jobresults_has_lstring(&sqlenv, chosenJob, "0"),tj_jobresults_has_lstring(&sqlenv, chosenJob, "123"));
 
-        tj_jobresults_sum_counts(&sqlenv, jobIdOriginal, tempMpz);
+        tj_jobresults_sum_counts(&sqlenv, chosenJob, tempMpz);
         gmp_printf("job %ld total count=%Zd\n", chosenJob, tempMpz);
 
         mpq_t tempMpq; mpq_init(tempMpq);
@@ -310,7 +311,20 @@ int main(){
 
         mpfr_t tempMpfr; mpfr_init(tempMpfr);
         tj_jobresults_get_freq_neglog2(&sqlenv, chosenJob, lstring, tempMpfr);
-        printf("job %ld, lstring %s, -log2(freq)=%f\n",chosenJob, lstring, mpfr_get_d(tempMpfr,MPFR_RNDZ));
+        printf("job %ld, lstring %s, -log2(freq)=%f\n",chosenJob, lstring, mpfr_get_d(tempMpfr, MPFR_RNDZ));
+
+        // loading into hashmap
+        struct hashmap* slicecountMap = new_slicecounthashmap();
+        tj_jobresults_load_into_slicecount_hashmap(&sqlenv, chosenJob, slicecountMap);
+
+        tm_slice_counter_t sliceCounter;
+        tm_slice_from_cstring(&sliceCounter.slice, "0");
+
+        tm_slice_counter_t* result = hashmap_get(slicecountMap, &sliceCounter);
+
+        char buff[40] = {0};
+        tm_slice_sprint(&sliceCounter.slice, buff);
+        gmp_printf("from hashmap %s:%Zd\n", buff, result->count);
 
         mpfr_clear(tempMpfr);
         mpz_clears(tempMpz, NULL);
