@@ -127,16 +127,26 @@
         PRIMARY KEY (job_id, lstring)
     );
     */
-        void tj_add_job_result(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount);
 
-        void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
+
+        void tj_jobresults_add_single_row(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount);
+
+        void tj_jobresults_add_rows_slicecount_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
 
         bool tj_do_tm_enumerate_job(sqlenv_t *sqlenv, unsigned long jobId, int workers);
 
         // true if succeed, false otherwise.
         // puts results of job_id into 'slicecounter_hashmap'.
-        bool tj_load_job_results_into_slicecount_map(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
+        bool tj_jobresults_load_into_slicecount_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* slicecounter_hashmap);
 
-        void tj_merge_children_into_parent_job(sqlenv_t *sqlenv, unsigned long jobId);
+        void tj_jobresults_clear_job(sqlenv_t *sqlenv, unsigned long jobId);
+
+        void tj_jobresults_merge_B_into_A(sqlenv_t *sqlenv, unsigned long jobIdA, unsigned long jobIdB);
+
+        void tj_jobresults_get_rcount(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, mpz_t rcountMpz);
+        bool tj_jobresults_has_lstring(sqlenv_t *sqlenv, unsigned long jobId, char* lstring);
+        void tj_jobresults_sum_counts(sqlenv_t *sqlenv, unsigned long jobId, mpz_t sumMpz);
+        void tj_jobresults_get_freq(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, mpq_t freqMpq);
+        void tj_jobresults_get_freq_neglog2(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, mpfr_t negLog2Mpfr);
 
 #endif

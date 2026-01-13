@@ -81,10 +81,13 @@ void tj_create_jobs_table(sqlenv_t* sqlenv)
             // sqlite assigns a value automagically to 'INTEGER PRIMARY KEY's
             "job_id INTEGER NOT NULL PRIMARY KEY," 
             
+            // enumeration parameters
             "states INTEGER NOT NULL,"
             "start TEXT NOT NULL,"
             "length TEXT NOT NULL,"
             "max_steps TEXT NOT NULL,"
+
+            // what kind of enumeration is done
             "doOnesTape INTEGER NOT NULL," // boolean
             "doZerosTape INTEGER NOT NULL," // boolean
             "randomIterations TEXT NOT NULL,"
@@ -710,7 +713,7 @@ void create_job_results_table(sqlenv_t* sqlenv)
     tj_unlock();
 }
 
-void tj_add_job_result(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount)
+void tj_jobresults_add_single_row(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, char* rcount)
 {
     if(lstring == NULL || rcount == NULL)return;
     tj_lock();
@@ -728,7 +731,7 @@ void tj_add_job_result(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, cha
     tj_unlock();
 }
 
-void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* map)
+void tj_jobresults_add_rows_slicecount_hashmap(sqlenv_t *sqlenv, unsigned long jobId, struct hashmap* map)
 {
     size_t iterA = 0;
     void *itemA;
@@ -749,9 +752,25 @@ void tj_add_job_results_from_hashmap(sqlenv_t *sqlenv, unsigned long jobId, stru
 
         // if(strcmp(lstring, "0") == 0)printf("           %s:%s\n", lstring, rcount);
         
-        tj_add_job_result(sqlenv, jobId, lstring, rcount);
+        tj_jobresults_add_single_row(sqlenv, jobId, lstring, rcount);
     }
     mpz_clear(count);
+}
+
+void tj_jobresults_clear_job(sqlenv_t *sqlenv, unsigned long jobId)
+{
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "DELETE FROM job_results WHERE job_id=%ld;"
+        , jobId
+    );
+    // printf("%s\n", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        NULL, NULL,
+        NULL
+        // &sql_resultHandler_print
+    );
+    tj_unlock();
 }
 
 bool tj_do_tm_enumerate_job(sqlenv_t *sqlenv, unsigned long jobId, int workers)
@@ -768,9 +787,113 @@ bool tj_do_tm_enumerate_job(sqlenv_t *sqlenv, unsigned long jobId, int workers)
 
     tm_enumerate_job_opt_destroy(&enumerateOpt);
 
-    tj_add_job_results_from_hashmap(sqlenv, jobId, slicecount_map);
+    tj_jobresults_clear_job(sqlenv, jobId);
+    tj_jobresults_add_rows_slicecount_hashmap(sqlenv, jobId, slicecount_map);
     
     tj_mark_job_completed_results(sqlenv, jobId);
 
     hashmap_free(slicecount_map);
 }
+
+void tj_jobresults_get_rcount(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, mpz_t rcountMpz)
+{
+    mpz_set_si(rcountMpz, -1);
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "SELECT rcount FROM job_results"
+        " WHERE job_id=%ld AND lstring='%s';"
+        , jobId, lstring
+    );
+    // printf("%s\n", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        (void*)rcountMpz, &sql_callback_load_firstcol_into_mpz,
+        NULL
+        // &sql_resultHandler_print
+    );
+    tj_unlock();
+}
+
+bool tj_jobresults_has_lstring(sqlenv_t *sqlenv, unsigned long jobId, char* lstring)
+{
+    mpz_t rcountMpz; mpz_init(rcountMpz);
+
+    tj_jobresults_get_rcount(sqlenv, jobId, lstring, rcountMpz);
+
+    bool result = mpz_cmp_si(rcountMpz, -1) != 0;
+
+    mpz_clear(rcountMpz);
+
+    return result;
+}
+
+int sql_callback_add_firstcol_into_mpz(void *data, int count, char **values, char **columnNames)
+{
+    // mpz_t dataMpz = data;
+
+    if(count == 0 || values[0] == NULL)return 0;
+
+    mpz_t tempMpz; mpz_init(tempMpz);
+
+    mpz_set_str(tempMpz, values[0], 10);
+
+    mpz_add(*(mpz_t*)data, *(mpz_t*)data, tempMpz);
+
+    mpz_clear(tempMpz);
+
+    return 0;
+}
+
+void tj_jobresults_sum_counts(sqlenv_t *sqlenv, unsigned long jobId, mpz_t sumMpz)
+{
+    mpz_set_ui(sumMpz, 0);
+
+    tj_lock();
+    sprintf(tjState.statementBuffer,
+        "SELECT rcount FROM job_results"
+        " WHERE job_id=%ld;"
+        , jobId
+    );
+    // printf("%s\n", tjState.statementBuffer);
+    sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
+        (void*)sumMpz, &sql_callback_add_firstcol_into_mpz,
+        NULL
+        // &sql_resultHandler_print
+    );
+    tj_unlock();
+}
+
+void tj_jobresults_get_freq(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, mpq_t freqMpq)
+{
+    mpz_t count, totalCount; mpz_inits(count, totalCount, NULL);
+    mpq_t tempq1;mpq_init(tempq1);
+
+    tj_jobresults_sum_counts(sqlenv, jobId, totalCount);
+    tj_jobresults_get_rcount(sqlenv, jobId, lstring, count);
+
+    mpq_set_z(freqMpq, count); // freq = count
+    mpq_set_z(tempq1, totalCount); // tempq1 = totalCount
+
+    mpq_canonicalize(freqMpq);
+    mpq_canonicalize(tempq1);
+
+    mpq_div(freqMpq, freqMpq, tempq1); // freq = count/totalCount;
+
+    mpq_canonicalize(freqMpq);
+
+    mpz_clears(count, totalCount, NULL);
+    mpq_clear(tempq1);
+}
+
+void tj_jobresults_get_freq_neglog2(sqlenv_t *sqlenv, unsigned long jobId, char* lstring, mpfr_t negLog2Mpfr)
+{
+    mpq_t freq; mpq_init(freq);
+    
+    tj_jobresults_get_freq(sqlenv, jobId, lstring, freq);
+
+    mpfr_set_q(negLog2Mpfr, freq, MPFR_RNDZ);
+    mpfr_log2(negLog2Mpfr, negLog2Mpfr, MPFR_RNDZ);
+    mpfr_mul_si(negLog2Mpfr, negLog2Mpfr, -1, MPFR_RNDZ);
+
+    mpq_clear(freq);
+}
+

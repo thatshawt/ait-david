@@ -267,6 +267,54 @@ int main(){
         printf("print job_reuslts\n");
         sqlenv_exec_with_callback(&sqlenv, "SELECT * from job_results;", NULL, &sql_callback_print);
 
+        tm_enumerate_options_simple_t twoStateFull100Random_simpleopt = {
+            .states = 2,
+            .max_steps = "100",
+            .startIndex = "0",
+            .indexesConsidered = NULL,
+
+            .randomStartSeed = "1",
+            .randomIterations = "100",
+
+            .doZerosTape = true,
+            .doOnesTape = true,
+
+            // this doesnt affect the enumeration but it needs to be set. woopssies :P
+            .workers = 0
+        };
+
+        unsigned long twoStateFull100Random_jobId = tj_create_job_simple_args(&sqlenv, twoStateFull100Random_simpleopt);
+
+        tj_do_tm_enumerate_job(&sqlenv, twoStateFull100Random_jobId, 4);
+
+        printf("print job_reuslts\n");
+        sqlenv_exec_with_callback(&sqlenv, "SELECT * from job_results;", NULL, &sql_callback_print);
+
+
+        // job result specifics tests
+        unsigned long chosenJob = twoStateFull100Random_jobId;
+        char* lstring = "0";
+
+        mpz_t tempMpz; mpz_init(tempMpz);
+        tj_jobresults_get_rcount(&sqlenv, chosenJob, lstring, tempMpz);
+        gmp_printf("%s|%Zd\n", lstring, tempMpz);
+
+        printf("has 0: %d, has 123: %d\n", tj_jobresults_has_lstring(&sqlenv, chosenJob, "0"),tj_jobresults_has_lstring(&sqlenv, chosenJob, "123"));
+
+        tj_jobresults_sum_counts(&sqlenv, jobIdOriginal, tempMpz);
+        gmp_printf("job %ld total count=%Zd\n", chosenJob, tempMpz);
+
+        mpq_t tempMpq; mpq_init(tempMpq);
+        tj_jobresults_get_freq(&sqlenv, chosenJob, lstring, tempMpq);
+        printf("job %ld, lstring %s, frequency %f\n",chosenJob, lstring, mpq_get_d(tempMpq));
+
+        mpfr_t tempMpfr; mpfr_init(tempMpfr);
+        tj_jobresults_get_freq_neglog2(&sqlenv, chosenJob, lstring, tempMpfr);
+        printf("job %ld, lstring %s, -log2(freq)=%f\n",chosenJob, lstring, mpfr_get_d(tempMpfr,MPFR_RNDZ));
+
+        mpfr_clear(tempMpfr);
+        mpz_clears(tempMpz, NULL);
+        mpq_clears(tempMpq, NULL);
         // tj_DANGEROUS_delete_tables(&sqlenv);
     }
 
