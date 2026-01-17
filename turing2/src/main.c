@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 #include "sqlenv.h"
+#include "prefix_tms.h"
 
 // int trivialNonHalters = 0;
 
@@ -41,14 +42,15 @@ int main(){
         // return 0;
     }
 
+    // mtm testing
+
+
+    return 0;
+
     // tm_print_enumerate_performance_stats(2,500);
 
     const int selfid = turing_threading_self_index();
     tm_srand(selfid, 1337);
-
-    char *originalTableName = "NumbersCount";
-    char *halfATableName = "NumbersCountHalfA";
-    char *halfBTableName = "NumbersCountHalfB";
 
     sqlenv_t sqlenv;
     if(sqlenv_open(&sqlenv, "artifacts/test.db", 0, 0))return 1;
@@ -79,6 +81,10 @@ int main(){
     enumerate_simple_opt_halfB.indexesConsidered = NULL;
     
     
+    char *originalTableName = "NumbersCount";
+    char *halfATableName = "NumbersCountHalfA";
+    char *halfBTableName = "NumbersCountHalfB";
+
     // populate tables with enumeration results
     {
         // int states = 2;

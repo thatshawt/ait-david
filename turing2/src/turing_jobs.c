@@ -935,18 +935,18 @@ void tj_jobresults_load_into_slicecount_hashmap(sqlenv_t *sqlenv, unsigned long 
         " WHERE job_id=%ld;"
         , jobId
     );
-    printf("%s\n", tjState.statementBuffer);
+    // printf("%s\n", tjState.statementBuffer);
     sqlenv_exec_with_callback_resulthandler(sqlenv, tjState.statementBuffer,
         (void*)slicecounter_hashmap, &sql_callback_load_lstring_rcount_into_hashmap,
-        // NULL
-        &sql_resultHandler_print
+        NULL
+        // &sql_resultHandler_print
     );
     tj_unlock();
 }
 
 void tj_jobresults_merge_B_into_A(sqlenv_t *sqlenv, unsigned long jobIdA, unsigned long jobIdB)
 {
-
+    // make function to merge two hashmaps from code at turing_enumerate.c:441
 }
 
 
