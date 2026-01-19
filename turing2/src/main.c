@@ -17,7 +17,7 @@
 #include <unistd.h>
 
 #include "sqlenv.h"
-#include "prefix_tms.h"
+#include "monotone_tm.h"
 
 // int trivialNonHalters = 0;
 
@@ -44,6 +44,11 @@ int main(){
 
     // mtm testing
 
+    int states = 2;
+    int workTapes = 3;
+    mtm_transition_table_t table;
+    mtm_trans_table_init(&table, states, workTapes);
+    mtm_print_table(&table);
 
     return 0;
 

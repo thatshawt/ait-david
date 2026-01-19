@@ -1,6 +1,8 @@
 #ifndef MONOTONE_TM_H
 #define MONOTONE_TM_H
 
+#include <pthread.h>
+
 /*
 https://www.hutter1.net/ai/sintro2kc.pdf, slide 11.
 Monotone Turing Machine
@@ -22,51 +24,62 @@ on input p
 /*
 Uptm(mpz_t machine_index, char* input, unsigned long max_steps);
 
-ptm tables:
+mtm table:
     state 0 = halt.
-    state entry:
-        ( input tape read (2) ,
-            work tape read (2) )
-        ->
-        ( output tape write (2),
+        state (states),
+        input tape read (2),
+        work tape1 read (2)
+    ->
+        input tape move (2), // if true, input moves right
+        output tape write (2),
+        output tape move (2), // if true, output moves right
         work tape write (2),
         work tape move (2),
-        next state (states) )
+        next state (states)
     ...
 
-table[]
-
-mtm_load_table_from_machine_index(mtm_t* ptm, mpz_t machine_index);
-
-https://people.idsia.ch/~juergen/toesv2/node6.html
- Monotone TMs (MTMs).
- Most current theory of description size and inductive inference is based on MTMs (compare [#!LiVitanyi:97!#, p. 276 ff]) with:
-    several tapes
-each tape being a finite chain of adjacent squares with a scanning head initially pointing to the leftmost square.
-There is:
-    one output tape
-and:
-    at least two work tapes (sufficient to compute everything traditionally regarded as computable).
-
-The MTM has a finite number of internal states, one of them being the initial state. MTM behavior is specified by a lookup table mapping current state and contents of the squares above work tape scanning heads to a new state and an instruction to be executed next.
-
-There are instructions for shifting work tape scanning heads one square left or right (appending new squares when necessary), and for writing 0 or 1 on squares above work tape scanning heads.
-
-The only input-related instruction requests an input bit determined by an external process and copies it onto the square above the first work tape scanning head.
-
-There may or may not be a halt instruction to terminate a computation.
-
-Sequences of requested input bits are called self-delimiting programs because they convey all information about their own length, possibly causing the MTM to halt [#!Levin:74!#,#!Gacs:74!#,#!Chaitin:75!#], or at least to cease requesting new input bits (the typical case in this paper).
-
-MTMs are called monotone because they have a one-way write-only output tape -- they cannot edit their previous output, because the only ouput instructions are: append a new square at the right end of the output tape and fill it with 0/1.
-
+mtm_load_table_from_machine_index(mtm_t* mtm, mpz_t machine_index);
 */
 
-#include <pthread.h>
+
+#define MTM_MAX_WORK_TAPES 5
+#define MTM_MAX_STATES 10
+#define MTM_MAX_TAPE_SIZE 1000
+
+typedef struct{
+    char inputTapeMove;
+    char outputTapeWrite;
+    char outputTapeMove;
+    char workTapeWrites[MTM_MAX_WORK_TAPES];
+    char workTapeMoves[MTM_MAX_WORK_TAPES];
+    unsigned int nextState;
+} mtm_transition_entry_t;
+
+typedef struct{
+    char state;
+    char inputRead;
+    char workTapeReads[MTM_MAX_WORK_TAPES];
+} mtm_entry_index_t;
+
+typedef struct{
+    int states;
+    int workTapes;
+    mtm_transition_entry_t* entryMap;
+
+    size_t _D[MTM_MAX_WORK_TAPES+2];
+} mtm_transition_table_t;
+
+void mtm_trans_table_init(mtm_transition_table_t* table, int states, int workTapes);
+mtm_transition_entry_t* mtm_trans_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex);
+void mtm_trans_table_free(mtm_transition_table_t* table);
+
+void mtm_print_entry(mtm_transition_entry_t* entry, int workTapes);
+void mtm_print_entry_index(mtm_entry_index_t* entryIndex, int workTapes);
+void mtm_print_table(mtm_transition_table_t* table);
 
 // mtm tapes are binary and go left and right.
 typedef struct{
-    char* tapeMemory;
+    char tapeMemory[MTM_MAX_TAPE_SIZE];
     unsigned int tapeMemoryMinIndex;
     unsigned int tapeMemoryMaxIndex;
 
@@ -83,38 +96,26 @@ unsigned int mtm_tape_read(mtm_tape_t* tape);
 void mtm_tape_move_right(mtm_tape_t* tape);
 void mtm_tape_move_left(mtm_tape_t* tape);
 
-typedef struct{
-    mtm_tape_t* firstTapePointer;
-    unsigned int numberOfTapes;
-} mtm_tape_array_t;
-
-void mtm_tape_array_init(mtm_tape_array_t* tapeArray, unsigned int numberOfTapes);
-void mtm_tape_array_destroy(mtm_tape_array_t* tapeArray);
-
-mtm_tape_t* mtm_tape_array_get_tape(mtm_tape_array_t* tapeArray, unsigned int tapeNum);
-unsigned int mtm_tape_array_get_number_of_tapes(mtm_tape_array_t* tapeArray);
-
-//TODO encode the transition table somehow...
-// there can be a variable amount of work tapes...
-
-typedef struct {
-    // unsigned char 
-} mtm_table_entry_t;
-
-typedef struct{
-
-} mtm_transition_table_t;
-
+void mtm_tape_ranged_fill_with_symbol(mtm_tape_t* tape, unsigned char fillSymbol, unsigned int startIndex, unsigned int endIndex);
+void mtm_tape_fill_with_symbol(mtm_tape_t* tape, unsigned char fillSymbol);
+void mtm_tape_fill_with_zeros(mtm_tape_t* tape);
+void mtm_tape_fill_with_ones(mtm_tape_t* tape);
+void mtm_tape_fill_with_callback(mtm_tape_t* tape, void* data, unsigned char(*fillCallback)(void* data, unsigned int index));
 
 typedef struct{
     pthread_mutex_t mutex;
 
+    int state;
     // supposed to be unidirectional, read-only
     mtm_tape_t input_tape;
     // supposed to be unidirectional, read-only
     mtm_tape_t output_tape;
     // supposed to be bidirectional, read-write
-    mtm_tape_array_t work_tapes_array;
+    mtm_tape_t work_tapes_array[MTM_MAX_WORK_TAPES];
+
+    mtm_transition_table_t transition_table;
+
+    mtm_entry_index_t _tableEntry;
 
 } mtm_t;
 
