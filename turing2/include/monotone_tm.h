@@ -1,8 +1,6 @@
 #ifndef MONOTONE_TM_H
 #define MONOTONE_TM_H
 
-#include <pthread.h>
-
 /*
 https://www.hutter1.net/ai/sintro2kc.pdf, slide 11.
 Monotone Turing Machine
@@ -21,30 +19,21 @@ on input p
 • We call such codes p minimal programs.
 */
 
-/*
-Uptm(mpz_t machine_index, char* input, unsigned long max_steps);
+#include <pthread.h>
+#include <gmp.h>
+#include <stdbool.h>
 
-mtm table:
-    state 0 = halt.
-        state (states),
-        input tape read (2),
-        work tape1 read (2)
-    ->
-        input tape move (2), // if true, input moves right
-        output tape write (2),
-        output tape move (2), // if true, output moves right
-        work tape write (2),
-        work tape move (2),
-        next state (states)
-    ...
-
-mtm_load_table_from_machine_index(mtm_t* mtm, mpz_t machine_index);
-*/
-
-
+#ifndef MTM_MAX_WORK_TAPES
 #define MTM_MAX_WORK_TAPES 5
+#endif
+
+#ifndef MTM_MAX_STATES
 #define MTM_MAX_STATES 10
+#endif
+
+#ifndef MTM_MAX_TAPE_SIZE
 #define MTM_MAX_TAPE_SIZE 1000
+#endif
 
 typedef struct{
     char inputTapeMove;
@@ -55,11 +44,23 @@ typedef struct{
     unsigned int nextState;
 } mtm_transition_entry_t;
 
+void mtm_entry_zero(mtm_transition_entry_t* entry);
+bool mtm_entry_increment(mtm_transition_entry_t* entry, int states, int worktapes);
+void mtm_print_entry(mtm_transition_entry_t* entry, int workTapes);
+
+void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes);
+void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes);
+int mtm_entry_max_digit(int states, int worktapes);
+
 typedef struct{
     char state;
     char inputRead;
     char workTapeReads[MTM_MAX_WORK_TAPES];
 } mtm_entry_index_t;
+
+void mtm_entry_index_zero(mtm_entry_index_t* entryIndex);
+bool mtm_entry_index_increment(mtm_entry_index_t* entryIndex, int states, int worktapes);
+void mtm_print_entry_index(mtm_entry_index_t* entryIndex, int workTapes);
 
 typedef struct{
     int states;
@@ -69,13 +70,23 @@ typedef struct{
     size_t _D[MTM_MAX_WORK_TAPES+2];
 } mtm_transition_table_t;
 
-void mtm_trans_table_init(mtm_transition_table_t* table, int states, int workTapes);
-mtm_transition_entry_t* mtm_trans_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex);
-void mtm_trans_table_free(mtm_transition_table_t* table);
+void mtm_table_init(mtm_transition_table_t* table, int states, int workTapes);
+mtm_transition_entry_t* mtm_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex);
+void mtm_table_free(mtm_transition_table_t* table);
+bool mtm_table_increment(mtm_transition_table_t* table);
 
-void mtm_print_entry(mtm_transition_entry_t* entry, int workTapes);
-void mtm_print_entry_index(mtm_entry_index_t* entryIndex, int workTapes);
 void mtm_print_table(mtm_transition_table_t* table);
+
+void mtm_load_table_from_code(mtm_transition_table_t* table, mpz_t tableCode);
+void mtm_get_table_code(mpz_t tableCode, mtm_transition_table_t* table);
+
+// bool lincrement(int n, int* sizes, int* digits);
+
+
+
+// void mtm_load_entry_from_digit(mtm_transition_entry_t* entry, mpz_t entryDigit);
+
+
 
 // mtm tapes are binary and go left and right.
 typedef struct{
@@ -106,16 +117,16 @@ typedef struct{
     pthread_mutex_t mutex;
 
     int state;
-    // supposed to be unidirectional, read-only
+    // unidirectional, read-only
     mtm_tape_t input_tape;
-    // supposed to be unidirectional, read-only
+    // unidirectional, write-only
     mtm_tape_t output_tape;
-    // supposed to be bidirectional, read-write
+    // bidirectional, read-write
     mtm_tape_t work_tapes_array[MTM_MAX_WORK_TAPES];
 
     mtm_transition_table_t transition_table;
 
-    mtm_entry_index_t _tableEntry;
+    mtm_entry_index_t _entryIndex;
 
 } mtm_t;
 

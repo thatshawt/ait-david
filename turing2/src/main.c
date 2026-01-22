@@ -45,12 +45,42 @@ int main(){
     // mtm testing
 
     int states = 2;
-    int workTapes = 3;
+    int worktapes = 3;
+
     mtm_transition_table_t table;
-    mtm_trans_table_init(&table, states, workTapes);
+    mtm_table_init(&table, states, worktapes);
     mtm_print_table(&table);
 
+    mtm_table_free(&table);
+
+
+    // printf("entryindex increment test\n");
+    // mtm_entry_index_t entryIndex;
+    // mtm_entry_index_zero(&entryIndex);
+    // do{
+    //     mtm_print_entry_index(&entryIndex, worktapes);
+    // }while(!mtm_entry_index_increment(&entryIndex, states, worktapes));
+
+
+    int counter = 0;
+    mtm_transition_entry_t entry;
+    mtm_entry_zero(&entry);
+    do{
+        // mtm_print_entry(&entry, worktapes);
+        int digit = mtm_entry_get_digit(&entry, states, worktapes);
+        printf("entry digit: %d %d\n", counter, digit);
+        if(digit != counter) return 1;
+        counter++;
+        // if(counter == 10)return 1;
+    }while(!mtm_entry_increment(&entry, states, worktapes));
+    printf("counted %d entries\n", counter);
+
+
     return 0;
+
+
+
+
 
     // tm_print_enumerate_performance_stats(2,500);
 
