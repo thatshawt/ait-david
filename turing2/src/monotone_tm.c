@@ -24,7 +24,6 @@ typedef struct{
     char workTapeReads[MTM_MAX_WORK_TAPES]; // each has max 2
 } mtm_entry_index_t;
 */
-
 void mtm_table_init(mtm_transition_table_t* table, int states, int workTapes)
 {
     table->states = states;
@@ -308,31 +307,113 @@ bool mtm_entry_increment(mtm_transition_entry_t* entry, int states, int worktape
 }
 
 /*
-char inputTapeMove; 1*2^0 +
-char outputTapeWrite; 0*2^1 + 
-char outputTapeMove;
-char workTapeWrites[MTM_MAX_WORK_TAPES];
-char workTapeMoves[MTM_MAX_WORK_TAPES];
-unsigned int nextState; states
+bool inputTapeMove; 1*2^0 +
+bool outputTapeWrite; 0*2^1 + 
+bool outputTapeMove;
+bool workTapeWrites[MTM_MAX_WORK_TAPES];
+bool workTapeMoves[MTM_MAX_WORK_TAPES];
+int nextState; states
 */
-int mtm_entry_get_digit(mtm_transition_entry_t* entry, int states, int worktapes)
+
+inline void mpz_set_or_lshifted_bits(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
 {
-    int digit = 0;
-
-    int n = 4+(worktapes*2);
-
-    digit |= (entry->inputTapeMove)<<0;
-    digit |= (entry->outputTapeWrite)<<1;
-    digit |= (entry->outputTapeMove)<<2;
-    digit |= (entry->nextState)<<(n-1);
-    for(int i=0; i<worktapes; i++){
-        // digits[i+3] = entry->workTapeWrites[i];
-        // digits[i+3+worktapes] = entry->workTapeMoves[i];
-        digit |= (entry->workTapeWrites[i])<<(i+3);
-        digit |= (entry->workTapeMoves[i])<<(i+3+worktapes);
-    }
-
-    return digit;
+    // rop |= bits<<biti;
+    mpz_mul_2exp(temp, bits, biti);
+    mpz_ior(rop, rop, temp);
 }
 
-int mtm_entry_max_digit(int states, int worktapes);
+int mtm_get_entry_bits(int states, int worktapes)
+{
+    mpz_t temp;
+    mpz_init_set_ui(temp, states);
+    mpz_sub_ui(temp,temp,1);
+    int bits = 3+(worktapes*2) + mpz_sizeinbase(temp,2);
+    // printf("%d sizeinbase(%d,2)\n", mpz_sizeinbase(temp,2),states);
+    mpz_clear(temp);
+    return bits;
+}
+
+void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes)
+{
+    mpz_set_ui(digit, 0);
+
+    int n = mtm_get_entry_bits(states, worktapes);
+    mp_bitcnt_t bitsi;
+    mpz_t temp; mpz_init(temp);
+    mpz_t bits; mpz_init(bits);
+
+    mpz_set_ui(bits, entry->inputTapeMove);
+    bitsi = 0;
+    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+
+    mpz_set_ui(bits, entry->outputTapeWrite);
+    bitsi = 1;
+    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+
+    mpz_set_ui(bits, entry->outputTapeMove);
+    bitsi = 2;
+    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+
+    mpz_set_ui(bits, entry->nextState);
+    bitsi = 3+(2*worktapes); // this goes after the first 3 bits and the 2*worktapes bits.
+    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+
+    for(int i=0; i<worktapes; i++){
+        mpz_set_ui(bits, entry->workTapeWrites[i]);
+        bitsi = i+3;
+        mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+
+        mpz_set_ui(bits, entry->workTapeMoves[i]);
+        bitsi = i+3+worktapes;
+        mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    }
+
+    mpz_clears(bits, temp, NULL);
+
+    // return digit;
+}
+
+inline void mpz_pop_nbits(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN)
+{
+    // bits = number & (2^bitsN - 1);
+    mpz_set_ui(bits, 1);
+    mpz_mul_2exp(bits, bits, bitsN);
+    mpz_sub_ui(bits, bits, 1);
+    mpz_and(bits, bits, number);
+
+    // number >> bitsN;
+    mpz_fdiv_q_2exp(number, number, bitsN);
+}
+
+void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes)
+{
+    mpz_t bits; mpz_init(bits);
+    mpz_t number; mpz_init_set(number, digit);
+    mpz_t temp; mpz_init(temp);
+
+    mpz_pop_nbits(bits, number, 1);
+    entry->inputTapeMove = mpz_get_ui(bits);
+
+    mpz_pop_nbits(bits, number, 1);
+    entry->outputTapeWrite = mpz_get_ui(bits);
+
+    mpz_pop_nbits(bits, number, 1);
+    entry->outputTapeMove = mpz_get_ui(bits);
+    
+    for(int i=0; i<worktapes; i++){
+        mpz_pop_nbits(bits, number, 1);
+        entry->workTapeWrites[i] = mpz_get_ui(bits);
+    }
+
+    for(int i=0; i<worktapes; i++){
+        mpz_pop_nbits(bits, number, 1);
+        entry->workTapeMoves[i] = mpz_get_ui(bits);
+    }
+
+    mpz_set_ui(temp, states-1);
+    mpz_set_ui(bits, mpz_sizeinbase(temp, 2));
+    mpz_pop_nbits(bits, number, mpz_get_ui(bits));
+    entry->nextState = mpz_get_ui(bits);
+
+    mpz_clears(bits, number, temp, NULL);
+}

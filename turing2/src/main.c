@@ -61,21 +61,41 @@ int main(){
     //     mtm_print_entry_index(&entryIndex, worktapes);
     // }while(!mtm_entry_index_increment(&entryIndex, states, worktapes));
 
+    printf("%d states, %d worktapes = %d bits\n", states, worktapes, mtm_get_entry_bits(states, worktapes));
+
+    mpz_t number,bits;
+    mpz_init(bits);
+    mpz_init_set_ui(number, 1023);
+    // inline void mpz_pop_nbits(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN)
+    gmp_printf("before: number %Zd, bits %Zd\n", number, bits);
+    mpz_pop_nbits(bits, number, 5);
+    gmp_printf("after: number %Zd, bits %Zd\n", number, bits);
+
+    mpz_clears(number, bits, NULL);
 
     int counter = 0;
     mtm_transition_entry_t entry;
+    mtm_transition_entry_t entry2;
     mtm_entry_zero(&entry);
-    do{
+    mpz_t digit; mpz_init(digit);
+    mpz_t digit2; mpz_init(digit2);
+    do{        
+        mtm_entry_get_digit(digit, &entry, states, worktapes);
+
+        mtm_entry_from_digit(&entry2, digit, states, worktapes);
+        mtm_entry_get_digit(digit2, &entry2, states, worktapes);
+
+        gmp_printf("counter: %d, entry digit: %Zd, digit2 %Zd\n", counter, digit, digit2);
         // mtm_print_entry(&entry, worktapes);
-        int digit = mtm_entry_get_digit(&entry, states, worktapes);
-        printf("entry digit: %d %d\n", counter, digit);
-        if(digit != counter) return 1;
-        counter++;
+
+        if(mpz_get_ui(digit) != counter || mpz_get_ui(digit2) != counter) return 1;
         // if(counter == 10)return 1;
+
+        counter++;
     }while(!mtm_entry_increment(&entry, states, worktapes));
     printf("counted %d entries\n", counter);
 
-
+    mpz_clears(digit, digit2, NULL);
     return 0;
 
 

@@ -19,22 +19,7 @@ void turing_threading_init_global()
         turing_global_thread_info.index_is_null[i] = true;
     }
     pthread_mutex_init(&turing_global_thread_info.mutex, NULL);
-    // turing_global_thread_info.config_workThreadsCount = 1;
 }
-
-// void turing_threading_set_workthreads_count(int workthreads)
-// {
-//     ttlock();
-
-//     turing_global_thread_info.config_workThreadsCount = workthreads;
-
-//     ttunlock();
-// }
-
-// int turing_threading_get_workthreads_count()
-// {
-//     return turing_global_thread_info.config_workThreadsCount;
-// }
 
 void turing_threading_destroy()
 {

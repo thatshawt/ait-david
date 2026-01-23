@@ -50,7 +50,10 @@ void mtm_print_entry(mtm_transition_entry_t* entry, int workTapes);
 
 void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes);
 void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes);
-int mtm_entry_max_digit(int states, int worktapes);
+int mtm_get_entry_bits(int states, int worktapes);
+
+void mpz_set_or_lshifted_bits(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
+void mpz_pop_nbits(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN);
 
 typedef struct{
     char state;
