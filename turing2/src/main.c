@@ -53,6 +53,27 @@ int main(){
 
     mtm_table_free(&table);
 
+    mpz_t bar_encoded; mpz_init(bar_encoded);
+    mpz_t apos_encoded; mpz_init(apos_encoded);
+    mpz_t x; mpz_init(x);
+    mpz_t bitlength; mpz_init(bitlength);
+    mpz_t bitinteger; mpz_init(bitinteger);
+    for(int i=0;i<8;i++){
+        mpz_set_ui(x,i);
+
+        mpz_prefix_index_get_bit_length(x, bitlength);
+        mpz_prefix_index_get_bit_integer(x, bitinteger);
+
+        mpz_bar_encode_from_x_bits(bar_encoded, bitinteger, mpz_get_ui(bitlength));
+        mpz_apos_encode_from_x_bits(apos_encoded, bitinteger, mpz_get_ui(bitlength));
+
+        gmp_printf(
+            "x %Zd, bitlength %Zd, bitinteger %Zd, bar_encoded %Zd, apos_encoded %Zd\n\n",
+            x, bitlength, bitinteger, bar_encoded, apos_encoded);
+    }
+    mpz_clears(bitlength,bitinteger,x,bar_encoded,apos_encoded,NULL);
+
+    return 1;
 
     // printf("entryindex increment test\n");
     // mtm_entry_index_t entryIndex;

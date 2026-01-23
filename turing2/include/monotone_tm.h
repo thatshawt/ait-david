@@ -80,8 +80,14 @@ bool mtm_table_increment(mtm_transition_table_t* table);
 
 void mtm_print_table(mtm_transition_table_t* table);
 
-void mtm_load_table_from_code(mtm_transition_table_t* table, mpz_t tableCode);
+void mpz_prefix_index_get_bit_length(mpz_t x, mpz_t bitlength);
+void mpz_prefix_index_get_bit_integer(mpz_t x, mpz_t bitinteger);
+
+void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX);
+void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX);
+
 void mtm_get_table_code(mpz_t tableCode, mtm_transition_table_t* table);
+void mtm_load_table_from_code(mtm_transition_table_t* table, mpz_t tableCode);
 
 // bool lincrement(int n, int* sizes, int* digits);
 

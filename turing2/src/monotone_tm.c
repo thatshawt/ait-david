@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include <mpfr.h>
+
 #include "monotone_tm.h"
 
 // https://stackoverflow.com/questions/19883518/how-can-i-create-an-n-dimensional-array-in-c
@@ -76,6 +78,7 @@ mtm_transition_entry_t* mtm_table_get_entry(mtm_transition_table_t* table, mtm_e
 void mtm_table_free(mtm_transition_table_t* table)
 {
     free(table->entryMap);
+    table->entryMap = NULL;
 }
 
 // typedef struct{
@@ -338,35 +341,38 @@ void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states,
     mpz_set_ui(digit, 0);
 
     int n = mtm_get_entry_bits(states, worktapes);
-    mp_bitcnt_t bitsi;
     mpz_t temp; mpz_init(temp);
     mpz_t bits; mpz_init(bits);
+    mp_bitcnt_t bitsi = 0;
 
     mpz_set_ui(bits, entry->inputTapeMove);
-    bitsi = 0;
     mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    bitsi++;
 
     mpz_set_ui(bits, entry->outputTapeWrite);
-    bitsi = 1;
     mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    bitsi++;
 
     mpz_set_ui(bits, entry->outputTapeMove);
-    bitsi = 2;
     mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
-
-    mpz_set_ui(bits, entry->nextState);
-    bitsi = 3+(2*worktapes); // this goes after the first 3 bits and the 2*worktapes bits.
-    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
-
+    bitsi++;
+    
     for(int i=0; i<worktapes; i++){
         mpz_set_ui(bits, entry->workTapeWrites[i]);
-        bitsi = i+3;
         mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
-
-        mpz_set_ui(bits, entry->workTapeMoves[i]);
-        bitsi = i+3+worktapes;
-        mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+        bitsi++;
     }
+
+    for(int i=0; i<worktapes; i++){
+        mpz_set_ui(bits, entry->workTapeMoves[i]);
+        mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+        bitsi++;
+    }
+
+    mpz_set_ui(bits, entry->nextState);
+    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    mpz_set_ui(temp, states-1);
+    bitsi += mpz_sizeinbase(temp, 2);
 
     mpz_clears(bits, temp, NULL);
 
@@ -417,3 +423,129 @@ void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states
 
     mpz_clears(bits, number, temp, NULL);
 }
+
+// mpz_prefix_index_get_bit_length(x) = floor(log(x+1)/log(2))
+// x is the prefix index
+void mpz_prefix_index_get_bit_length(mpz_t x, mpz_t bitlength)
+{
+    mpz_t tempMpz; mpz_init(tempMpz);
+    mpfr_t tempMpfr; mpfr_init(tempMpfr);
+
+    mpz_set(tempMpz, x);
+    mpz_add_ui(tempMpz, tempMpz, 1);
+    mpfr_set_z(tempMpfr, tempMpz, MPFR_RNDZ);
+    mpfr_log2(tempMpfr, tempMpfr, MPFR_RNDZ);
+
+    mpfr_get_z(bitlength, tempMpfr, MPFR_RNDZ);
+
+    mpz_clear(tempMpz);
+    mpfr_clear(tempMpfr);
+}
+
+// mpz_prefix_index_get_bit_integer(x) = x - 2^prefixCodeIndexBitLength(x) - 1
+//                              = x - 2^floor(log(x+1)/log(2)) - 1
+// x is the prefix index
+void mpz_prefix_index_get_bit_integer(mpz_t x, mpz_t bitinteger)
+{
+    mpz_t tempMpz; mpz_init(tempMpz);
+
+    mpz_prefix_index_get_bit_length(x, tempMpz);
+    mpz_set_ui(bitinteger, 1);
+    mpz_mul_2exp(bitinteger, bitinteger, mpz_get_ui(tempMpz));
+    mpz_sub_ui(bitinteger, bitinteger, 1);
+
+    mpz_sub(bitinteger, x, bitinteger);
+
+    mpz_clear(tempMpz);
+}
+
+// bar_encode(x) = 1^ℓ(x) 0 x
+// x is treated as a binary string of length lengthX
+void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX)
+{
+    mpz_t temp; mpz_init(temp);
+    mpz_t bits; mpz_init(bits);
+    mp_bitcnt_t bitsi = 0;
+    
+    // zero bar_encoded to start off.
+    mpz_set_ui(bar_encoded, 0);
+
+    // encode x
+    mpz_set(bits, x);
+    mpz_set_or_lshifted_bits(bar_encoded, temp, bits, bitsi);
+    // bitsi += mpz_sizeinbase(bits, 2);
+    bitsi += lengthX;
+    
+    // add the 0 before the x
+    mpz_set_ui(bits, 0);
+    mpz_set_or_lshifted_bits(bar_encoded, temp, bits, bitsi);
+    bitsi += mpz_sizeinbase(bits, 2);
+    
+    // encode the 1^ℓ(x)
+    // int lengthX = mpz_sizeinbase(x, 2); // save for later
+    mpz_set_ui(temp, lengthX);
+    mpz_set_ui(bits, 1);
+    mpz_mul_2exp(bits, bits, lengthX);
+    mpz_sub_ui(bits, bits, 1); // bits = 2^ℓ(x) - 1 -> bit string 1^ℓ(x)
+    mpz_set_or_lshifted_bits(bar_encoded, temp, bits, bitsi);
+    bitsi += mpz_sizeinbase(bits, 2);
+    
+    // finished.
+    mpz_clears(temp, bits, NULL);
+}
+
+void mpz_x_from_bar_encode(mpz_t x, mpz_t bar_encoded);
+
+void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX)
+{
+    mpz_t temp; mpz_init(temp);
+    mpz_t temp2; mpz_init(temp2);
+    mpz_t bits; mpz_init(bits);
+    mp_bitcnt_t bitsi = 0;
+    
+    // zero apos_encoded to start off.
+    mpz_set_ui(apos_encoded, 0);
+
+    // encode x
+    mpz_set(bits, x);
+    mpz_set_or_lshifted_bits(apos_encoded, temp, bits, bitsi);
+    // bitsi += mpz_sizeinbase(bits, 2);
+    bitsi += lengthX;
+
+    // encode the bar_encoded(lengthX)
+    mpz_set_ui(temp, lengthX);
+    mpz_prefix_index_get_bit_length(temp, temp);
+
+    mpz_set_ui(temp2, lengthX);
+    mpz_prefix_index_get_bit_integer(temp2, bits);
+    
+    mpz_bar_encode_from_x_bits(temp2, bits, mpz_get_ui(temp));
+    mpz_set(bits, temp2);
+    mpz_set_or_lshifted_bits(apos_encoded, temp, bits, bitsi);
+    bitsi += mpz_sizeinbase(bits, 2);
+    
+    // finished.
+    mpz_clears(temp, temp2, bits, NULL);
+}
+
+/*
+    typedef struct{
+        int states;
+        int workTapes;
+        mtm_transition_entry_t* entryMap;
+
+        size_t _D[MTM_MAX_WORK_TAPES+2];
+    } mtm_transition_table_t;
+*/
+// void mtm_get_table_code(mpz_t tableCode, mtm_transition_table_t* table)
+// {
+//     mpz_set_ui(tableCode, 0);
+
+//     int entryBits = mtm_get_entry_bits(states, worktapes);
+//     mpz_t temp; mpz_init(temp);
+//     mpz_t bits; mpz_init(bits);
+//     mp_bitcnt_t bitsi = 0;
+
+
+
+// }
