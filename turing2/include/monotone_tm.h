@@ -52,9 +52,6 @@ void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states,
 void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes);
 int mtm_get_entry_bits(int states, int worktapes);
 
-void mpz_set_or_lshifted_bits(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
-void mpz_pop_nbits(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN);
-
 typedef struct{
     char state;
     char inputRead;
@@ -80,21 +77,30 @@ bool mtm_table_increment(mtm_transition_table_t* table);
 
 void mtm_print_table(mtm_transition_table_t* table);
 
+
 void mpz_prefix_index_get_bit_length(mpz_t x, mpz_t bitlength);
 void mpz_prefix_index_get_bit_integer(mpz_t x, mpz_t bitinteger);
+void mpz_get_prefix_index_from_int_and_length(mpz_t x, mpz_t bitinteger, mpz_t bitlength);
 
+// various mpz bit manipulating funcs
+void mpz_lshift(mpz_t rop, mpz_t number, int n);
+void mpz_rshift(mpz_t rop, mpz_t number, int n);
+void mpz_load_number_of_n_ones(mpz_t rop, int n);
+void mpz_set_or_lshifted_bits(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
+void mpz_pop_nbits_right(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN);
+int mpz_count_leading_ones(mpz_t numberWithLeadingOnes);
+
+// bar encoding
+void mpz_bar_decode_left(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_left);
+void mpz_bar_decode_left_pop(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_left);
 void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX);
+
+// apos encoding
+void mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left);
 void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX);
 
 void mtm_get_table_code(mpz_t tableCode, mtm_transition_table_t* table);
 void mtm_load_table_from_code(mtm_transition_table_t* table, mpz_t tableCode);
-
-// bool lincrement(int n, int* sizes, int* digits);
-
-
-
-// void mtm_load_entry_from_digit(mtm_transition_entry_t* entry, mpz_t entryDigit);
-
 
 
 // mtm tapes are binary and go left and right.

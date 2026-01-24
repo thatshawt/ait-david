@@ -49,16 +49,30 @@ int main(){
 
     mtm_transition_table_t table;
     mtm_table_init(&table, states, worktapes);
-    mtm_print_table(&table);
-
+    // mtm_print_table(&table);
     mtm_table_free(&table);
+
+    int barencoded = 863;
+    mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
+    mpz_t decodedX; mpz_init(decodedX);
+    int lengthx;
+
+    mpz_bar_decode_left_pop(decodedX, &lengthx, thing1);
+
+    gmp_printf("bar encode %d -> x: %Zd, lengthX: %d, thingAfter: %Zd\n",
+        barencoded, decodedX, lengthx, thing1);
+
+    mpz_clears(thing1, decodedX, NULL);
 
     mpz_t bar_encoded; mpz_init(bar_encoded);
     mpz_t apos_encoded; mpz_init(apos_encoded);
     mpz_t x; mpz_init(x);
     mpz_t bitlength; mpz_init(bitlength);
     mpz_t bitinteger; mpz_init(bitinteger);
-    for(int i=0;i<8;i++){
+
+    mpz_t decodedBarX; mpz_init(decodedBarX);
+    mpz_t decodedAposX; mpz_init(decodedAposX);
+    for(int i=0;i<20;i++){
         mpz_set_ui(x,i);
 
         mpz_prefix_index_get_bit_length(x, bitlength);
@@ -67,11 +81,20 @@ int main(){
         mpz_bar_encode_from_x_bits(bar_encoded, bitinteger, mpz_get_ui(bitlength));
         mpz_apos_encode_from_x_bits(apos_encoded, bitinteger, mpz_get_ui(bitlength));
 
+        int decodedBarLengthX;
+        mpz_bar_decode_left(decodedBarX, &decodedBarLengthX, bar_encoded);
+
+        int decodedAposLengthX;
+        mpz_apos_decode_left(decodedAposX, &decodedAposLengthX, apos_encoded);
+
         gmp_printf(
-            "x %Zd, bitlength %Zd, bitinteger %Zd, bar_encoded %Zd, apos_encoded %Zd\n\n",
-            x, bitlength, bitinteger, bar_encoded, apos_encoded);
+            "(x %Zd, bitlength %Zd, bitinteger %Zd), (bar_encoded %Zd -> xlength: %d, xint:%Zd), (apos_encoded %Zd -> xlength: %d, xint: %Zd)\n",
+            x, bitlength, bitinteger,
+            bar_encoded, decodedBarLengthX, decodedBarX,
+            apos_encoded, decodedAposLengthX, decodedAposX
+        );
     }
-    mpz_clears(bitlength,bitinteger,x,bar_encoded,apos_encoded,NULL);
+    mpz_clears(bitlength,bitinteger,x,bar_encoded,apos_encoded,decodedBarX,decodedAposX,NULL);
 
     return 1;
 
@@ -89,7 +112,7 @@ int main(){
     mpz_init_set_ui(number, 1023);
     // inline void mpz_pop_nbits(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN)
     gmp_printf("before: number %Zd, bits %Zd\n", number, bits);
-    mpz_pop_nbits(bits, number, 5);
+    mpz_pop_nbits_right(bits, number, 5);
     gmp_printf("after: number %Zd, bits %Zd\n", number, bits);
 
     mpz_clears(number, bits, NULL);
