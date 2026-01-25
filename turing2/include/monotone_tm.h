@@ -74,33 +74,40 @@ void mtm_table_init(mtm_transition_table_t* table, int states, int workTapes);
 mtm_transition_entry_t* mtm_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex);
 void mtm_table_free(mtm_transition_table_t* table);
 bool mtm_table_increment(mtm_transition_table_t* table);
+void mtm_table_zero(mtm_transition_table_t* table);
 
 void mtm_print_table(mtm_transition_table_t* table);
 
 
-void mpz_prefix_index_get_bit_length(mpz_t x, mpz_t bitlength);
-void mpz_prefix_index_get_bit_integer(mpz_t x, mpz_t bitinteger);
-void mpz_get_prefix_index_from_int_and_length(mpz_t x, mpz_t bitinteger, mpz_t bitlength);
+void mpz_prefix_index_get_bit_length(mpz_t prefixIndex, mpz_t bitlength);
+void mpz_prefix_index_get_bit_integer(mpz_t prefixIndex, mpz_t bitinteger);
+void mpz_get_prefix_index_from_int_and_length(mpz_t prefixIndex, mpz_t bitinteger, mpz_t bitlength);
 
 // various mpz bit manipulating funcs
 void mpz_lshift(mpz_t rop, mpz_t number, int n);
 void mpz_rshift(mpz_t rop, mpz_t number, int n);
 void mpz_load_number_of_n_ones(mpz_t rop, int n);
-void mpz_set_or_lshifted_bits(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
+void mpz_push_nbits_right(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
 void mpz_pop_nbits_right(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN);
 int mpz_count_leading_ones(mpz_t numberWithLeadingOnes);
 
 // bar encoding
 void mpz_bar_decode_left(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_left);
 void mpz_bar_decode_left_pop(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_left);
-void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX);
+void mpz_bar_encode(mpz_t bar_encoded, mpz_t x, int lengthX);
 
 // apos encoding
-void mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left);
-void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX);
+int mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left);
+int mpz_apos_decode_prefix_index_left(mpz_t prefixIndex, mpz_t number_with_apos_encoded_left);
+// void mpz_apos_decode_left_pop(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left);
+void mpz_apos_encode(mpz_t apos_encoded, mpz_t x, int lengthX);
+void mpz_apos_encode_prefix_index(mpz_t apos_encoded, mpz_t prefixIndex);
 
-void mtm_get_table_code(mpz_t tableCode, mtm_transition_table_t* table);
-void mtm_load_table_from_code(mtm_transition_table_t* table, mpz_t tableCode);
+int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table);
+int mpz_pop_table_entry_map_left(mpz_t number, mtm_transition_table_t* table);
+
+int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table);
+int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex);
 
 
 // mtm tapes are binary and go left and right.

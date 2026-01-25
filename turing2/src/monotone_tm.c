@@ -63,6 +63,11 @@ mtm_transition_entry_t* Element(mtm_transition_entry_t* A, size_t N, size_t D[],
 //     char inputRead; // max 2
 //     char workTapeReads[MTM_MAX_WORK_TAPES]; // each has max 2
 // } mtm_entry_index_t;
+// mtm_transition_entry_t* mtm_entrymap_get_entry(mtm_transition_entry_t* entryMap, mtm_entry_index_t* entryIndex, int states, int workTapes)
+// {
+
+// }
+
 mtm_transition_entry_t* mtm_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex)
 {
     size_t I[MTM_MAX_WORK_TAPES+2] = {0};
@@ -79,6 +84,21 @@ void mtm_table_free(mtm_transition_table_t* table)
 {
     free(table->entryMap);
     table->entryMap = NULL;
+}
+
+void mtm_table_zero(mtm_transition_table_t* table)
+{
+    mtm_transition_entry_t* entry;
+    mtm_entry_index_t index;
+    mtm_entry_index_zero(&index);
+    int states = table->states;
+    int worktapes = table->workTapes;
+    do{
+        entry = mtm_table_get_entry(table, &index);
+
+        mtm_entry_zero(entry);
+
+    }while(!mtm_entry_index_increment(&index, states, worktapes));
 }
 
 // typedef struct{
@@ -318,7 +338,7 @@ bool workTapeMoves[MTM_MAX_WORK_TAPES];
 int nextState; states
 */
 
-inline void mpz_set_or_lshifted_bits(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
+inline void mpz_push_nbits_right(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
 {
     // rop |= bits<<biti;
     mpz_lshift(temp, bits, biti);
@@ -346,31 +366,31 @@ void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states,
     mp_bitcnt_t bitsi = 0;
 
     mpz_set_ui(bits, entry->inputTapeMove);
-    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    mpz_push_nbits_right(digit, temp, bits, bitsi);
     bitsi++;
 
     mpz_set_ui(bits, entry->outputTapeWrite);
-    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    mpz_push_nbits_right(digit, temp, bits, bitsi);
     bitsi++;
 
     mpz_set_ui(bits, entry->outputTapeMove);
-    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    mpz_push_nbits_right(digit, temp, bits, bitsi);
     bitsi++;
     
     for(int i=0; i<worktapes; i++){
         mpz_set_ui(bits, entry->workTapeWrites[i]);
-        mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+        mpz_push_nbits_right(digit, temp, bits, bitsi);
         bitsi++;
     }
 
     for(int i=0; i<worktapes; i++){
         mpz_set_ui(bits, entry->workTapeMoves[i]);
-        mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+        mpz_push_nbits_right(digit, temp, bits, bitsi);
         bitsi++;
     }
 
     mpz_set_ui(bits, entry->nextState);
-    mpz_set_or_lshifted_bits(digit, temp, bits, bitsi);
+    mpz_push_nbits_right(digit, temp, bits, bitsi);
     mpz_set_ui(temp, states-1);
     bitsi += mpz_sizeinbase(temp, 2);
 
@@ -443,8 +463,8 @@ void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states
     mpz_clears(bits, number, temp, NULL);
 }
 
-// mpz_prefix_index_get_bit_length(x) = floor(log(x+1)/log(2))
 // x is the prefix index
+// bitlength = floor(log(x+1)/log(2))
 void mpz_prefix_index_get_bit_length(mpz_t x, mpz_t bitlength)
 {
     mpz_t tempMpz; mpz_init(tempMpz);
@@ -461,8 +481,8 @@ void mpz_prefix_index_get_bit_length(mpz_t x, mpz_t bitlength)
     mpfr_clear(tempMpfr);
 }
 
-// mpz_prefix_index_get_bit_integer(x) = x - 2^prefixCodeIndexBitLength(x) - 1
-//                              = x - 2^floor(log(x+1)/log(2)) - 1
+// bitinteger = x - 2^bitlength - 1
+// bitinteger = x - 2^floor(log(x+1)/log(2)) - 1
 // x is the prefix index
 void mpz_prefix_index_get_bit_integer(mpz_t x, mpz_t bitinteger)
 {
@@ -493,7 +513,7 @@ inline void mpz_get_prefix_index_from_int_and_length(mpz_t x, mpz_t bitinteger, 
 
 // bar_encode(x) = 1^ℓ(x) 0 x
 // x is treated as a binary string of length lengthX
-void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX)
+void mpz_bar_encode(mpz_t bar_encoded, mpz_t x, int lengthX)
 {
     mpz_t temp; mpz_init(temp);
     mpz_t bits; mpz_init(bits);
@@ -504,13 +524,13 @@ void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX)
 
     // encode x
     mpz_set(bits, x);
-    mpz_set_or_lshifted_bits(bar_encoded, temp, bits, bitsi);
+    mpz_push_nbits_right(bar_encoded, temp, bits, bitsi);
     // bitsi += mpz_sizeinbase(bits, 2);
     bitsi += lengthX;
     
     // add the 0 before the x
     mpz_set_ui(bits, 0);
-    mpz_set_or_lshifted_bits(bar_encoded, temp, bits, bitsi);
+    mpz_push_nbits_right(bar_encoded, temp, bits, bitsi);
     bitsi += mpz_sizeinbase(bits, 2);
     
     // encode the 1^ℓ(x)
@@ -519,7 +539,7 @@ void mpz_bar_encode_from_x_bits(mpz_t bar_encoded, mpz_t x, int lengthX)
     mpz_set_ui(bits, 1);
     mpz_mul_2exp(bits, bits, lengthX);
     mpz_sub_ui(bits, bits, 1); // bits = 2^ℓ(x) - 1 -> bit string 1^ℓ(x)
-    mpz_set_or_lshifted_bits(bar_encoded, temp, bits, bitsi);
+    mpz_push_nbits_right(bar_encoded, temp, bits, bitsi);
     bitsi += mpz_sizeinbase(bits, 2);
     
     // finished.
@@ -602,7 +622,7 @@ void mpz_bar_decode_left_pop(mpz_t x, int* lengthx, mpz_t number_with_bar_encode
     mpz_clear(temp);
 }
 
-void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX)
+void mpz_apos_encode(mpz_t apos_encoded, mpz_t x, int lengthX)
 {
     mpz_t temp; mpz_init(temp);
     mpz_t temp2; mpz_init(temp2);
@@ -614,7 +634,7 @@ void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX)
 
     // encode x
     mpz_set(bits, x);
-    mpz_set_or_lshifted_bits(apos_encoded, temp, bits, bitsi);
+    mpz_push_nbits_right(apos_encoded, temp, bits, bitsi);
     bitsi += lengthX;
 
     // encode the bar_encoded(lengthX)
@@ -624,21 +644,36 @@ void mpz_apos_encode_from_x_bits(mpz_t apos_encoded, mpz_t x, int lengthX)
     mpz_set_ui(temp2, lengthX);
     mpz_prefix_index_get_bit_integer(temp2, bits);
     
-    mpz_bar_encode_from_x_bits(temp2, bits, mpz_get_ui(temp));
+    mpz_bar_encode(temp2, bits, mpz_get_ui(temp));
     mpz_set(bits, temp2);
-    mpz_set_or_lshifted_bits(apos_encoded, temp, bits, bitsi);
+    mpz_push_nbits_right(apos_encoded, temp, bits, bitsi);
     bitsi += mpz_sizeinbase(bits, 2);
     
     // finished.
     mpz_clears(temp, temp2, bits, NULL);
 }
 
-void mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left)
+void mpz_apos_encode_prefix_index(mpz_t apos_encoded, mpz_t prefixIndex)
+{
+    mpz_t temp; mpz_init(temp);
+    
+    mpz_prefix_index_get_bit_length(prefixIndex, temp);
+
+    int lengthX = mpz_get_ui(temp);
+
+    mpz_prefix_index_get_bit_integer(prefixIndex, temp);
+
+    mpz_apos_encode(apos_encoded, temp, lengthX);
+
+    mpz_clear(temp);
+}
+
+int mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left)
 {
     if(mpz_cmp_ui(number_with_apos_encoded_left,0) == 0){
         *lengthx = 0;
         mpz_set_ui(x, 0);
-        return;
+        return 0;
     }
 
     const int lengthOfFullNumber = mpz_sizeinbase(number_with_apos_encoded_left,2);
@@ -660,6 +695,107 @@ void mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_
     mpz_rshift(x, temp, shifted);
 
     mpz_clears(temp, temp2, NULL);
+
+    return 2*lengthOfLength + 1 + *lengthx;
+}
+
+int mpz_apos_decode_prefix_index_left(mpz_t prefixIndex, mpz_t number_with_apos_encoded_left)
+{
+    mpz_t xint; mpz_init(xint);
+    mpz_t temp; mpz_init(temp);
+    int lengthx;
+
+    int aposLength = mpz_apos_decode_left(xint, &lengthx, number_with_apos_encoded_left);
+
+    mpz_set_ui(temp, lengthx);
+
+    mpz_get_prefix_index_from_int_and_length(prefixIndex, xint, temp);
+
+    mpz_clears(xint,temp,
+        NULL);
+
+    return aposLength;
+}
+
+
+int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table)
+{
+    mpz_t temp; mpz_init(temp);
+    mpz_t temp2; mpz_init(temp2);
+
+    mtm_entry_index_t index;
+    mtm_entry_index_zero(&index);
+
+    const int states = table->states;
+    const int worktapes = table->workTapes;
+
+    const int bitsi = mtm_get_entry_bits(states, worktapes);
+
+    mtm_transition_entry_t* entry;
+
+    int totalBitsAdded = 0;
+
+    // push the entryMap digits
+    do{
+        entry = mtm_table_get_entry(table, &index);
+
+        mtm_entry_get_digit(temp2, entry, states, worktapes);
+
+        mpz_push_nbits_right(number, temp, temp2, bitsi);
+
+        totalBitsAdded += bitsi;
+
+    }while(!mtm_entry_index_increment(&index, states, worktapes));
+
+    mpz_clears(temp, temp2,
+        NULL);
+
+    return totalBitsAdded;
+}
+
+int mpz_pop_table_entry_map_left(mpz_t number, mtm_transition_table_t* table)
+{
+    const int numberFullLength = mpz_sizeinbase(number,2);
+
+    mpz_t temp; mpz_init(temp);
+    mpz_t temp2; mpz_init(temp2);
+
+    mtm_entry_index_t index;
+    mtm_entry_index_zero(&index);
+
+    const int states = table->states;
+    const int worktapes = table->workTapes;
+
+    const int bitsi = mtm_get_entry_bits(states, worktapes);
+
+    mtm_transition_entry_t* entry;
+
+    int totalBitsRemoved = 0;
+
+    // pop the entryMap digits
+    do{
+        entry = mtm_table_get_entry(table, &index);
+
+        // get the entry digit
+        mpz_load_number_of_n_ones(temp, bitsi);
+        mpz_lshift(temp, temp, numberFullLength-totalBitsRemoved-bitsi);
+        mpz_and(temp, temp, number);
+        
+        // load the entry into the table
+        mtm_entry_from_digit(entry, temp2, states, worktapes);
+        
+        totalBitsRemoved += bitsi;
+    }while(!mtm_entry_index_increment(&index, states, worktapes));
+
+    mpz_clears(temp, temp2,
+        NULL);
+
+    // remove the entry digits
+    mpz_load_number_of_n_ones(temp, totalBitsRemoved);
+    mpz_lshift(temp, temp, numberFullLength-totalBitsRemoved);
+    mpz_and(number, number, temp);
+
+    return totalBitsRemoved;
 }
 
 /*
@@ -671,15 +807,65 @@ void mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_
         size_t _D[MTM_MAX_WORK_TAPES+2];
     } mtm_transition_table_t;
 */
-// void mtm_get_table_code(mpz_t tableCode, mtm_transition_table_t* table)
-// {
-//     mpz_set_ui(tableCode, 0);
+int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table)
+{
+    mpz_set_ui(tableIndex, 0);
 
-//     int entryBits = mtm_get_entry_bits(states, worktapes);
-//     mpz_t temp; mpz_init(temp);
-//     mpz_t bits; mpz_init(bits);
-//     mp_bitcnt_t bitsi = 0;
+    mpz_t temp; mpz_init(temp);
+    mpz_t temp2; mpz_init(temp2);
 
+    // push states integer
+    mpz_set_ui(temp2, table->states);
+    mpz_apos_encode_prefix_index(temp, temp2);
+    int pushed1 = mpz_sizeinbase(temp,2);
+    mpz_push_nbits_right(tableIndex, temp2, temp, pushed1);
 
+    // push workTapes integer
+    mpz_set_ui(temp2, table->workTapes);
+    mpz_apos_encode_prefix_index(temp, temp2);
+    int pushed2 = mpz_sizeinbase(temp,2);
+    mpz_push_nbits_right(tableIndex, temp2, temp, pushed2);
 
-// }
+    // push entry map
+    int pushed3 = mpz_push_table_entry_map(tableIndex, table);
+
+    mpz_clears(temp,temp2,
+        NULL);
+
+    return pushed1 + pushed2 + pushed3;
+}
+
+int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
+{
+    // zero the table if index is zero
+    if(mpz_cmp_ui(tableIndex, 0) == 0){
+        mtm_table_zero(table);
+        return 0;
+    }
+
+    mpz_t temp; mpz_init(temp);
+    mpz_t temp2; mpz_init(temp2);
+
+    mpz_set(temp2, tableIndex);
+
+    // pop states integer
+    int aposLength1 = mpz_apos_decode_prefix_index_left(temp, temp2);
+    table->states = mpz_get_ui(temp);
+    mpz_load_number_of_n_ones(temp, mpz_sizeinbase(temp2,2)-aposLength1);
+    mpz_and(temp2, temp2, temp);
+
+    // pop workTapes integer
+    int aposLength2 = mpz_apos_decode_prefix_index_left(temp, temp2);
+    table->workTapes = mpz_get_ui(temp);
+    mpz_load_number_of_n_ones(temp, mpz_sizeinbase(temp2,2)-aposLength2);
+    mpz_and(temp2, temp2, temp);
+
+    // pop entry map
+    int mapLength = mpz_pop_table_entry_map_left(temp2, table);
+
+    mpz_clears(temp,temp2,
+        NULL);
+
+    return aposLength1 + aposLength2 + mapLength;
+}
+
