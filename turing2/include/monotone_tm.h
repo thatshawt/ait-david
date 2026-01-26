@@ -28,7 +28,7 @@ on input p
 #endif
 
 #ifndef MTM_MAX_STATES
-#define MTM_MAX_STATES 10
+#define MTM_MAX_STATES 5
 #endif
 
 #ifndef MTM_MAX_TAPE_SIZE
@@ -77,6 +77,7 @@ bool mtm_table_increment(mtm_transition_table_t* table);
 void mtm_table_zero(mtm_transition_table_t* table);
 
 void mtm_print_table(mtm_transition_table_t* table);
+void mtm_print_table_summary(mtm_transition_table_t* table);
 
 
 void mpz_prefix_index_get_bit_length(mpz_t prefixIndex, mpz_t bitlength);

@@ -28,15 +28,17 @@ typedef struct{
 */
 void mtm_table_init(mtm_transition_table_t* table, int states, int workTapes)
 {
-    table->states = states;
-    table->workTapes = workTapes;
-
     for(int i=1;i<MTM_MAX_WORK_TAPES+2;i++){
         table->_D[i] = 2;
     }
     table->_D[0] = MTM_MAX_STATES;
 
     table->entryMap = CreateArray(MTM_MAX_WORK_TAPES+2, table->_D);
+
+    table->states = states;
+    table->workTapes = workTapes;
+
+    mtm_table_zero(table);
 }
 
 /*  Return a pointer to an element in an N-dimensional A array with sizes
@@ -56,17 +58,6 @@ mtm_transition_entry_t* Element(mtm_transition_entry_t* A, size_t N, size_t D[],
     //  Return address of element.
     return &A[index];
 }
-
-
-// typedef struct{
-//     char state; // max states
-//     char inputRead; // max 2
-//     char workTapeReads[MTM_MAX_WORK_TAPES]; // each has max 2
-// } mtm_entry_index_t;
-// mtm_transition_entry_t* mtm_entrymap_get_entry(mtm_transition_entry_t* entryMap, mtm_entry_index_t* entryIndex, int states, int workTapes)
-// {
-
-// }
 
 mtm_transition_entry_t* mtm_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex)
 {
@@ -122,6 +113,23 @@ void mtm_print_entry(mtm_transition_entry_t* entry, int workTapes)
     printf("    nextState: %d\n", entry->nextState);
 }
 
+void mtm_print_entry_short(mtm_transition_entry_t* entry, int workTapes)
+{
+    printf("(inputMove, outputWrite, outputMove, ");
+    for(int i=0;i<workTapes;i++){
+        printf("tape%dWrite, ", i);
+        printf("tape%dMove, ", i);
+    }
+    printf("nextState)\n");
+
+    printf("(%d, %d, %d, ", entry->inputTapeMove, entry->outputTapeWrite, entry->outputTapeMove);
+    for(int i=0;i<workTapes;i++){
+        printf("%d, ", entry->workTapeWrites[i]);
+        printf("%d, ", entry->workTapeMoves[i]);
+    }
+    printf("%d)\n", entry->nextState);
+}
+
 // typedef struct{
 //     char state;
 //     char inputRead;
@@ -137,61 +145,82 @@ void mtm_print_entry_index(mtm_entry_index_t* entryIndex, int workTapes)
     }
 }
 
-// typedef struct{
-//     int states;
-//     int workTapes;
-//     mtm_transition_entry_t* entryMap;
+void mtm_print_entry_index_short(mtm_entry_index_t* entryIndex, int workTapes)
+{
+    printf("(state, inputRead, ");
+    for(int i=0;i<workTapes;i++){
+        if(i == workTapes-1) printf("workTape%dRead)", i);
+        else printf("workTape%dRead, ", i);
+    }
 
-//     size_t _D[MTM_MAX_WORK_TAPES+2];
-// } mtm_transition_table_t;
+    printf(" (%d, %d, ", entryIndex->state, entryIndex->inputRead);
+    for(int i=0;i<workTapes;i++){
+        if(i == workTapes-1) printf("%d):",entryIndex->workTapeReads[i]);
+        else printf("%d, ",entryIndex->workTapeReads[i]);
+    }
+    printf("\n");
+}
 
-// typedef struct{
-//     char state; // max states
-//     char inputRead; // max 2
-//     char workTapeReads[MTM_MAX_WORK_TAPES]; // each has max 2
-// } mtm_entry_index_t;
+void mtm_print_table_header(mtm_transition_table_t* table)
+{
+    int workTapes = table->workTapes;
+    printf("(state, inputRead, ");
+    for(int i=0;i<workTapes;i++){
+        if(i == workTapes-1) printf("workTape%dRead)", i);
+        else printf("workTape%dRead, ", i);
+    }
+    printf(" -> ");
+
+    printf("(inputMove, outputWrite, outputMove, ");
+    for(int i=0;i<workTapes;i++){
+        printf("tape%dWrite, ", i);
+        printf("tape%dMove, ", i);
+    }
+    printf("nextState):\n");
+}
+
+void mtm_print_table_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex)
+{
+    const int workTapes = table->workTapes;
+    printf("    (%d, %d, ", entryIndex->state, entryIndex->inputRead);
+    for(int i=0;i<workTapes;i++){
+        if(i == workTapes-1) printf("%d) -> ",entryIndex->workTapeReads[i]);
+        else printf("%d, ",entryIndex->workTapeReads[i]);
+    }
+
+    mtm_transition_entry_t* entry = mtm_table_get_entry(table, entryIndex);
+
+    printf("(%d, %d, %d, ", entry->inputTapeMove, entry->outputTapeWrite, entry->outputTapeMove);
+    for(int i=0;i<workTapes;i++){
+        printf("%d, ", entry->workTapeWrites[i]);
+        printf("%d, ", entry->workTapeMoves[i]);
+    }
+    printf("%d)\n", entry->nextState);
+}
+
 void mtm_print_table(mtm_transition_table_t* table)
 {
     const int states = table->states;
     const int workTapes = table->workTapes;
 
     mtm_entry_index_t entryIndex;
+    mtm_entry_index_zero(&entryIndex);
 
-    for(int state=1;state<states;state++){
-        entryIndex.state = state;
+    mtm_print_table_header(table);
+    int conut = 0;
+    do{
+        mtm_print_table_entry(table, &entryIndex);
+        // mtm_print_entry_index_short(&entryIndex, workTapes);
+        // mtm_print_entry_short(mtm_table_get_entry(table, &entryIndex), workTapes);
+        // printf("\n");
+        conut++;
+    }while(!mtm_entry_index_increment(&entryIndex, states, workTapes) && conut<100);
 
-        for(int inputRead=0;inputRead<2;inputRead++){
-            entryIndex.inputRead = inputRead;
+}
 
-            int workTapeReads[MTM_MAX_WORK_TAPES+2] = {0};
-            int workTapeCounter = 0;
-            while(workTapeCounter < workTapes){
-                for(int i=0;i<workTapes;i++)
-                    entryIndex.workTapeReads[i] = workTapeReads[i];
-
-                mtm_print_entry_index(&entryIndex, workTapes);
-                mtm_print_entry(mtm_table_get_entry(table, &entryIndex), workTapes);
-                printf("\n");
-
-                int overflows = 0;
-                INCREMENT:
-                if(workTapeCounter < workTapes){
-                    workTapeReads[workTapeCounter]++;
-                    if(workTapeReads[workTapeCounter]>=2){
-                        workTapeReads[workTapeCounter]=0;
-                        workTapeCounter++;
-                        overflows++;
-                        goto INCREMENT;
-                    }
-                }
-                if(overflows < workTapes)workTapeCounter = 0;
-                // printf("end of workTapeCounter forloop\n");
-            }
-            // printf("end of inputRead forloop\n");
-        }
-        // printf("end of state forloop\n");
-    }
-    // printf("end of func\n");
+void mtm_print_table_summary(mtm_transition_table_t* table)
+{
+    printf("table: states %d, worktapes %d", table->states, table->workTapes);
 }
 
 void mtm_entry_index_zero(mtm_entry_index_t* entryIndex)
@@ -225,6 +254,7 @@ bool lincrement_int(int n, int* sizes, int* digits)
     return false;
 }
 
+//TODO change this to use mpz maybe?
 bool mtm_entry_index_increment(mtm_entry_index_t* entryIndex, int states, int worktapes)
 {
     // entry index encoding
@@ -265,7 +295,7 @@ void mtm_entry_zero(mtm_transition_entry_t* entry)
     entry->outputTapeWrite = 0;
     entry->outputTapeMove = 0;
     entry->nextState = 0;
-    for(int i=0;i<MTM_MAX_WORK_TAPES;i++){
+    for(int i=0; i<MTM_MAX_WORK_TAPES; i++){
         entry->workTapeWrites[i] = 0;
         entry->workTapeMoves[i] = 0;
     }
@@ -401,7 +431,7 @@ void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states,
 
 inline void mpz_load_number_of_n_ones(mpz_t rop, int n)
 {
-    if(n == 0){
+    if(n < 0){
         mpz_set_ui(rop, 0);
     }else{
         mpz_set_ui(rop, 1);
@@ -591,6 +621,12 @@ void mpz_bar_decode_left(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_le
     mpz_t temp; mpz_init(temp);
 
     const int shifted = lengthOfBarEncodedFull - *lengthx - *lengthx - 1;
+
+    if(shifted < 0){
+        mpz_clear(temp);
+        return;
+    }
+
     mpz_load_number_of_n_ones(temp, *lengthx);
     mpz_lshift(temp, temp, shifted);
     // gmp_printf("shifted %d left is %Zd\n", shifted, temp);
@@ -688,6 +724,15 @@ int mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_l
     *lengthx = mpz_get_ui(temp);
 
     int shifted = lengthOfFullNumber - lengthOfLength - lengthOfLength - 1 - *lengthx;
+    if(shifted < 0){
+        *lengthx = 0;
+        mpz_set_ui(x, 0);
+
+        mpz_clears(temp, temp2, NULL);
+
+        return 0;
+    }
+
     // gmp_printf("shifted %d\n", shifted);
     mpz_load_number_of_n_ones(temp, *lengthx);
     mpz_lshift(temp, temp, shifted);
@@ -701,6 +746,11 @@ int mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_l
 
 int mpz_apos_decode_prefix_index_left(mpz_t prefixIndex, mpz_t number_with_apos_encoded_left)
 {
+    // if(mpz_cmp_ui(number_with_apos_encoded_left, 0) == 0){
+
+    //     return 0;
+    // }
+
     mpz_t xint; mpz_init(xint);
     mpz_t temp; mpz_init(temp);
     int lengthx;
@@ -711,8 +761,7 @@ int mpz_apos_decode_prefix_index_left(mpz_t prefixIndex, mpz_t number_with_apos_
 
     mpz_get_prefix_index_from_int_and_length(prefixIndex, xint, temp);
 
-    mpz_clears(xint,temp,
-        NULL);
+    mpz_clears(xint,temp, NULL);
 
     return aposLength;
 }
@@ -737,6 +786,7 @@ int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table)
 
     // push the entryMap digits
     do{
+        if(worktapes < 1)continue;
         entry = mtm_table_get_entry(table, &index);
 
         mtm_entry_get_digit(temp2, entry, states, worktapes);
@@ -747,8 +797,7 @@ int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table)
 
     }while(!mtm_entry_index_increment(&index, states, worktapes));
 
-    mpz_clears(temp, temp2,
-        NULL);
+    mpz_clears(temp, temp2, NULL);
 
     return totalBitsAdded;
 }
@@ -777,25 +826,41 @@ int mpz_pop_table_entry_map_left(mpz_t number, mtm_transition_table_t* table)
         entry = mtm_table_get_entry(table, &index);
 
         // get the entry digit
+        int shift = numberFullLength-totalBitsRemoved-bitsi;
+        if(shift < 0){
+            break;
+        }
         mpz_load_number_of_n_ones(temp, bitsi);
-        mpz_lshift(temp, temp, numberFullLength-totalBitsRemoved-bitsi);
+        mpz_lshift(temp, temp, shift);
         mpz_and(temp, temp, number);
+        mpz_rshift(temp, temp, shift);
+
+        // gmp_printf("found entry digits: %Zd\n", temp);
         
         // load the entry into the table
-        mtm_entry_from_digit(entry, temp2, states, worktapes);
+        mtm_entry_from_digit(entry, temp, states, worktapes);
         
         totalBitsRemoved += bitsi;
     }while(!mtm_entry_index_increment(&index, states, worktapes));
 
-    mpz_clears(temp, temp2,
-        NULL);
-
     // remove the entry digits
     mpz_load_number_of_n_ones(temp, totalBitsRemoved);
-    mpz_lshift(temp, temp, numberFullLength-totalBitsRemoved);
-    mpz_and(number, number, temp);
+    int shift = numberFullLength-totalBitsRemoved;
+    if(shift < 0){
+        mpz_clears(temp, temp2, NULL);
+        return 0;
+    }else{
+        mpz_lshift(temp, temp, shift);
 
-    return totalBitsRemoved;
+        // gmp_printf("temp %Zd\n", temp);
+        // gmp_printf("number before and %Zd\n", number);
+        mpz_and(number, number, temp);
+        // gmp_printf("number after and %Zd\n", number);
+
+        mpz_clears(temp, temp2, NULL);
+
+        return totalBitsRemoved;
+    }
 }
 
 /*
@@ -829,8 +894,7 @@ int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table)
     // push entry map
     int pushed3 = mpz_push_table_entry_map(tableIndex, table);
 
-    mpz_clears(temp,temp2,
-        NULL);
+    mpz_clears(temp,temp2, NULL);
 
     return pushed1 + pushed2 + pushed3;
 }
@@ -861,10 +925,10 @@ int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
     mpz_and(temp2, temp2, temp);
 
     // pop entry map
+    // gmp_printf("temp2 when map pop %Zd\n", temp2);
     int mapLength = mpz_pop_table_entry_map_left(temp2, table);
 
-    mpz_clears(temp,temp2,
-        NULL);
+    mpz_clears(temp,temp2, NULL);
 
     return aposLength1 + aposLength2 + mapLength;
 }

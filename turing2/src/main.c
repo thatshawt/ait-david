@@ -35,9 +35,9 @@ int main(){
 
         turing_threading_self_init();
 
-        test_opt_t testOptions;
-        testOptions.onlyPrintFailingTests = false;
-        test_all(&testOptions);
+        // test_opt_t testOptions;
+        // testOptions.onlyPrintFailingTests = false;
+        // test_all(&testOptions);
 
         // return 0;
     }
@@ -45,12 +45,31 @@ int main(){
     // mtm testing
 
     int states = 2;
-    int worktapes = 3;
+    int worktapes = 2;
+
+    const int bitsi = mtm_get_entry_bits(states, worktapes);
+
+    printf("entry bits %d\n", bitsi);
 
     mtm_transition_table_t table;
     mtm_table_init(&table, states, worktapes);
-    // mtm_print_table(&table);
+    mpz_t tableIndexHEEHEE; mpz_init(tableIndexHEEHEE);
+
+    // 153 << (16*8)
+    mpz_set_ui(tableIndexHEEHEE, 153);
+    mpz_lshift(tableIndexHEEHEE, tableIndexHEEHEE, 16*8);
+    mpz_add_ui(tableIndexHEEHEE, tableIndexHEEHEE, 4260087681);
+    int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
+    gmp_printf("loaded %d bits from table index %Zd\n",
+        loadedBitsFromIndex123123, tableIndexHEEHEE);
+    mtm_print_table_summary(&table);
+    printf("\n");
+    mtm_print_table(&table);
+
     mtm_table_free(&table);
+
+    mpz_clear(tableIndexHEEHEE);
+    return 1;
 
     int barencoded = 863;
     mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
@@ -72,9 +91,11 @@ int main(){
     mpz_t bitinteger; mpz_init(bitinteger);
     mpz_t xFromIntAndLength; mpz_init(xFromIntAndLength);
 
+    mpz_t prefixXFromAposX; mpz_init(prefixXFromAposX);
+
     mpz_t decodedBarX; mpz_init(decodedBarX);
     mpz_t decodedAposX; mpz_init(decodedAposX);
-    for(int i=0;i<20;i++){
+    for(int i=0;i<25;i++){
         mpz_set_ui(x,i);
 
         mpz_prefix_index_get_bit_length(x, bitlength);
@@ -82,28 +103,64 @@ int main(){
 
         mpz_get_prefix_index_from_int_and_length(xFromIntAndLength, bitinteger, bitlength);
 
+        gmp_printf("(%Zd    -> length:%Zd, int:%Zd -> %Zd)\n",
+                x, bitlength, bitinteger, xFromIntAndLength
+        );
+
         mpz_bar_encode(bar_encoded, bitinteger, mpz_get_ui(bitlength));
-        // mpz_apos_encode(apos_encoded, bitinteger, mpz_get_ui(bitlength));
+
         mpz_apos_encode_prefix_index(apos_encoded, x);
 
         int decodedBarLengthX;
         mpz_bar_decode_left(decodedBarX, &decodedBarLengthX, bar_encoded);
+
+        gmp_printf("(bar:%Zd -> length:%d, int:%Zd) \n",
+            bar_encoded, decodedBarLengthX, decodedBarX
+        );
 
         int decodedAposLengthX;
         mpz_apos_decode_left(decodedAposX, &decodedAposLengthX, apos_encoded);
 
         mpz_apos_decode_prefix_index_left(xFromApos, apos_encoded);
 
+        mpz_apos_decode_prefix_index_left(prefixXFromAposX, x);
+
         gmp_printf(
-            "(x %Zd, bitlength %Zd, bitinteger %Zd, xFromIntAndLength:%Zd), (bar_encoded %Zd -> xlength: %d, xint:%Zd), (apos_encoded %Zd -> xlength: %d, xint: %Zd, x: %Zd)\n",
-            x, bitlength, bitinteger, xFromIntAndLength,
-            bar_encoded, decodedBarLengthX, decodedBarX,
-            apos_encoded, decodedAposLengthX, decodedAposX, xFromApos
+            "(apos:%Zd -> length: %d, int:%Zd -> %Zd) (xprefixApos: %Zd)\n",
+            apos_encoded, decodedAposLengthX, decodedAposX, xFromApos, prefixXFromAposX
         );
+
+        printf("\n");
+
     }
     mpz_clears(bitlength,bitinteger,x,bar_encoded,
         apos_encoded,decodedBarX,decodedAposX,xFromIntAndLength,xFromApos,
+        prefixXFromAposX,
         NULL);
+
+    mtm_table_init(&table, states, worktapes);
+    mtm_table_zero(&table);
+    mpz_t tableIndex; mpz_init(tableIndex);
+    for(int i=0; i<4; i++){
+
+        mpz_set_ui(tableIndex, i);
+        int loadedBitsFromIndex = mtm_load_table_from_index(&table, tableIndex);
+
+        if(table.states < 1 || table.states > MTM_MAX_STATES
+        || table.workTapes < 1 || table.workTapes > MTM_MAX_WORK_TAPES) continue;
+
+        printf("table %d, ", i);
+
+        printf(" %d bits from index. ", loadedBitsFromIndex);
+        mtm_print_table_summary(&table);
+
+        // mtm_get_table_index(tableIndex, &table);
+
+        // gmp_printf(" (from get_index %Zd)\n", tableIndex);
+
+        mtm_print_table(&table);
+    }
+
 
     return 1;
 
