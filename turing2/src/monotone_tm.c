@@ -808,9 +808,15 @@ int mpz_pop_entry_left(mpz_t number, mtm_transition_entry_t* entry, int states, 
 {
     // gmp_printf("number %Zd\n", number);
 
-    if(mpz_cmp_ui(number, 1) == 0){
+    if(mpz_cmp_ui(number, 0) == 0){
         mtm_entry_zero(entry);
         return 0;
+    }
+
+    if(mpz_cmp_ui(number, 1) == 0){
+        mtm_entry_zero(entry);
+        mpz_set_ui(number, 0);
+        return 1;
     }
 
     const int numberLength = mpz_sizeinbase(number,2);
@@ -963,6 +969,22 @@ int mpz_table_index_pop_states_worktape(mpz_t tableIndex, int* states, int* work
     return aposLength1 + aposLength2;
 }
 
+int mpz_pop_apos_input_string_into_table(mtm_transition_table_t* table, mpz_t inputApos)
+{
+    mpz_t x; mpz_init(x);
+    
+    // load the string into the input tape of table
+    int aposLength = mpz_apos_decode_prefix_index_left(x, inputApos);
+    mtm_table_load_input_prefix(table, x);
+
+    // pop the encoded thing.
+    int fullInputAposLength = mpz_sizeinbase(inputApos, 2);
+    mpz_load_number_of_n_ones(x, fullInputAposLength-aposLength);
+    mpz_and(inputApos, inputApos, x);
+
+    return aposLength;
+}
+
 int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
 {
     // zero the table if index is zero
@@ -982,9 +1004,16 @@ int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
     // pop entry map
     // gmp_printf("temp2 when map pop %Zd\n", temp2);
     int mapLength = mpz_pop_table_entry_map_left(temp2, table);
+    
+    // remove leading 1 left over from the entry map part
+    mpz_load_number_of_n_ones(temp, mpz_sizeinbase(temp2,2)-1);
+    mpz_and(temp2, temp2, temp);
+
+    // pop the input tape
+    int inputAposPrefixLength = mpz_pop_apos_input_string_into_table(table, temp2);
 
     mpz_clears(temp,temp2, NULL);
 
-    return aposLength1And2 + mapLength;
+    return aposLength1And2 + mapLength + inputAposPrefixLength;
 }
 
