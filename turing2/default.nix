@@ -24,6 +24,6 @@ pkgs.mkShell {
     export MPFR_INCLUDE=${pkgs.mpfr.dev}/include
     export MPFR_LIB=${pkgs.mpfr.out}/lib
     
-    echo "ready for development >:)"
+    echo "ready for development ^ↀᴥↀ^"
   '';
 }
