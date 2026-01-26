@@ -88,7 +88,7 @@ void mpz_get_prefix_index_from_int_and_length(mpz_t prefixIndex, mpz_t bitintege
 void mpz_lshift(mpz_t rop, mpz_t number, int n);
 void mpz_rshift(mpz_t rop, mpz_t number, int n);
 void mpz_load_number_of_n_ones(mpz_t rop, int n);
-void mpz_push_nbits_right(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
+void mpz_ior_bits_lshift(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
 void mpz_pop_nbits_right(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN);
 int mpz_count_leading_ones(mpz_t numberWithLeadingOnes);
 
