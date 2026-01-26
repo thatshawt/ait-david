@@ -19,10 +19,6 @@
 #include "sqlenv.h"
 #include "monotone_tm.h"
 
-// int trivialNonHalters = 0;
-
-// how do we catch more non halters o.O
-
 int main(){
 
     // print various messages.
@@ -54,11 +50,18 @@ int main(){
     mtm_transition_table_t table;
     mtm_table_init(&table, states, worktapes);
     mpz_t tableIndexHEEHEE; mpz_init(tableIndexHEEHEE);
+    mpz_t temp123123; mpz_init(temp123123);
 
-    // 153 << (16*8)
-    mpz_set_ui(tableIndexHEEHEE, 153);
-    mpz_lshift(tableIndexHEEHEE, tableIndexHEEHEE, 16*8);
-    mpz_add_ui(tableIndexHEEHEE, tableIndexHEEHEE, 4260087681);
+    // 2 states, 2 worktapes -> 153
+    // 153 << (16*4), 16 cus each entry is 16 bits long when using 2 states 2 worktapes.
+    // 4260087681 encodes 4 entries
+    // mpz_set_ui(tableIndexHEEHEE, 153);
+    // mpz_lshift(tableIndexHEEHEE, tableIndexHEEHEE, 16*4);
+    // mpz_set_str(temp123123, "4260087681", 10);
+    // mpz_add(tableIndexHEEHEE,tableIndexHEEHEE,temp123123);
+
+    mpz_set_str(tableIndexHEEHEE, "661390083969", 10);
+
     int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
     gmp_printf("loaded %d bits from table index %Zd\n",
         loadedBitsFromIndex123123, tableIndexHEEHEE);
@@ -68,8 +71,9 @@ int main(){
 
     mtm_table_free(&table);
 
-    mpz_clear(tableIndexHEEHEE);
-    return 1;
+    mpz_clears(tableIndexHEEHEE, temp123123, NULL);
+
+    // return 1;
 
     int barencoded = 863;
     mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
@@ -138,28 +142,38 @@ int main(){
         prefixXFromAposX,
         NULL);
 
+    printf("\n\n");
+
     mtm_table_init(&table, states, worktapes);
     mtm_table_zero(&table);
     mpz_t tableIndex; mpz_init(tableIndex);
-    for(int i=0; i<4; i++){
-
-        mpz_set_ui(tableIndex, i);
+    mpz_set_str(tableIndex, "143130624", 10);
+    for(int i=0; i<5; i++){
+        
         int loadedBitsFromIndex = mtm_load_table_from_index(&table, tableIndex);
-
+        
+        
         if(table.states < 1 || table.states > MTM_MAX_STATES
-        || table.workTapes < 1 || table.workTapes > MTM_MAX_WORK_TAPES) continue;
+            || table.workTapes < 1 || table.workTapes > MTM_MAX_WORK_TAPES) continue;
+            
+        gmp_printf("table %Zd:\n", tableIndex);
+        gmp_printf("entry bits for %Zd is %d\n", tableIndex, mtm_get_entry_bits(table.states, table.workTapes));
 
-        printf("table %d, ", i);
-
-        printf(" %d bits from index. ", loadedBitsFromIndex);
+        printf(" %d bits from index\n", loadedBitsFromIndex);
         mtm_print_table_summary(&table);
+        printf("\n");
 
         // mtm_get_table_index(tableIndex, &table);
 
         // gmp_printf(" (from get_index %Zd)\n", tableIndex);
 
         mtm_print_table(&table);
+
+        mpz_add_ui(tableIndex, tableIndex, 1);
+        printf("\n");
     }
+
+    mpz_clears(tableIndex, NULL);
 
 
     return 1;
@@ -207,7 +221,7 @@ int main(){
 
     mpz_clears(digit, digit2, NULL);
 
-    // return 0;
+    return 0;
 
 
 

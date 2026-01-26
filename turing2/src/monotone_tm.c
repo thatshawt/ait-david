@@ -802,65 +802,85 @@ int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table)
     return totalBitsAdded;
 }
 
+int mpz_pop_entry_left(mpz_t number, mtm_transition_entry_t* entry, int states, int worktapes)
+{
+    gmp_printf("number %Zd\n", number);
+
+    if(mpz_cmp_ui(number, 1) == 0){
+        mtm_entry_zero(entry);
+        return 0;
+    }
+
+    const int numberLength = mpz_sizeinbase(number,2);
+    const int bitsi = mtm_get_entry_bits(states, worktapes);
+
+    // try to isolate bitsi bits from number leftside
+    int entries = (numberLength-1) / bitsi;
+    int entryRemainder = (numberLength-1) % bitsi;
+    int entryBits = 0;
+    if(entries > 0){
+        entryBits = bitsi;
+    }else if(entries == 0 && entryRemainder > 0){
+        entryBits = entryRemainder;
+    }
+
+    mpz_t temp1; mpz_init(temp1);
+    mpz_t temp2; mpz_init(temp2);
+
+    // capture the bits and shift it right so its a proper digit
+    mpz_load_number_of_n_ones(temp1, entryBits);
+    mpz_rshift(temp2, number, numberLength-entryBits - 1);
+    mpz_and(temp1, temp1, temp2);
+
+    // load it into entry
+    mtm_entry_from_digit(entry, temp1, states, worktapes);
+
+    // remove the digits we used
+    mpz_load_number_of_n_ones(temp1, numberLength-entryBits - 1);
+    mpz_and(number, number, temp1);
+
+    // add the leading 1 back in because we expect it
+    mpz_set_ui(temp1, 1);
+    mpz_mul_2exp(temp1, temp1, numberLength-entryBits - 1);
+    mpz_add(number, number, temp1);
+
+    mpz_clears(temp1, temp2, NULL);
+
+    return entryBits;
+}
+
 int mpz_pop_table_entry_map_left(mpz_t number, mtm_transition_table_t* table)
 {
-    const int numberFullLength = mpz_sizeinbase(number,2);
-
-    mpz_t temp; mpz_init(temp);
-    mpz_t temp2; mpz_init(temp2);
+    // const int numberFullLength = mpz_sizeinbase(number,2);
+    const int states = table->states;
+    const int worktapes = table->workTapes;
+    
+    if(mpz_cmp_ui(number, 0) == 0){
+        mtm_table_zero(table);
+        return 0;
+    }
 
     mtm_entry_index_t index;
     mtm_entry_index_zero(&index);
-
-    const int states = table->states;
-    const int worktapes = table->workTapes;
-
-    const int bitsi = mtm_get_entry_bits(states, worktapes);
 
     mtm_transition_entry_t* entry;
 
     int totalBitsRemoved = 0;
 
+    // mpz_set(temp, number);
     // pop the entryMap digits
     do{
         entry = mtm_table_get_entry(table, &index);
 
-        // get the entry digit
-        int shift = numberFullLength-totalBitsRemoved-bitsi;
-        if(shift < 0){
-            break;
-        }
-        mpz_load_number_of_n_ones(temp, bitsi);
-        mpz_lshift(temp, temp, shift);
-        mpz_and(temp, temp, number);
-        mpz_rshift(temp, temp, shift);
+        int removed = mpz_pop_entry_left(number, entry, states, worktapes);
+        
+        if(removed == 0)break;
 
-        // gmp_printf("found entry digits: %Zd\n", temp);
-        
-        // load the entry into the table
-        mtm_entry_from_digit(entry, temp, states, worktapes);
-        
-        totalBitsRemoved += bitsi;
+        totalBitsRemoved += removed;
+
     }while(!mtm_entry_index_increment(&index, states, worktapes));
 
-    // remove the entry digits
-    mpz_load_number_of_n_ones(temp, totalBitsRemoved);
-    int shift = numberFullLength-totalBitsRemoved;
-    if(shift < 0){
-        mpz_clears(temp, temp2, NULL);
-        return 0;
-    }else{
-        mpz_lshift(temp, temp, shift);
-
-        // gmp_printf("temp %Zd\n", temp);
-        // gmp_printf("number before and %Zd\n", number);
-        mpz_and(number, number, temp);
-        // gmp_printf("number after and %Zd\n", number);
-
-        mpz_clears(temp, temp2, NULL);
-
-        return totalBitsRemoved;
-    }
+    return totalBitsRemoved;
 }
 
 /*
