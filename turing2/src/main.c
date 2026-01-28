@@ -144,16 +144,20 @@ int main(){
 
     printf("\n\n");
 
+
+
     mtm_table_init(&table, states, worktapes);
     mtm_table_zero(&table);
+
     mpz_t tableIndex; mpz_init(tableIndex);
-    mpz_set_str(tableIndex, "36641439744", 10);
+
+    mpz_set_str(tableIndex, "36773560824", 10);
     mpz_t temp1; mpz_init(temp1);
-    for(int i=0; i<4; i++){
+    for(int i=0; i<10; i++){
         int loadedBitsFromIndex = mtm_load_table_from_index(&table, tableIndex);
         
         if(table.states < 1 || table.states > MTM_MAX_STATES
-            || table.workTapes < 1 || table.workTapes > MTM_MAX_WORK_TAPES) continue;
+            || table.workTapes < 1 || table.workTapes > MTM_MAX_WORK_TAPES)continue;
             
         gmp_printf("table %Zd:\n", tableIndex);
         gmp_printf("entry bits for %Zd is %d\n", tableIndex, mtm_get_entry_bits(table.states, table.workTapes));
@@ -164,7 +168,7 @@ int main(){
 
         int tableGotLength = mtm_get_table_index(temp1, &table);
 
-        gmp_printf(" (%d bits from get_index %Zd)\n",tableGotLength, temp1);
+        gmp_printf(" (%d bits from get_index %Zd)\n", tableGotLength, temp1);
 
         mtm_print_table(&table);
 
@@ -174,6 +178,31 @@ int main(){
 
     mpz_clears(tableIndex, temp1, NULL);
 
+    mtm_tape_t tape;
+    mtm_tape_init(&tape);
+    mtm_tape_print(&tape);
+    printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+    mtm_tape_move_right(&tape);
+    mtm_tape_print(&tape);
+    printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+    mtm_tape_write(&tape, 1);
+    mtm_tape_move_left(&tape);
+    mtm_tape_print(&tape);
+    printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+    mtm_tape_move_left(&tape);
+    mtm_tape_print(&tape);
+    printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+    mtm_tape_move_left(&tape);
+    mtm_tape_print(&tape);
+    printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+    mtm_tape_move_left(&tape);
+    mtm_tape_print(&tape);
+    printf("under head: %d\n\n", mtm_tape_read(&tape));
 
     return 1;
 

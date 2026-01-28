@@ -113,19 +113,26 @@ int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex);
 
 // mtm tapes are binary and go left and right.
 typedef struct{
-    char tapeMemory[MTM_MAX_TAPE_SIZE];
-    unsigned int tapeMemoryMinIndex;
-    unsigned int tapeMemoryMaxIndex;
+    mpz_t tapeMemory;
+    unsigned int headBitIndex;
 
-    unsigned int head_index;
+    mpz_t temp1;
+    mpz_t temp2;
 } mtm_tape_t;
 
+void mtm_tape_print(mtm_tape_t* tape);
+
 void mtm_tape_init(mtm_tape_t* tape);
+void mtm_tape_reset(mtm_tape_t* tape);
 void mtm_tape_destroy(mtm_tape_t* tape);
+
+unsigned long mpz_tape_mem_size(mtm_tape_t* tape);
 
 // 0 writes 0, anything else writes 1.
 void mtm_tape_write(mtm_tape_t* tape, unsigned char symbol);
-unsigned int mtm_tape_read(mtm_tape_t* tape);
+
+// reads a 1 or 0 from under the head.
+unsigned char mtm_tape_read(mtm_tape_t* tape);
 
 void mtm_tape_move_right(mtm_tape_t* tape);
 void mtm_tape_move_left(mtm_tape_t* tape);

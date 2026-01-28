@@ -847,7 +847,8 @@ int mpz_pop_entry_left(mpz_t number, mtm_transition_entry_t* entry, int states, 
     mpz_load_number_of_n_ones(temp1, numberLength-entryBits - 1);
     mpz_and(number, number, temp1);
 
-    // add the leading 1 back in because we expect it
+    // add the leading 1 back in because we expect it. yea
+    // for the input string part to retain its length we need the leading 1
     mpz_set_ui(temp1, 1);
     mpz_mul_2exp(temp1, temp1, numberLength-entryBits - 1);
     mpz_add(number, number, temp1);
@@ -969,20 +970,10 @@ int mpz_table_index_pop_states_worktape(mpz_t tableIndex, int* states, int* work
     return aposLength1 + aposLength2;
 }
 
-int mpz_pop_apos_input_string_into_table(mtm_transition_table_t* table, mpz_t inputApos)
+void mpz_load_input_string_into_table(mtm_transition_table_t* table, mpz_t inputStrInt, int inputStrLength)
 {
-    mpz_t x; mpz_init(x);
-    
-    // load the string into the input tape of table
-    int aposLength = mpz_apos_decode_prefix_index_left(x, inputApos);
-    mtm_table_load_input_prefix(table, x);
+    gmp_printf("loaded input strInt %Zd, length: %d\n", inputStrInt, inputStrLength);
 
-    // pop the encoded thing.
-    int fullInputAposLength = mpz_sizeinbase(inputApos, 2);
-    mpz_load_number_of_n_ones(x, fullInputAposLength-aposLength);
-    mpz_and(inputApos, inputApos, x);
-
-    return aposLength;
 }
 
 int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
@@ -1005,15 +996,97 @@ int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
     // gmp_printf("temp2 when map pop %Zd\n", temp2);
     int mapLength = mpz_pop_table_entry_map_left(temp2, table);
     
+    // int inputStringLength = mpz_pop_leading1_input_string_into_table(temp2, table);
+
+    int inputStrLength = mpz_sizeinbase(temp2,2)-1;
+
     // remove leading 1 left over from the entry map part
+    gmp_printf("input with leading1: %Zd\n", temp2);
     mpz_load_number_of_n_ones(temp, mpz_sizeinbase(temp2,2)-1);
     mpz_and(temp2, temp2, temp);
 
+    mpz_load_input_string_into_table(table, temp2, inputStrLength);
+
     // pop the input tape
-    int inputAposPrefixLength = mpz_pop_apos_input_string_into_table(table, temp2);
+    // int inputAposPrefixLength = mpz_pop_apos_input_string_into_table(table, temp2);
 
     mpz_clears(temp,temp2, NULL);
 
-    return aposLength1And2 + mapLength + inputAposPrefixLength;
+    return aposLength1And2 + mapLength + inputStrLength;
 }
 
+void mtm_tape_print(mtm_tape_t* tape)
+{
+    gmp_printf("tape head: %d, tapeMemory: %Zd\n", tape->headBitIndex, tape->tapeMemory);
+}
+
+void mtm_tape_init(mtm_tape_t* tape)
+{
+    mpz_inits(tape->tapeMemory, tape->temp1, tape->temp2, NULL);
+    mpz_set_ui(tape->tapeMemory, 2); // binary 1 0
+    tape->headBitIndex = 0;
+}
+
+void mtm_tape_reset(mtm_tape_t* tape)
+{
+    mpz_set_ui(tape->tapeMemory, 2); // binary 1 0
+    tape->headBitIndex = 0;
+}
+
+void mtm_tape_destroy(mtm_tape_t* tape)
+{
+    mpz_clears(tape->tapeMemory, tape->temp1, tape->temp2, NULL);
+}
+
+inline unsigned long mpz_tape_mem_size(mtm_tape_t* tape)
+{
+    return mpz_sizeinbase(tape->tapeMemory,2);
+}
+
+// 0 writes 0, anything else writes 1.
+void mtm_tape_write(mtm_tape_t* tape, unsigned char symbol)
+{
+    const unsigned int headBitIndex = tape->headBitIndex;
+    // write 0
+    if(symbol == 0){
+        mpz_clrbit(tape->tapeMemory, headBitIndex);
+    }else{// write 1
+        mpz_setbit(tape->tapeMemory, headBitIndex);
+    }
+}
+
+// reads a 1 or 0 from under the head.
+unsigned char mtm_tape_read(mtm_tape_t* tape)
+{
+    const unsigned int headBitIndex = tape->headBitIndex;
+
+    return mpz_tstbit(tape->tapeMemory, headBitIndex);
+}
+
+void mtm_tape_move_right(mtm_tape_t* tape)
+{
+    const unsigned long tapeSize = mpz_tape_mem_size(tape);
+    const unsigned int headBitIndex = tape->headBitIndex;
+
+    // need to grow tape
+    if(headBitIndex == 0){
+        mpz_lshift(tape->tapeMemory, tape->tapeMemory, 1);
+    }else{
+        tape->headBitIndex--;
+    }
+}
+
+void mtm_tape_move_left(mtm_tape_t* tape)
+{
+    const unsigned long tapeSize = mpz_tape_mem_size(tape);
+    const unsigned int headBitIndex = tape->headBitIndex;
+
+    // need to grow tape
+    if(headBitIndex == tapeSize-2){
+        // add another leading 1 and remove the previous one
+        mpz_clrbit(tape->tapeMemory, tapeSize-1);
+        mpz_setbit(tape->tapeMemory, tapeSize);
+    }
+
+    tape->headBitIndex++;
+}
