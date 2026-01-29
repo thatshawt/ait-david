@@ -925,9 +925,8 @@ int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table)
     // gmp_printf("size %d pushed %Zd, tableIndex %Zd\n",pushed2, temp, tableIndex);
 
     // push a 1 before the map
-    mpz_set_ui(temp, 1);
     mpz_lshift(tableIndex, tableIndex, 1);
-    mpz_ior(tableIndex, tableIndex, temp);
+    mpz_setbit(tableIndex, 0);
     // gmp_printf("size %d pushed %Zd, tableIndex %Zd\n", 1, temp, tableIndex);
 
     // push entry map
@@ -1090,3 +1089,78 @@ void mtm_tape_move_left(mtm_tape_t* tape)
 
     tape->headBitIndex++;
 }
+
+// TODO check behavior of empty tape
+void mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode)
+{
+    mpz_set_ui(tapeCode, 0);
+
+    int tapeLength = mpz_tape_mem_size(tape);
+    mpz_set(tape->temp1, tape->tapeMemory);
+    mpz_clrbit(tape->temp1, tapeLength-1); // remove the leading 1
+
+    // encode string using apos encoding
+    mpz_apos_encode(tapeCode, tape->temp1, tapeLength-1);
+
+    // encode the headBitIndex with apos
+    mpz_set_ui(tape->temp1, tape->headBitIndex);
+    mpz_apos_encode_prefix_index(tape->temp2, tape->temp1);
+    mpz_lshift(tapeCode, tapeCode, mpz_sizeinbase(tape->temp2,2));
+    mpz_ior(tapeCode, tapeCode, tape->temp2);
+}
+
+// TODO check behavior of empty tape
+int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode)
+{
+    int tapeLength;
+    // decode the apos encoded tapeMemory
+    int aposLength1 = mpz_apos_decode_left(tape->tapeMemory, &tapeLength, tapeCode);
+
+    //add the leading 1
+    mpz_setbit(tape->tapeMemory, tapeLength);
+
+    // decode the apos prefix encoded headBitIndex
+    mpz_set(tape->temp1, tapeCode);
+    int fullTapeCodeLength = mpz_sizeinbase(tapeCode,2);
+    mpz_load_number_of_n_ones(tape->temp2, fullTapeCodeLength-aposLength1);
+    mpz_and(tape->temp1, tape->temp1, tape->temp2); // cut out the tapeMemory apos part
+
+    int aposLength2 = mpz_apos_decode_prefix_index_left(tape->temp2, tape->temp1);
+    tape->headBitIndex = mpz_get_ui(tape->temp2);
+
+    return aposLength1 + aposLength2;
+}
+
+void mtm_init(mtm_t* mtm, int states, int worktapes)
+{
+    pthread_mutex_init(&mtm->mutex, NULL);
+
+    mtm_table_init(&mtm->table, states, worktapes);
+
+    mtm_tape_init(&mtm->inputTape);
+    mtm_tape_init(&mtm->outputTape);
+    for(int i=0;i<MTM_MAX_WORK_TAPES;i++)mtm_tape_init(&mtm->workTapesArray[i]);
+}
+
+void mtm_destroy(mtm_t* mtm)
+{
+    pthread_mutex_destroy(&mtm->mutex);
+
+    mtm_table_free(&mtm->table);
+
+    mtm_tape_destroy(&mtm->inputTape);
+    mtm_tape_destroy(&mtm->outputTape);
+    for(int i=0;i<MTM_MAX_WORK_TAPES;i++)mtm_tape_destroy(&mtm->workTapesArray[i]);
+}
+
+void mtm_lock(mtm_t* mtm)
+{
+    pthread_mutex_lock(&mtm->mutex);
+}
+
+void mtm_unlock(mtm_t* mtm)
+{
+    pthread_mutex_unlock(&mtm->mutex);
+}
+
+

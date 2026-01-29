@@ -120,6 +120,9 @@ typedef struct{
     mpz_t temp2;
 } mtm_tape_t;
 
+void mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode);
+int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode);
+
 void mtm_tape_print(mtm_tape_t* tape);
 
 void mtm_tape_init(mtm_tape_t* tape);
@@ -138,33 +141,38 @@ void mtm_tape_move_right(mtm_tape_t* tape);
 void mtm_tape_move_left(mtm_tape_t* tape);
 
 void mtm_tape_ranged_fill_with_symbol(mtm_tape_t* tape, unsigned char fillSymbol, unsigned int startIndex, unsigned int endIndex);
-void mtm_tape_fill_with_symbol(mtm_tape_t* tape, unsigned char fillSymbol);
 void mtm_tape_fill_with_zeros(mtm_tape_t* tape);
 void mtm_tape_fill_with_ones(mtm_tape_t* tape);
-void mtm_tape_fill_with_callback(mtm_tape_t* tape, void* data, unsigned char(*fillCallback)(void* data, unsigned int index));
+void mtm_tape_fill_with_callback(
+    mtm_tape_t* tape,
+    void* data,
+    unsigned char(*fillCallback)(void* data, unsigned int tapeBitIndex)
+);
 
 typedef struct{
     pthread_mutex_t mutex;
 
     int state;
     // unidirectional, read-only
-    mtm_tape_t input_tape;
+    mtm_tape_t inputTape;
     // unidirectional, write-only
-    mtm_tape_t output_tape;
+    mtm_tape_t outputTape;
     // bidirectional, read-write
-    mtm_tape_t work_tapes_array[MTM_MAX_WORK_TAPES];
+    mtm_tape_t workTapesArray[MTM_MAX_WORK_TAPES];
 
-    mtm_transition_table_t transition_table;
-
-    mtm_entry_index_t _entryIndex;
+    mtm_transition_table_t table;
 
 } mtm_t;
 
 // lock whenever reading/writing a mtm_t's state.
 // unlock when your done.
-void mtm_lock();
-void mtm_unlock();
+void mtm_lock(mtm_t* mtm);
+void mtm_unlock(mtm_t* mtm);
 
+void mtm_init(mtm_t* mtm, int states, int worktapes);
+void mtm_destroy(mtm_t* mtm);
+
+int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode);
 
 
 #endif
