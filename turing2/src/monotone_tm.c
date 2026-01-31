@@ -5,6 +5,8 @@
 
 #include "monotone_tm.h"
 
+#include <string.h>
+
 // https://stackoverflow.com/questions/19883518/how-can-i-create-an-n-dimensional-array-in-c
 //  Create an array with N dimensions with sizes specified in D.
 mtm_transition_entry_t* CreateArray(size_t N, size_t D[])
@@ -969,11 +971,11 @@ int mpz_table_index_pop_states_worktape(mpz_t tableIndex, int* states, int* work
     return aposLength1 + aposLength2;
 }
 
-void mpz_load_input_string_into_table(mtm_transition_table_t* table, mpz_t inputStrInt, int inputStrLength)
-{
-    gmp_printf("loaded input strInt %Zd, length: %d\n", inputStrInt, inputStrLength);
+// void mpz_load_input_string_into_table(mtm_transition_table_t* table, mpz_t inputStrInt, int inputStrLength)
+// {
+//     gmp_printf("loaded input strInt %Zd, length: %d\n", inputStrInt, inputStrLength);
 
-}
+// }
 
 int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
 {
@@ -997,21 +999,18 @@ int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
     
     // int inputStringLength = mpz_pop_leading1_input_string_into_table(temp2, table);
 
-    int inputStrLength = mpz_sizeinbase(temp2,2)-1;
+    // int inputStrLength = mpz_sizeinbase(temp2,2)-1;
 
-    // remove leading 1 left over from the entry map part
-    gmp_printf("input with leading1: %Zd\n", temp2);
-    mpz_load_number_of_n_ones(temp, mpz_sizeinbase(temp2,2)-1);
-    mpz_and(temp2, temp2, temp);
+    // // remove leading 1 left over from the entry map part
+    // gmp_printf("input with leading1: %Zd\n", temp2);
+    // mpz_load_number_of_n_ones(temp, mpz_sizeinbase(temp2,2)-1);
+    // mpz_and(temp2, temp2, temp);
 
-    mpz_load_input_string_into_table(table, temp2, inputStrLength);
-
-    // pop the input tape
-    // int inputAposPrefixLength = mpz_pop_apos_input_string_into_table(table, temp2);
+    // mpz_load_input_string_into_table(table, temp2, inputStrLength);
 
     mpz_clears(temp,temp2, NULL);
 
-    return aposLength1And2 + mapLength + inputStrLength;
+    return aposLength1And2 + mapLength;
 }
 
 void mtm_tape_print(mtm_tape_t* tape)
@@ -1091,7 +1090,7 @@ void mtm_tape_move_left(mtm_tape_t* tape)
 }
 
 // TODO check behavior of empty tape
-void mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode)
+int mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode)
 {
     mpz_set_ui(tapeCode, 0);
 
@@ -1107,6 +1106,8 @@ void mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode)
     mpz_apos_encode_prefix_index(tape->temp2, tape->temp1);
     mpz_lshift(tapeCode, tapeCode, mpz_sizeinbase(tape->temp2,2));
     mpz_ior(tapeCode, tapeCode, tape->temp2);
+
+    return mpz_sizeinbase(tapeCode,2);
 }
 
 // TODO check behavior of empty tape
@@ -1131,9 +1132,37 @@ int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode)
     return aposLength1 + aposLength2;
 }
 
+void mtm_tape_goto_leftmost(mtm_tape_t* tape)
+{
+    int tapeMemSize = mpz_tape_mem_size(tape);
+    tape->headBitIndex = tapeMemSize-2;
+}
+
+void mtm_tape_goto_rightmost(mtm_tape_t* tape)
+{
+    tape->headBitIndex = 0;
+}
+
+// str null terminated, or else.
+void mtm_tape_load_str(mtm_tape_t* tape, char* str)
+{
+    // god, i pray for null terminated strings.
+    int strLen = strlen(str);
+
+    // load the base 2 string
+    mpz_set_str(tape->tapeMemory, str, 2);
+
+    // leading 1
+    mpz_setbit(tape->tapeMemory, strLen);
+
+    mtm_tape_goto_leftmost(tape);
+}
+
 void mtm_init(mtm_t* mtm, int states, int worktapes)
 {
     pthread_mutex_init(&mtm->mutex, NULL);
+
+    mtm_entry_index_zero(&mtm->tempIndex);
 
     mtm_table_init(&mtm->table, states, worktapes);
 
@@ -1163,4 +1192,55 @@ void mtm_unlock(mtm_t* mtm)
     pthread_mutex_unlock(&mtm->mutex);
 }
 
+// mtm code [table, inputTape]
+int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
+{
+    mpz_t temp1; mpz_init(temp1);
+    mpz_t temp2; mpz_init(temp2);
 
+    mpz_set(temp1, mtmCode);
+
+    // load table
+    int tableBits = mtm_load_table_from_index(&mtm->table, temp1);
+    mpz_load_number_of_n_ones(temp2, mpz_sizeinbase(temp1,2) - tableBits);
+    mpz_and(temp1, temp1, temp2);
+
+    // load inputTape 
+    int inputTapeBits = mtm_tape_load_from_code(&mtm->inputTape, temp1);
+
+    mpz_clears(temp1, temp2, NULL);
+
+    return tableBits + inputTapeBits;
+}
+
+// mtm code [table, inputTape]
+int mtm_get_code(mtm_t* mtm, mpz_t mtmCode)
+{
+
+    mpz_set_ui(mtmCode, 0);
+
+    mpz_t temp1; mpz_init(temp1);
+
+    // push table encoding
+    int tableBits = mtm_get_table_index(mtmCode, &mtm->table);
+    // mpz_lshift(mtmCode, mtmCode, tableBits);
+
+    //push inputTape encoding
+    int inputTapeBits = mtm_tape_get_code(&mtm->inputTape, temp1);
+    mpz_lshift(mtmCode, mtmCode, inputTapeBits);
+    mpz_ior(mtmCode, mtmCode, temp1);
+
+    mpz_clears(temp1, NULL);
+
+    return tableBits + inputTapeBits;
+}
+
+void mtm_print(mtm_t* mtm)
+{
+    printf("mtm:\ninputTape,outputTape:\n");
+    mtm_tape_print(&mtm->inputTape);
+    mtm_tape_print(&mtm->outputTape);
+    mtm_print_table_summary(&mtm->table);
+    printf("\n");
+    mtm_print_table(&mtm->table);
+}

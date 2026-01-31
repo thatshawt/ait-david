@@ -228,6 +228,34 @@ int main(){
     mtm_tape_destroy(&tape);
     mpz_clear(tapeCode);
 
+    mtm_t mtm;
+    mtm_init(&mtm, 1, 1);
+
+    mtm.tempIndex.inputRead = 1;
+
+    mtm_transition_entry_t* entryIdk = mtm_table_get_entry(&mtm.table, &mtm.tempIndex);
+    entryIdk->inputTapeMove = 1;
+    entryIdk->outputTapeWrite = 1;
+    entryIdk->nextState = 1;
+
+    mtm_tape_load_str(&mtm.inputTape, "0000010101010101010101010101010");
+
+    mpz_t mtmCode; mpz_init(mtmCode);
+
+    int mtmcodebits = mtm_get_code(&mtm, mtmCode);
+
+    gmp_printf("\nbits %d, mtmCode %Zd\n", mtmcodebits, mtmCode);
+
+    mtm_load_from_code(&mtm, mtmCode);
+    mtmcodebits = mtm_get_code(&mtm, mtmCode);
+
+    gmp_printf("\nbits %d, mtmCode %Zd\n", mtmcodebits, mtmCode);
+
+    mtm_print(&mtm);
+
+    mpz_clears(mtmCode, NULL);
+    mtm_destroy(&mtm);
+
     return 1;
 
     // printf("entryindex increment test\n");

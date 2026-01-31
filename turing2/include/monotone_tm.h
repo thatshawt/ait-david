@@ -120,7 +120,12 @@ typedef struct{
     mpz_t temp2;
 } mtm_tape_t;
 
-void mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode);
+
+void mtm_tape_goto_leftmost(mtm_tape_t* tape);
+void mtm_tape_goto_rightmost(mtm_tape_t* tape);
+void mtm_tape_load_str(mtm_tape_t* tape, char* str);
+
+int mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode);
 int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode);
 
 void mtm_tape_print(mtm_tape_t* tape);
@@ -149,6 +154,7 @@ void mtm_tape_fill_with_callback(
     unsigned char(*fillCallback)(void* data, unsigned int tapeBitIndex)
 );
 
+// mtm code [table, inputTape]
 typedef struct{
     pthread_mutex_t mutex;
 
@@ -162,6 +168,8 @@ typedef struct{
 
     mtm_transition_table_t table;
 
+    mtm_entry_index_t tempIndex;
+
 } mtm_t;
 
 // lock whenever reading/writing a mtm_t's state.
@@ -173,6 +181,9 @@ void mtm_init(mtm_t* mtm, int states, int worktapes);
 void mtm_destroy(mtm_t* mtm);
 
 int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode);
+int mtm_get_code(mtm_t* mtm, mpz_t mtmCode);
+
+void mtm_print(mtm_t* mtm);
 
 
 #endif
