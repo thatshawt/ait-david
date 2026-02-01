@@ -46,6 +46,7 @@ int main(){
     const int bitsi = mtm_get_entry_bits(states, worktapes);
 
     printf("entry bits %d\n", bitsi);
+    printf("MPFR_PREC_MAX %ld\n", MPFR_PREC_MAX);
 
     mtm_transition_table_t table;
     mtm_table_init(&table, states, worktapes);
@@ -69,11 +70,41 @@ int main(){
     printf("\n");
     mtm_print_table(&table);
 
+    mtm_table_increment(&table);
+    mtm_print_table_summary(&table);
+    printf("\n");
+    mtm_print_table(&table);
+    printf("\n");
+
+    mtm_table_increment(&table);
+    mtm_print_table_summary(&table);
+    printf("\n");
+    mtm_print_table(&table);
+    printf("\n");
+
+    mtm_table_increment(&table);
+    mtm_print_table_summary(&table);
+    printf("\n");
+    mtm_print_table(&table);
+    printf("\n");
+
+    mtm_table_increment(&table);
+    mtm_print_table_summary(&table);
+    printf("\n");
+    mtm_print_table(&table);
+    printf("\n");
+
+    mtm_table_increment(&table);
+    mtm_print_table_summary(&table);
+    printf("\n");
+    mtm_print_table(&table);
+    printf("\n");
+
     mtm_table_free(&table);
 
     mpz_clears(tableIndexHEEHEE, temp123123, NULL);
 
-    // return 1;
+    return 1;
 
     int barencoded = 863;
     mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
@@ -229,28 +260,35 @@ int main(){
     mpz_clear(tapeCode);
 
     mtm_t mtm;
-    mtm_init(&mtm, 1, 1);
+    mtm_init(&mtm, 3, 1);
 
     mtm.tempIndex.inputRead = 1;
 
     mtm_transition_entry_t* entryIdk = mtm_table_get_entry(&mtm.table, &mtm.tempIndex);
     entryIdk->inputTapeMove = 1;
     entryIdk->outputTapeWrite = 1;
-    entryIdk->nextState = 1;
+    entryIdk->nextState = 3;
 
-    mtm_tape_load_str(&mtm.inputTape, "0000010101010101010101010101010");
+    mtm_tape_load_str(&mtm.inputTape, "1000000000101");
 
     mpz_t mtmCode; mpz_init(mtmCode);
 
     int mtmcodebits = mtm_get_code(&mtm, mtmCode);
+    char poopooBuffer[1000] = {0};
 
     gmp_printf("\nbits %d, mtmCode %Zd\n", mtmcodebits, mtmCode);
 
     mtm_load_from_code(&mtm, mtmCode);
     mtmcodebits = mtm_get_code(&mtm, mtmCode);
+    mpz_get_str(poopooBuffer, 62, mtmCode);
+    gmp_printf("\nbits %d, mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
+    mtm_print(&mtm);
 
-    gmp_printf("\nbits %d, mtmCode %Zd\n", mtmcodebits, mtmCode);
-
+    mpz_add_ui(mtmCode, mtmCode, 1);
+    mtm_load_from_code(&mtm, mtmCode);
+    mtmcodebits = mtm_get_code(&mtm, mtmCode);
+    mpz_get_str(poopooBuffer, 62, mtmCode);
+    gmp_printf("\nbits %d, mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
     mtm_print(&mtm);
 
     mpz_clears(mtmCode, NULL);
