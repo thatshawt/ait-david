@@ -65,7 +65,7 @@ valgrind:
          --show-leak-kinds=all \
          --track-origins=yes \
          --verbose \
-         --log-file=valgrind-out.txt \
+         --log-file=artifacts/valgrind-out.txt \
          $(BUILD_DIR)/$(TARGET_EXEC)
 	
 gdb:
