@@ -420,6 +420,15 @@ int mtm_get_entry_bits(int states, int worktapes)
     return bits;
 }
 
+inline void mpz_get_entry_max_digit(mpz_t maxEntryDigit, int states, int worktapes)
+{
+    // we got 2^3 * 2^(worktapes*2) * states
+    mpz_set_ui(maxEntryDigit, 1);
+    mpz_mul_2exp(maxEntryDigit, maxEntryDigit, 3);// 2^3
+    mpz_mul_ui(maxEntryDigit, maxEntryDigit, states);// 2^3 * states
+    mpz_mul_2exp(maxEntryDigit, maxEntryDigit, worktapes*2);// 2^3 * 2^(worktapes*2) * states
+}
+
 void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes)
 {
     mpz_set_ui(digit, 0);
@@ -428,6 +437,11 @@ void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states,
     mpz_t temp; mpz_init(temp);
     mpz_t bits; mpz_init(bits);
     mp_bitcnt_t bitsi = 0;
+
+    // mpz_set_ui(bits, entry->nextState);
+    // mpz_ior_bits_lshift(digit, temp, bits, bitsi);
+    // mpz_set_ui(temp, states-1);
+    // bitsi += mpz_sizeinbase(temp, 2);
 
     mpz_set_ui(bits, entry->inputTapeMove);
     mpz_ior_bits_lshift(digit, temp, bits, bitsi);
@@ -499,6 +513,11 @@ void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states
     mpz_t bits; mpz_init(bits);
     mpz_t number; mpz_init_set(number, digit);
     mpz_t temp; mpz_init(temp);
+
+    // mpz_set_ui(temp, states-1);
+    // mpz_set_ui(bits, mpz_sizeinbase(temp, 2));
+    // mpz_pop_nbits_right(bits, number, mpz_get_ui(bits));
+    // entry->nextState = mpz_get_ui(bits);
 
     mpz_pop_nbits_right(bits, number, 1);
     entry->inputTapeMove = mpz_get_ui(bits);
@@ -996,7 +1015,7 @@ int mpz_pop_entry_left_temps(mpz_t number, mtm_transition_entry_t* entry, int st
 
     // load it into entry
     mtm_entry_from_digit(entry, temp1, states, worktapes);
-    // entry->nextState = entry->nextState % states; // please speed i need this, my bits are kinda overflowed
+    entry->nextState = entry->nextState % states; // please speed i need this, my bits are kinda overflowed
 
     // remove the digits we used
     mpz_load_number_of_n_ones(temp1, numberLength-entryBits - 1);
@@ -1120,6 +1139,7 @@ int mtm_get_table_index_temps(mpz_t tableIndex, mtm_transition_table_t* table,
     int pushed3 = mpz_push_table_entry_map_temps(tableIndex, table, poo1, poo2);
     // gmp_printf("size %d pushed map, tableIndex %Zd\n", pushed3, tableIndex);
 
+    // printf("pushed1 %d, pushed2 %d, pushed3 %d\n",pushed1, pushed2, pushed3);
     return pushed1 + pushed2 + pushed3 + 1;
 }
 
@@ -1136,6 +1156,8 @@ int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table)
 
     mpz_clears(temp,temp2, NULL);
     mpz_clears(poo1,poo2,poo3,poo4,poo5,poo6,NULL);
+
+    return result;
 }
 
 int mpz_table_index_pop_states_worktape_temps(mpz_t tableIndex, int* states, int* worktapes,
@@ -1457,10 +1479,13 @@ int mtm_get_code(mtm_t* mtm, mpz_t mtmCode)
 
     //push inputTape encoding
     int inputTapeBits = mtm_tape_get_code(&mtm->inputTape, temp1);
+    gmp_printf("inputtape code %Zd\n", temp1);
     mpz_lshift(mtmCode, mtmCode, inputTapeBits);
     mpz_ior(mtmCode, mtmCode, temp1);
 
     mpz_clears(temp1, NULL);
+
+    printf("tableBits %d, inputTapeBits %d\n", tableBits, inputTapeBits);
 
     return tableBits + inputTapeBits;
 }

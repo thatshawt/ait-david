@@ -18,6 +18,7 @@
 
 #include "sqlenv.h"
 #include "monotone_tm.h"
+#include "gmp_mpzstr.h"
 
 int main(){
 
@@ -37,6 +38,39 @@ int main(){
 
         // return 0;
     }
+
+    // mpzstr testing
+
+    int digits = 16;
+    int baseConvert = 27;
+    mpz_t* mpzstr = mpzstr_init_malloc(digits);
+    // gmp_printf("%Zd\n", *mpzstr);
+    // mpzstr_set_zero(mpzstr);
+    
+    mpz_set_ui(*(mpzstr+(digits-4)), 3);
+    mpz_set_ui(*(mpzstr+(digits-3)), 5);
+    mpz_set_ui(*(mpzstr+(digits-2)), 10);
+    mpz_set_ui(*(mpzstr+(digits-1)), 20);
+    printf("in base %d: ", baseConvert);
+    mpzstr_print(mpzstr);
+
+    mpz_t shartPoop; mpz_init(shartPoop);
+
+    mpz_set_mpzstr(shartPoop, mpzstr, baseConvert);
+    gmp_printf("as base 10: %Zd\n", shartPoop);
+
+    mpzstr_set_zero(mpzstr);
+
+    printf("as base 2: ");
+    mpz_get_mpzstr(mpzstr, 2, shartPoop);
+    mpzstr_print(mpzstr);
+
+
+
+    mpzstr_clear_free(mpzstr);
+    mpz_clear(shartPoop);
+
+    return 1;
 
     // mtm testing
 
@@ -104,7 +138,7 @@ int main(){
 
     mpz_clears(tableIndexHEEHEE, temp123123, NULL);
 
-    return 1;
+    // return 1;
 
     int barencoded = 863;
     mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
@@ -269,10 +303,10 @@ int main(){
     entryIdk->outputTapeWrite = 1;
     entryIdk->nextState = 3;
 
-    mtm_tape_load_str(&mtm.inputTape, "1000000000101");
+    // mtm_tape_load_str(&mtm.inputTape, "1000000000101");
 
     mpz_t mtmCode; mpz_init(mtmCode);
-
+    mtm_print(&mtm);
     int mtmcodebits = mtm_get_code(&mtm, mtmCode);
     char poopooBuffer[1000] = {0};
 
@@ -284,12 +318,16 @@ int main(){
     gmp_printf("\nbits %d, mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
     mtm_print(&mtm);
 
-    mpz_add_ui(mtmCode, mtmCode, 1);
-    mtm_load_from_code(&mtm, mtmCode);
-    mtmcodebits = mtm_get_code(&mtm, mtmCode);
-    mpz_get_str(poopooBuffer, 62, mtmCode);
-    gmp_printf("\nbits %d, mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
-    mtm_print(&mtm);
+    for(int i=0;i<5;i++){
+        printf("on i %d\n", i);
+        // mpz_add_ui(mtmCode, mtmCode, 1);
+        // mtm_load_from_code(&mtm, mtmCode);
+        mtm_table_increment(&mtm.table);
+        mtmcodebits = mtm_get_code(&mtm, mtmCode);
+        mpz_get_str(poopooBuffer, 62, mtmCode);
+        gmp_printf("\n%d bits mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
+        mtm_print(&mtm);
+    }
 
     mpz_clears(mtmCode, NULL);
     mtm_destroy(&mtm);
