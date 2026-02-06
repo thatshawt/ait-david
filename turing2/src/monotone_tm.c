@@ -292,6 +292,28 @@ bool lincrement_int(int n, int* sizes, int* digits)
     return false;
 }
 
+// starts on right side and overflows leftwards.
+bool rincrement_int(int n, int* sizes, int* digits)
+{
+    // start on last digit
+    int digiti = n-1;
+    INCREMENT:
+    if(digiti >= 0){
+        digits[digiti]++;
+
+        //overflows, try increment next digit
+        if(digits[digiti] >= sizes[digiti]){
+            digits[digiti] = 0;
+            digiti--;
+            goto INCREMENT;
+        }
+    }else{//if we go too far we overflowed past last digit
+        return true;
+    }
+
+    return false;
+}
+
 //TODO change this to use mpz maybe?
 bool mtm_entry_index_increment(mtm_entry_index_t* entryIndex, int states, int worktapes)
 {
@@ -339,7 +361,7 @@ void mtm_entry_zero(mtm_transition_entry_t* entry)
     }
 }
 
-bool mtm_entry_increment_old(mtm_transition_entry_t* entry, int states, int worktapes)
+bool mtm_entry_increment_fast(mtm_transition_entry_t* entry, int states, int worktapes)
 {
 
     /*
@@ -369,16 +391,17 @@ bool mtm_entry_increment_old(mtm_transition_entry_t* entry, int states, int work
 
     sizes[n-1] = states; // nextstate
 
-    // everybody now, digits! digits!
+    // i had a comment here but it cringed me to keep seeing it as i scrolled past each time so now
+    // this is a less cringy replacement comment.
     int digits[4+MTM_MAX_WORK_TAPES*2] = {0};
     digits[0] = entry->inputTapeMove;
     digits[1] = entry->outputTapeWrite;
     digits[2] = entry->outputTapeMove;
-    digits[n-1] = entry->nextState;
     for(int i=0;i<worktapes;i++){
         digits[i+3] = entry->workTapeWrites[i];
         digits[i+3+worktapes] = entry->workTapeMoves[i];
     }
+    digits[n-1] = entry->nextState;
 
     bool returnval = lincrement_int(n, sizes, digits);
 
@@ -415,7 +438,6 @@ bool mtm_entry_increment_temps(mtm_transition_entry_t* entry, int states, int wo
     mtm_entry_get_digit_temps(var1, entry, states, worktapes, var2, var3);
     mpz_add_ui(var1, var1, 1);
 
-    // performance idea: cache this...
     mpz_get_entry_max_digit(var2, states, worktapes);
 
     bool overflowed = mpz_cmp(var1, var2) >= 0;
@@ -486,9 +508,9 @@ void mpz_get_entry_max_digit(mpz_t maxEntryDigit, int states, int worktapes)
     }else{
         // we got 2^3 * 2^(worktapes*2) * states
         mpz_set_ui(maxEntryDigit, 1);
-        mpz_mul_2exp(maxEntryDigit, maxEntryDigit, 3);// 2^3
-        mpz_mul_ui(maxEntryDigit, maxEntryDigit, states);// 2^3 * states
-        mpz_mul_2exp(maxEntryDigit, maxEntryDigit, worktapes*2);// 2^3 * 2^(worktapes*2) * states
+        mpz_mul_2exp(maxEntryDigit, maxEntryDigit, 3); // 2^3
+        mpz_mul_ui(maxEntryDigit, maxEntryDigit, states); // 2^3 * states
+        mpz_mul_2exp(maxEntryDigit, maxEntryDigit, worktapes*2); // 2^3 * 2^(worktapes*2) * states
 
         //update cache for next time just incase
         cacache_set_item(CACACHE_ENTRY_MAX_DIGIT, cacheHash, maxEntryDigit);
@@ -499,7 +521,7 @@ void mpz_get_entry_max_digit(mpz_t maxEntryDigit, int states, int worktapes)
 void mtm_entry_get_digit_temps(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes, mpz_t temp, mpz_t bits)
 {
     if(2*worktapes > 64){
-        fprintf(stderr, __FILE__ ":%d, %d worktapes too high\n",__LINE__, worktapes);
+        fprintf(stderr, __FILE__ ":%d, %d worktapes too high :skull:\n",__LINE__, worktapes);
         exit(1);
     }
     mpz_set_ui(digit, 0);

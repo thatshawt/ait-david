@@ -40,7 +40,7 @@ int main(){
         printf("SQLITE_OK %d\n", SQLITE_OK);
 
         turing_threading_init_global();
-        
+
         cacache_init();
 
         turing_threading_self_init();
@@ -159,7 +159,7 @@ int main(){
 
     mpz_clears(tableIndexHEEHEE, temp123123, NULL);
 
-    // return 1;
+    return 1;
 
     int barencoded = 863;
     mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
@@ -408,15 +408,16 @@ int main(){
     printf("full enumeration test:\n");
     uint64_t startMilli = current_timestamp();
     uint64_t count = 0;
-    // mpz_t* poopoos = mpzstr_init_malloc(4);
-    mpz_t* poopoos = mpzstr_init2_malloc(4, 100);
+    mpz_t* poopoos = mpzstr_init_malloc(4);
+    // mpz_t* poopoos = mpzstr_init2_malloc(4, 100);
     for(int i=0; i<500; i++){
         mtm_entry_zero(&entry);
         while(
-            !mtm_entry_increment_temps(&entry, testStates, testWorktapes,
-            *(poopoos), *(poopoos+1), *(poopoos+2), *(poopoos+3))
-            // !mtm_entry_increment_old(&entry, testStates, testWorktapes)
-        ){
+            // !mtm_entry_increment_temps(&entry, testStates, testWorktapes,
+            // *(poopoos), *(poopoos+1), *(poopoos+2), *(poopoos+3))
+            !mtm_entry_increment_fast(&entry, testStates, testWorktapes)
+            )
+            {
                 if(entry.inputTapeMove)count++;
             }
     }

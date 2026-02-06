@@ -28,7 +28,7 @@ on input p
 #endif
 
 #ifndef MTM_MAX_STATES
-#define MTM_MAX_STATES 5
+#define MTM_MAX_STATES 15
 #endif
 
 #ifndef MTM_MAX_TAPE_SIZE
@@ -50,7 +50,7 @@ void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int 
 
 bool mtm_entry_increment_temps(mtm_transition_entry_t* entry, int states, int worktapes, mpz_t var1, mpz_t var2, mpz_t var3, mpz_t var4);
 bool mtm_entry_increment(mtm_transition_entry_t* entry, int states, int worktapes);
-bool mtm_entry_increment_old(mtm_transition_entry_t* entry, int states, int worktapes);
+bool mtm_entry_increment_fast(mtm_transition_entry_t* entry, int states, int worktapes);
 
 void mtm_print_entry(mtm_transition_entry_t* entry, int workTapes);
 void mtm_print_entry_short(mtm_transition_entry_t* entry, int workTapes);
