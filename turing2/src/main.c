@@ -4,6 +4,7 @@
 #include "turing_utils.h"
 #include "turing_enumerate.h"
 #include "turing_jobs.h"
+#include "cacache.h"
 
 #include "hashmap.h"
 
@@ -39,6 +40,8 @@ int main(){
         printf("SQLITE_OK %d\n", SQLITE_OK);
 
         turing_threading_init_global();
+        
+        cacache_init();
 
         turing_threading_self_init();
 
