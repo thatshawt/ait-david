@@ -15,10 +15,20 @@
 #include <mpfr.h>
 
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "sqlenv.h"
 #include "monotone_tm.h"
 #include "gmp_mpzstr.h"
+
+extern uint64_t current_timestamp();
+// uint64_t current_timestamp() {
+//     struct timeval te;
+//     gettimeofday(&te, NULL); // get current time
+//     long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
+//     // printf("milliseconds: %lld\n", milliseconds);
+//     return (uint64_t)milliseconds;
+// }
 
 int main(){
 
@@ -47,30 +57,38 @@ int main(){
     // gmp_printf("%Zd\n", *mpzstr);
     // mpzstr_set_zero(mpzstr);
     
-    mpz_set_ui(*(mpzstr+(digits-4)), 3);
-    mpz_set_ui(*(mpzstr+(digits-3)), 5);
-    mpz_set_ui(*(mpzstr+(digits-2)), 10);
-    mpz_set_ui(*(mpzstr+(digits-1)), 20);
-    printf("in base %d: ", baseConvert);
-    mpzstr_print(mpzstr);
+    mpz_set_si(*(mpzstr+(digits-4)), 3);
+    mpz_set_si(*(mpzstr+(digits-3)), 5);
+    mpz_set_si(*(mpzstr+(digits-2)), 10);
+    mpz_set_si(*(mpzstr+(digits-1)), -100000);
 
     mpz_t shartPoop; mpz_init(shartPoop);
 
-    mpz_set_mpzstr(shartPoop, mpzstr, baseConvert);
+    mpzstr_basenorm(mpzstr+1, mpzstr_len(mpzstr), 7, &shartPoop);
+    gmp_printf("carry %Zd, in base 7: ", shartPoop);
+    mpzstr_print(mpzstr);
+
+
+    mpz_set_mpzstr(shartPoop, mpzstr, 7);
     gmp_printf("as base 10: %Zd\n", shartPoop);
 
     mpzstr_set_zero(mpzstr);
 
-    printf("as base 2: ");
-    mpz_get_mpzstr(mpzstr, 2, shartPoop);
+    printf("as base 7: "); // what the sigma
+    mpz_get_mpzstr(mpzstr, 7, shartPoop);
     mpzstr_print(mpzstr);
+    mpz_t* mpzstr2 = mpzstr_init_malloc(mpzstr_len(mpzstr));
+    mpzstr_copy(mpzstr2, mpzstr);
 
+    printf("heres a copy i hope, ");
+    mpzstr_print(mpzstr2);
 
 
     mpzstr_clear_free(mpzstr);
+    mpzstr_clear_free(mpzstr2);
     mpz_clear(shartPoop);
 
-    return 1;
+    // return 1;
 
     // mtm testing
 
@@ -332,7 +350,7 @@ int main(){
     mpz_clears(mtmCode, NULL);
     mtm_destroy(&mtm);
 
-    return 1;
+    // return 1;
 
     // printf("entryindex increment test\n");
     // mtm_entry_index_t entryIndex;
@@ -359,23 +377,54 @@ int main(){
     mtm_entry_zero(&entry);
     mpz_t digit; mpz_init(digit);
     mpz_t digit2; mpz_init(digit2);
-    do{        
+    do{
+        // mpz_get_entry_max_digit(digit, states, worktapes);
+        // if(mpz_cmp_ui(digit, counter) == 0)break;
+
         mtm_entry_get_digit(digit, &entry, states, worktapes);
 
         mtm_entry_from_digit(&entry2, digit, states, worktapes);
         mtm_entry_get_digit(digit2, &entry2, states, worktapes);
 
         gmp_printf("counter: %d, entry digit: %Zd, digit2 %Zd\n", counter, digit, digit2);
-        // mtm_print_entry(&entry, worktapes);
+        mtm_print_entry_short(&entry, worktapes);
 
         if(mpz_get_ui(digit) != counter || mpz_get_ui(digit2) != counter) return 1;
         // if(counter == 10)return 1;
 
         counter++;
     }while(!mtm_entry_increment(&entry, states, worktapes));
+
     printf("counted %d entries\n", counter);
 
+    // performance test i suppose entry increment
+
+    int testStates = 5;
+    int testWorktapes = 5;
+
+    printf("full enumeration test:\n");
+    uint64_t startMilli = current_timestamp();
+    uint64_t count = 0;
+    // mpz_t* poopoos = mpzstr_init_malloc(4);
+    mpz_t* poopoos = mpzstr_init2_malloc(4, 100);
+    for(int i=0; i<500; i++){
+        mtm_entry_zero(&entry);
+        while(
+            !mtm_entry_increment_temps(&entry, testStates, testWorktapes,
+            *(poopoos), *(poopoos+1), *(poopoos+2), *(poopoos+3))
+            // !mtm_entry_increment_old(&entry, testStates, testWorktapes)
+        ){
+                if(entry.inputTapeMove)count++;
+            }
+    }
+    uint64_t endMilli = current_timestamp();
+    printf("%ld counted, enumeration test done. took %f seconds\n", count, (float)(endMilli-startMilli)/((float)1000.0));
+
+    mpzstr_clear_free(poopoos);
+
     mpz_clears(digit, digit2, NULL);
+
+
 
     return 0;
 
