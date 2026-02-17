@@ -2,21 +2,23 @@
 #define MONOTONE_TM_H
 
 /*
+see readings/hutter-sintro2kc.pdf or
 https://www.hutter1.net/ai/sintro2kc.pdf, slide 11.
-Monotone Turing Machine
-For technical reasons we need the following variants of a Turing machine
-Definition 7 (Monotone Turing machine T (mTM))
-• one unidirectional read-only input tape,
-• one unidirectional write-only output tape,
-• some bidirectional work tapes, initially filled with zeros.
-• all tapes are binary (no blank symbol!),
-• T outputs/computes a string starting with x (or a sequence ω)
-on input p
-    :⇐⇒ T (p) = x∗ (or T (p) = ω)
-    :⇐⇒ p is to the left of the input head when the last bit of x is output.
-• T may continue operation and need not to halt.
-• For given x, {p : T (p) = x∗} forms a prefix code.
-• We call such codes p minimal programs.
+
+    Monotone Turing Machine
+    For technical reasons we need the following variants of a Turing machine
+    Definition 7 (Monotone Turing machine T (mTM))
+    • one unidirectional read-only input tape,
+    • one unidirectional write-only output tape,
+    • some bidirectional work tapes, initially filled with zeros.
+    • all tapes are binary (no blank symbol!),
+    • T outputs/computes a string starting with x (or a sequence ω)
+    on input p
+        :⇐⇒ T (p) = x∗ (or T (p) = ω)
+        :⇐⇒ p is to the left of the input head when the last bit of x is output.
+    • T may continue operation and need not to halt.
+    • For given x, {p : T (p) = x∗} forms a prefix code.
+    • We call such codes p minimal programs.
 */
 
 #include <pthread.h>
@@ -88,37 +90,11 @@ void mtm_table_zero(mtm_transition_table_t* table);
 void mtm_print_table(mtm_transition_table_t* table);
 void mtm_print_table_summary(mtm_transition_table_t* table);
 
-
-void mpz_prefix_index_get_bit_length(mpz_t prefixIndex, mpz_t bitlength);
-void mpz_prefix_index_get_bit_integer(mpz_t prefixIndex, mpz_t bitinteger);
-void mpz_get_prefix_index_from_int_and_length(mpz_t prefixIndex, mpz_t bitinteger, mpz_t bitlength);
-
-// various mpz bit manipulating funcs
-void mpz_lshift(mpz_t rop, mpz_t number, int n);
-void mpz_rshift(mpz_t rop, mpz_t number, int n);
-void mpz_load_number_of_n_ones(mpz_t rop, int n);
-void mpz_ior_bits_lshift(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti);
-void mpz_pop_nbits_right(mpz_t bits, mpz_t number, mp_bitcnt_t bitsN);
-int mpz_count_leading_ones(mpz_t numberWithLeadingOnes);
-
-// bar encoding
-void mpz_bar_decode_left(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_left);
-void mpz_bar_decode_left_pop(mpz_t x, int* lengthx, mpz_t number_with_bar_encoded_left);
-void mpz_bar_encode(mpz_t bar_encoded, mpz_t x, int lengthX);
-
-// apos encoding
-int mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left);
-int mpz_apos_decode_prefix_index_left(mpz_t prefixIndex, mpz_t number_with_apos_encoded_left);
-// void mpz_apos_decode_left_pop(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left);
-void mpz_apos_encode(mpz_t apos_encoded, mpz_t x, int lengthX);
-void mpz_apos_encode_prefix_index(mpz_t apos_encoded, mpz_t prefixIndex);
-
 int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table);
 int mpz_pop_table_entry_map_left(mpz_t number, mtm_transition_table_t* table);
 
 int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table);
 int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex);
-
 
 // mtm tapes are binary and go left and right.
 typedef struct{

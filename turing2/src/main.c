@@ -21,6 +21,7 @@
 #include "sqlenv.h"
 #include "monotone_tm.h"
 #include "gmp_mpzstr.h"
+#include "mpz_helpers.h"
 
 extern uint64_t current_timestamp();
 // uint64_t current_timestamp() {
@@ -51,6 +52,29 @@ int main(){
 
         // return 0;
     }
+
+    //cantor pair test
+    // mpz_t* poopooooos = mpzstr_init_malloc(3);
+    // mpz_t* pooo1 = (poopooooos+0);
+    // mpz_t* pooo2 = (poopooooos+1);
+    // mpz_t* pooo3 = (poopooooos+2);
+
+    // for(int a=0;a<5;a++){
+    //     for(int b=0;b<5;b++){
+    //         mpz_set_ui(*pooo1, a);
+    //         mpz_set_ui(*pooo2, b);
+
+    //         mpz_cantor_pair(*pooo3, *pooo1, *pooo2);
+    //         gmp_printf("pair   (%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3);
+
+    //         mpz_cantor_unpair(*pooo1, *pooo2, *pooo3);
+    //         gmp_printf("unpair (%Zd,%Zd) -> %Zd\n\n", *pooo1,*pooo2,*pooo3);
+    //     }
+    // }
+
+    // mpzstr_clear_free(poopooooos);
+
+    // return 0;
 
     // mpzstr testing
 
@@ -96,7 +120,7 @@ int main(){
     // mtm testing
 
     int states = 2;
-    int worktapes = 2;
+    int worktapes = 1;
 
     const int bitsi = mtm_get_entry_bits(states, worktapes);
 
@@ -116,11 +140,12 @@ int main(){
     // mpz_set_str(temp123123, "4260087681", 10);
     // mpz_add(tableIndexHEEHEE,tableIndexHEEHEE,temp123123);
 
-    mpz_set_str(tableIndexHEEHEE, "661390083969", 10);
+    // mpz_set_str(tableIndexHEEHEE, "661390083969", 10);
+
+    mtm_get_table_index(tableIndexHEEHEE, &table);
 
     int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
-    gmp_printf("loaded %d bits from table index %Zd\n",
-        loadedBitsFromIndex123123, tableIndexHEEHEE);
+    gmp_printf("loaded %d bits from table index %Zd\n", loadedBitsFromIndex123123, tableIndexHEEHEE);
     mtm_print_table_summary(&table);
     printf("\n");
     mtm_print_table(&table);
