@@ -14,6 +14,8 @@
 
 #include "cacache.h"
 
+#include <stdbool.h>
+
 // https://stackoverflow.com/questions/19883518/how-can-i-create-an-n-dimensional-array-in-c
 //  Create an array with N dimensions with sizes specified in D.
 mtm_transition_entry_t* CreateArray(size_t N, size_t D[])
@@ -362,6 +364,20 @@ void mtm_entry_zero(mtm_transition_entry_t* entry)
     }
 }
 
+bool mtm_entry_equal(mtm_transition_entry_t* entry1, mtm_transition_entry_t* entry2, int states, int worktapes)
+{
+    bool returnVal = true;
+    returnVal &= entry1->inputTapeMove == entry2->inputTapeMove;
+    returnVal &= entry1->outputTapeWrite == entry2->outputTapeWrite;
+    returnVal &= entry1->outputTapeMove == entry2->outputTapeMove;
+    returnVal &= entry1->nextState == entry2->nextState;
+    for(int i=0; i<worktapes; i++){
+        returnVal &= entry1->workTapeWrites[i] == entry2->workTapeWrites[i];
+        returnVal &= entry1->workTapeMoves[i] == entry2->workTapeMoves[i];
+    }
+    return returnVal;
+}
+
 bool mtm_entry_increment_fast(mtm_transition_entry_t* entry, int states, int worktapes)
 {
 
@@ -422,19 +438,6 @@ bool mtm_entry_increment_fast(mtm_transition_entry_t* entry, int states, int wor
 
 bool mtm_entry_increment_temps(mtm_transition_entry_t* entry, int states, int worktapes, mpz_t var1, mpz_t var2, mpz_t var3, mpz_t var4)
 {
-
-    /*
-    char inputTapeMove;
-    char outputTapeWrite;
-    char outputTapeMove;
-    char workTapeWrites[MTM_MAX_WORK_TAPES];
-    char workTapeMoves[MTM_MAX_WORK_TAPES];
-    unsigned int nextState;
-    */
-    // domain        {0,1},       {0,1},      {0,1},{0,1}^worktapes,{0,1}^worktapes,{0..states-1}.
-    // size              2,           2,          2,    2^worktapes,   2^worktapes,    states.
-    // encoding <inputmove, outputwrite, outputmove, worktapewrites, worktapemoves, nextstate>
-    // index          0          1          2           3...            4???            lastone...
 
     mtm_entry_get_digit_temps(var1, entry, states, worktapes, var2, var3);
     mpz_add_ui(var1, var1, 1);
@@ -602,7 +605,7 @@ void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states
 }
 
 
-int mpz_push_table_entry_map_temps(mpz_t number, mtm_transition_table_t* table,mpz_t temp,mpz_t temp2)
+int mpz_push_table_entry_map_temps(mpz_t number, mtm_transition_table_t* table,mpz_t temp,mpz_t temp2,mpz_t temp3)
 {
     // mpz_t temp; mpz_init(temp);
     // mpz_t temp2; mpz_init(temp2);
@@ -624,7 +627,8 @@ int mpz_push_table_entry_map_temps(mpz_t number, mtm_transition_table_t* table,m
         if(worktapes < 1)continue;
         entry = mtm_table_get_entry(table, &index);
 
-        mtm_entry_get_digit(temp2, entry, states, worktapes);
+        mtm_entry_get_digit_temps(temp2, entry, states, worktapes, temp, temp3);
+        // mtm_entry_get_digit(temp2, entry, states, worktapes);
 
         mpz_lshift(number, number, bitsi);
         mpz_ior(number, number, temp2);
@@ -642,10 +646,11 @@ int mpz_push_table_entry_map(mpz_t number, mtm_transition_table_t* table)
 {
     mpz_t temp; mpz_init(temp);
     mpz_t temp2; mpz_init(temp2);
+    mpz_t temp3; mpz_init(temp3);
 
-    int result = mpz_push_table_entry_map_temps(number, table,temp,temp2);
+    int result = mpz_push_table_entry_map_temps(number, table,temp,temp2,temp3);
 
-    mpz_clears(temp, temp2, NULL);
+    mpz_clears(temp, temp2,temp3, NULL);
 
     return result;
 }
@@ -784,27 +789,11 @@ int mtm_get_table_index_temps(mpz_t tableIndex, mtm_transition_table_t* table,
 
     // push cantorPair(states,workTapes)
     mpz_cantor_pair_ui_temps(temp2, table->states, table->workTapes, poo1, poo2, poo3);
-    gmp_printf("pushing cantorPair(%d:states, %d:worktapes) = %Zd \n",table->states, table->workTapes,  temp2);
+    // gmp_printf("pushing cantorPair(%d:states, %d:worktapes) = %Zd \n",table->states, table->workTapes,  temp2);
     mpz_apos_encode_prefix_index_temps(temp, temp2, poo1,poo2,poo3,poo4,poo5,poo6);
     int pushed1 = mpz_sizeinbase(temp,2);
     mpz_lshift(tableIndex, tableIndex, pushed1);
     mpz_ior(tableIndex, tableIndex, temp);
-
-    // push states integer
-    // mpz_set_ui(temp2, table->states);
-    // mpz_apos_encode_prefix_index_temps(temp, temp2, poo1,poo2,poo3,poo4,poo5,poo6);
-    // int pushed1 = mpz_sizeinbase(temp,2);
-    // mpz_lshift(tableIndex, tableIndex, pushed1);
-    // mpz_ior(tableIndex, tableIndex, temp);
-    // // gmp_printf("size %d pushed %Zd, tableIndex %Zd\n",pushed1, temp, tableIndex);
-
-    // // push workTapes integer
-    // mpz_set_ui(temp2, table->workTapes);
-    // mpz_apos_encode_prefix_index_temps(temp, temp2, poo1,poo2,poo3,poo4,poo5,poo6);
-    // int pushed2 = mpz_sizeinbase(temp,2);
-    // mpz_lshift(tableIndex, tableIndex, pushed2);
-    // mpz_ior(tableIndex, tableIndex, temp);
-    // // gmp_printf("size %d pushed %Zd, tableIndex %Zd\n",pushed2, temp, tableIndex);
 
     // push a 1 before the map
     mpz_lshift(tableIndex, tableIndex, 1);
@@ -812,7 +801,7 @@ int mtm_get_table_index_temps(mpz_t tableIndex, mtm_transition_table_t* table,
     // gmp_printf("size %d pushed %Zd, tableIndex %Zd\n", 1, temp, tableIndex);
 
     // push entry map
-    int pushed3 = mpz_push_table_entry_map_temps(tableIndex, table, poo1, poo2);
+    int pushed3 = mpz_push_table_entry_map_temps(tableIndex, table, poo1, poo2, poo3);
     // gmp_printf("size %d pushed map, tableIndex %Zd\n", pushed3, tableIndex);
 
     // printf("pushed1 %d, pushed2 %d, pushed3 %d\n",pushed1, pushed2, pushed3);
@@ -852,24 +841,12 @@ int mpz_table_index_pop_states_worktape_temps(mpz_t tableIndex, int* states, int
     int aposLength1 = mpz_apos_decode_prefix_index_left_temps(temp, tableIndex, poo1,poo2,poo3,poo4,poo5);
     
     mpz_cantor_unpair_temps(poo1, poo2, temp, poo3);
-    gmp_printf("popped cantor unpair %Zd -> (%Zd, %Zd)\n", temp, poo1, poo2);
+    // gmp_printf("popped cantor unpair %Zd -> (%Zd, %Zd)\n", temp, poo1, poo2);
     *states = mpz_get_ui(poo1);
     *worktapes = mpz_get_ui(poo2);
 
     mpz_load_number_of_n_ones(temp, mpz_sizeinbase(tableIndex,2)-aposLength1);
     mpz_and(tableIndex, tableIndex, temp);
-
-    // // pop states integer
-    // int aposLength1 = mpz_apos_decode_prefix_index_left_temps(temp, tableIndex, poo1,poo2,poo3,poo4,poo5);
-    // *states = mpz_get_ui(temp);
-    // mpz_load_number_of_n_ones(temp, mpz_sizeinbase(tableIndex,2)-aposLength1);
-    // mpz_and(tableIndex, tableIndex, temp);
-
-    // // pop workTapes integer
-    // int aposLength2 = mpz_apos_decode_prefix_index_left_temps(temp, tableIndex, poo1,poo2,poo3,poo4,poo5);
-    // *worktapes = mpz_get_ui(temp);
-    // mpz_load_number_of_n_ones(temp, mpz_sizeinbase(tableIndex,2)-aposLength2);
-    // mpz_and(tableIndex, tableIndex, temp);
 
     // return aposLength1 + aposLength2;
     return aposLength1;
@@ -1132,7 +1109,7 @@ void mtm_unlock(mtm_t* mtm)
     pthread_mutex_unlock(&mtm->mutex);
 }
 
-// universal_enumeration_code <apos sideInfo, apos turingindex, inputString>
+// universal_enumeration_code <apos turingindex, apos sideInfo  inputString>
 // mtm code [table, inputTape]
 int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
 {

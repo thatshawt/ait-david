@@ -23,14 +23,8 @@
 #include "gmp_mpzstr.h"
 #include "mpz_helpers.h"
 
-extern uint64_t current_timestamp();
-// uint64_t current_timestamp() {
-//     struct timeval te;
-//     gettimeofday(&te, NULL); // get current time
-//     long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // calculate milliseconds
-//     // printf("milliseconds: %lld\n", milliseconds);
-//     return (uint64_t)milliseconds;
-// }
+// this is somewhere i forgor where it is
+extern uint64_t current_timestamp();// its in milliseconds
 
 int main(){
 
@@ -38,7 +32,6 @@ int main(){
     // run tests.
     {
         printf("\nhello turing\n\n");
-        printf("SQLITE_OK %d\n", SQLITE_OK);
 
         turing_threading_init_global();
 
@@ -46,33 +39,12 @@ int main(){
 
         turing_threading_self_init();
 
-        // test_opt_t testOptions;
-        // testOptions.onlyPrintFailingTests = false;
-        // test_all(&testOptions);
+        test_opt_t testOptions;
+        testOptions.onlyPrintFailingTests = false;
+        test_all(&testOptions);
 
-        // return 0;
+        return 0;
     }
-
-    //cantor pair test
-    // mpz_t* poopooooos = mpzstr_init_malloc(3);
-    // mpz_t* pooo1 = (poopooooos+0);
-    // mpz_t* pooo2 = (poopooooos+1);
-    // mpz_t* pooo3 = (poopooooos+2);
-
-    // for(int a=0;a<5;a++){
-    //     for(int b=0;b<5;b++){
-    //         mpz_set_ui(*pooo1, a);
-    //         mpz_set_ui(*pooo2, b);
-
-    //         mpz_cantor_pair(*pooo3, *pooo1, *pooo2);
-    //         gmp_printf("pair   (%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3);
-
-    //         mpz_cantor_unpair(*pooo1, *pooo2, *pooo3);
-    //         gmp_printf("unpair (%Zd,%Zd) -> %Zd\n\n", *pooo1,*pooo2,*pooo3);
-    //     }
-    // }
-
-    // mpzstr_clear_free(poopooooos);
 
     // return 0;
 
@@ -125,7 +97,6 @@ int main(){
     const int bitsi = mtm_get_entry_bits(states, worktapes);
 
     printf("entry bits %d\n", bitsi);
-    printf("MPFR_PREC_MAX %ld\n", MPFR_PREC_MAX);
 
     mtm_transition_table_t table;
     mtm_table_init(&table, states, worktapes);
@@ -146,39 +117,12 @@ int main(){
 
     int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
     gmp_printf("loaded %d bits from table index %Zd\n", loadedBitsFromIndex123123, tableIndexHEEHEE);
-    mtm_print_table_summary(&table);
-    printf("\n");
-    mtm_print_table(&table);
-
-    mtm_table_increment(&table);
-    mtm_print_table_summary(&table);
-    printf("\n");
-    mtm_print_table(&table);
-    printf("\n");
-
-    mtm_table_increment(&table);
-    mtm_print_table_summary(&table);
-    printf("\n");
-    mtm_print_table(&table);
-    printf("\n");
-
-    mtm_table_increment(&table);
-    mtm_print_table_summary(&table);
-    printf("\n");
-    mtm_print_table(&table);
-    printf("\n");
-
-    mtm_table_increment(&table);
-    mtm_print_table_summary(&table);
-    printf("\n");
-    mtm_print_table(&table);
-    printf("\n");
-
-    mtm_table_increment(&table);
-    mtm_print_table_summary(&table);
-    printf("\n");
-    mtm_print_table(&table);
-    printf("\n");
+    for(int i=0; i<10; i++){
+        mtm_print_table_summary(&table);
+        printf("\n");
+        mtm_print_table(&table);
+        mtm_table_increment(&table);
+    }
 
     mtm_table_free(&table);
 
@@ -380,13 +324,6 @@ int main(){
 
     // return 1;
 
-    // printf("entryindex increment test\n");
-    // mtm_entry_index_t entryIndex;
-    // mtm_entry_index_zero(&entryIndex);
-    // do{
-    //     mtm_print_entry_index(&entryIndex, worktapes);
-    // }while(!mtm_entry_index_increment(&entryIndex, states, worktapes));
-
     printf("%d states, %d worktapes = %d bits\n", states, worktapes, mtm_get_entry_bits(states, worktapes));
 
     mpz_t number, bits;
@@ -405,26 +342,6 @@ int main(){
     mtm_entry_zero(&entry);
     mpz_t digit; mpz_init(digit);
     mpz_t digit2; mpz_init(digit2);
-    do{
-        // mpz_get_entry_max_digit(digit, states, worktapes);
-        // if(mpz_cmp_ui(digit, counter) == 0)break;
-
-        mtm_entry_get_digit(digit, &entry, states, worktapes);
-
-        mtm_entry_from_digit(&entry2, digit, states, worktapes);
-        mtm_entry_get_digit(digit2, &entry2, states, worktapes);
-
-        gmp_printf("counter: %d, entry digit: %Zd, digit2 %Zd\n", counter, digit, digit2);
-        mtm_print_entry_short(&entry, worktapes);
-
-        if(mpz_get_ui(digit) != counter || mpz_get_ui(digit2) != counter) return 1;
-        // if(counter == 10)return 1;
-
-        counter++;
-    }while(!mtm_entry_increment(&entry, states, worktapes));
-
-    printf("counted %d entries\n", counter);
-
     // performance test i suppose entry increment
 
     int testStates = 5;

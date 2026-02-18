@@ -13,6 +13,8 @@ void test_all(test_opt_t* testopt);
 void test_turing_sim(test_opt_t* testopt);
 void test_turing_mapping(test_opt_t* testopt);
 void test_turing_enumerate(test_opt_t* testopt);
+void test_monotone_tm(test_opt_t* testopt);
+void test_mpz_helpers(test_opt_t* testopt);
 
 
 typedef struct{

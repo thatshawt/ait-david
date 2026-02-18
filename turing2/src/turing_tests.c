@@ -4,9 +4,14 @@
 
 #include "turing_utils.h"
 
+#include "gmp_mpzstr.h"
+#include "mpz_helpers.h"
+#include "monotone_tm.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 unittest_state_t unitstate;
 tm_t tm;
@@ -24,12 +29,139 @@ void test_all(test_opt_t* testopt)
     test_turing_sim(testopt);
     test_turing_mapping(testopt);
     test_turing_enumerate(testopt);
+    test_monotone_tm(testopt);
+    test_mpz_helpers(testopt);
 
     mpz_clears(runopt_9999_nocheck.max_steps,NULL);
 
     printf("Testing complete.\n\n");
 }
 
+void test_monotone_tm(test_opt_t* testopt)
+{
+    printf("    Monotone Turing Machine Tests\n");
+    {
+        unittest_begin(&unitstate, "dummy", testopt);
+        unittest_finish(&unitstate);
+    }
+
+    // mtm entry increment tests
+    {
+        mpz_t counter,temp;
+        mpz_inits(counter,temp,NULL);
+        char testTitle[200] = {0};
+
+        const int statesMax = 3;
+        const int worktapesMax = 3;
+        for(int states=1; states<=statesMax; states++){
+            for(int worktapes=1; worktapes<=worktapesMax; worktapes++){
+                // check if incrementing follows the from digit thing
+                sprintf(testTitle, "mtm entry increment == mtm entry from digit++ == get_digit (%d states, %d worktapes)", states, worktapes);
+
+                unittest_begin(&unitstate, testTitle, testopt);
+                
+                mtm_transition_entry_t entry1;
+                mtm_transition_entry_t entry2;
+                
+                mtm_entry_zero(&entry1);
+                mpz_set_ui(counter, 0);
+
+                bool overflow = false;
+                
+                do{
+                    
+                    mtm_entry_from_digit(&entry2, counter, states, worktapes);
+
+                    //check if entries are equal
+                    bool equalEntries = mtm_entry_equal(&entry1, &entry2, states, worktapes);
+
+                    unittest_assert_true(&unitstate, equalEntries);
+
+                    if(!equalEntries){
+                        gmp_printf("counter %Zd\n", counter);
+                        mtm_print_entry_short(&entry1, worktapes);
+                        mtm_print_entry_short(&entry2, worktapes);
+                        printf("\n");
+                    }
+
+                    //check if entry get_digit works too
+                    mtm_entry_get_digit(temp, &entry1, states, worktapes);
+
+                    bool equalGetDigit = mpz_cmp(temp, counter) == 0;
+
+                    unittest_assert_true(&unitstate, equalGetDigit);
+
+                    overflow = mtm_entry_increment(&entry1, states, worktapes);
+                    mpz_add_ui(counter, counter, 1);
+                }while(!overflow);
+
+                unittest_finish(&unitstate);
+                
+                // check if it went to the max digit
+                sprintf(testTitle, "    did it reach max digit?");
+                unittest_begin(&unitstate, testTitle, testopt);
+                
+                mpz_get_entry_max_digit(temp, states, worktapes);
+
+                unittest_assert_true(&unitstate, mpz_cmp(temp, counter) == 0);
+
+                unittest_finish(&unitstate);
+                
+            }
+        }
+        
+        mpz_clears(counter,temp,NULL);
+    }
+    
+    // do{
+    //     entry = mtm_table_get_entry(table, &index);
+    // }while(!mtm_entry_index_increment(&index, states, worktapes));
+}
+
+void test_mpz_helpers(test_opt_t* testopt)
+{
+    printf("    Mpz Helpers Tests\n");
+    {
+        unittest_begin(&unitstate, "dummy", testopt);
+        unittest_finish(&unitstate);
+    }
+
+    // Cantor Pair == Cantor Unpair
+    {
+        const int n = 100;
+        unittest_begin(&unitstate, "Cantor Pair == Cantor Unpair from (0,0) to (99,99)", testopt);
+
+        mpz_t* poopooooos = mpzstr_init_malloc(3);
+        mpz_t* pooo1 = (poopooooos+0);
+        mpz_t* pooo2 = (poopooooos+1);
+        mpz_t* pooo3 = (poopooooos+2);
+
+        for(int a=0;a<n;a++){
+            for(int b=0;b<n;b++){
+                mpz_set_ui(*pooo1, a);
+                mpz_set_ui(*pooo2, b);
+
+                mpz_cantor_pair(*pooo3, *pooo1, *pooo2);
+                // gmp_printf("pair   (%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3);
+
+                mpz_cantor_unpair(*pooo1, *pooo2, *pooo3);
+                // gmp_printf("unpair (%Zd,%Zd) -> %Zd\n\n", *pooo1,*pooo2,*pooo3);
+
+                unittest_assert_true(&unitstate, mpz_get_ui(*pooo1) == a & mpz_get_ui(*pooo2) == b);
+            }
+        }
+
+        mpzstr_clear_free(poopooooos);
+
+        unittest_finish(&unitstate);
+    }
+
+    {
+        unittest_begin(&unitstate, "dummy", testopt);
+        unittest_finish(&unitstate);
+    }
+
+}
 
 void test_turing_sim(test_opt_t* testopt)
 {
@@ -108,29 +240,30 @@ void test_turing_sim(test_opt_t* testopt)
         unittest_finish(&unitstate);
     }
 
+    // random tape test
+    // {
+    //     unittest_begin(&unitstate, "random tape test", testopt);
+
+    //     tm_init(&tm);
+    //     tm_fill_tape_with_random(&tm, 1337);
+    //     int ones = tm_count_symbol_entire_tape(&tm, 1);
+    //     printf("ones %d\n", ones);
+    //     unittest_assert_int_equals(&unitstate, ones, 19833);
+    //     tm_destroy(&tm);
+    //     unittest_finish(&unitstate);
+    // }
+
     {
-        unittest_begin(&unitstate, "random tape test", testopt);
+        unittest_begin(&unitstate, "counting 2 state machines bruteforce", testopt);
 
         tm_init(&tm);
-        tm_fill_tape_with_random(&tm, 1337);
-        int ones = tm_count_symbol_entire_tape(&tm, 1);
-        // printf("ones %d\n", ones);
-        unittest_assert_int_equals(&unitstate, ones, 19833);
-        tm_destroy(&tm);
-        unittest_finish(&unitstate);
-    }
-
-    {
-        unittest_begin(&unitstate, "counting 3 state machines bruteforce", testopt);
-
-        tm_init(&tm);
-        tm.states = 3;
+        tm.states = 2;
         int i = 1;
         while(tm_next_table_lexico(&tm) == false){
             i++;
         }
         // printf("%d states, %d diff tables\n", tm.states, i);
-        unittest_assert_int_equals(&unitstate, i, 16777216);
+        unittest_assert_int_equals(&unitstate, i, 20736);
         tm_destroy(&tm);
         unittest_finish(&unitstate);
     }

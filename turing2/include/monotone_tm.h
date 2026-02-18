@@ -46,9 +46,11 @@ typedef struct{
     unsigned int nextState;
 } mtm_transition_entry_t;
 
+bool mtm_entry_equal(mtm_transition_entry_t* entry1, mtm_transition_entry_t* entry2, int states, int worktapes);
+
 void mtm_entry_zero(mtm_transition_entry_t* entry);
 
-void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes, mpz_t bits, mpz_t number, mpz_t temp);
+
 
 bool mtm_entry_increment_temps(mtm_transition_entry_t* entry, int states, int worktapes, mpz_t var1, mpz_t var2, mpz_t var3, mpz_t var4);
 bool mtm_entry_increment(mtm_transition_entry_t* entry, int states, int worktapes);
@@ -61,6 +63,7 @@ void mpz_get_entry_max_digit(mpz_t maxEntryDigit, int states, int worktapes);
 void mtm_entry_get_digit_temps(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes, mpz_t temp, mpz_t bits);
 void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states, int worktapes);
 void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes);
+void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes, mpz_t bits, mpz_t number, mpz_t temp);
 int mtm_get_entry_bits(int states, int worktapes);
 
 typedef struct{
