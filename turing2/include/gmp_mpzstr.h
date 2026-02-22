@@ -2,6 +2,7 @@
 #define GMP_MPZSTR
 
 #include <gmp.h>
+#include <stdbool.h>
 
 // mpzstr is an string of mpz_t's followed by one mpz_t at the end with mpz->_mp_d == NULL.
 // the last mpz_t is like the null terminator.

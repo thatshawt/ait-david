@@ -43,10 +43,8 @@ int main(){
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
 
-        // return 0;
+        return 0;
     }
-
-    return 1;
 
     // mtm testing
 
@@ -158,7 +156,7 @@ int main(){
 
     printf("\n\n");
 
-
+    return 1;
 
     mtm_table_init(&table, states, worktapes);
     mtm_table_zero(&table);

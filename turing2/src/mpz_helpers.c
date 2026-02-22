@@ -1,4 +1,5 @@
 #include "mpz_helpers.h"
+#include "gmp_mpzstr.h"
 #include <mpfr.h>
 
 inline void mpz_ior_bits_lshift(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
@@ -139,6 +140,73 @@ void mpz_cantor_unpair(mpz_t rx, mpz_t ry, mpz_t z)
     mpz_cantor_unpair_temps(rx, ry, z, i);
 
     mpz_clear(i);
+}
+
+void mpz_cantor_pair_mpzstr(mpz_t rz, mpz_t* mpzstr)
+{
+
+    mpz_t* poos = mpzstr_init_malloc(2);
+    mpz_t* poo1 = (poos+0);
+    mpz_t* poo2 = (poos+1);
+
+    mpz_cantor_pair_mpzstr_temps(rz, mpzstr, *poo1, *poo2);
+
+    mpzstr_clear_free(poos);
+
+}
+void mpz_cantor_pair_mpzstr_temps(mpz_t rz, mpz_t* mpzstr, mpz_t poo1, mpz_t poo2)
+{
+    const int n = mpzstr_len(mpzstr);
+
+    if(n < 2){
+        // we need 2 at least...
+        mpz_set_si(rz, -1);
+        return;
+    }
+
+    //pair the first two
+    mpz_cantor_pair_temps(rz, *(mpzstr_get_i_left(mpzstr, 0)), *(mpzstr_get_i_left(mpzstr, 1)), poo1);
+
+    //pair the rest
+    for(int i=2;i<n;i++){
+        // mpz_t* digit = mpzstr_get_i_left(mpzstr, i);
+        mpz_cantor_pair_temps(poo1, rz, *(mpzstr_get_i_left(mpzstr, i)), poo2);
+        mpz_set(rz, poo1);
+    }
+}
+
+void mpz_cantor_unpair_mpzstr(mpz_t* rmpzstr, mpz_t z, int n)
+{
+    mpz_t* poos = mpzstr_init_malloc(3);
+    mpz_t* poo1 = (poos+0);
+    mpz_t* poo2 = (poos+1);
+    mpz_t* poo3 = (poos+2);
+
+    mpz_cantor_unpair_mpzstr_temps(rmpzstr, z, n, *poo1,*poo2,*poo3);
+
+    mpzstr_clear_free(poos);
+}
+void mpz_cantor_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, mpz_t poo2, mpz_t poo3)
+{
+    const int len = mpzstr_len(rmpzstr);
+
+    if(len < n || n < 2){
+        // the mpzstr cant fit the desired amount
+        // or there are less than 2 
+        mpzstr_set_zero(rmpzstr);
+        return;
+    }
+
+    // start with z
+    mpz_set(poo2, z);
+    
+    for(int i=n-3;i>=0;i--){
+        mpz_cantor_unpair_temps(poo1, *(mpzstr_get_i_left(rmpzstr, i)), poo2, poo3);
+        mpz_set(poo2, poo1);
+    }
+    //do the final pair
+    mpz_cantor_unpair_temps(*(mpzstr_get_i_left(rmpzstr, 0)), *(mpzstr_get_i_left(rmpzstr, 1)), poo2, poo3);
+
 }
 
 // x is the prefix index

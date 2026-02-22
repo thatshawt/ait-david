@@ -18,6 +18,14 @@ void mpz_cantor_pair_ui_temps(mpz_t rz, int intX, int intY, mpz_t t1, mpz_t x, m
 void mpz_cantor_unpair(mpz_t rx, mpz_t ry, mpz_t z);
 void mpz_cantor_unpair_temps(mpz_t rx, mpz_t ry, mpz_t z, mpz_t i);
 
+void mpz_cantor_pair_mpzstr(mpz_t rz, mpz_t* mpzstr);
+void mpz_cantor_pair_mpzstr_temps(mpz_t rz, mpz_t* mpzstr, mpz_t poo1, mpz_t poo2);
+
+void mpz_cantor_unpair_mpzstr(mpz_t* rmpzstr, mpz_t z, int n);
+void mpz_cantor_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, mpz_t poo2, mpz_t poo3);
+
+
+
 // bijective map between all natural numbers and all binary strings.
 void mpz_prefix_index_get_bit_length(mpz_t prefixIndex, mpz_t bitlength);
 void mpz_prefix_index_get_bit_length_temps(mpz_t x, mpz_t bitlength, mpz_t tempMpz);
