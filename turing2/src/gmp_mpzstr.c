@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "gmp_mpzstr.h"
 
@@ -38,6 +39,17 @@ void mpzstr_copy(mpz_t* mpzstrDest, mpz_t* mpzstrSrc)
     for(int i=0; i<MIN(destLen,srcLen); i++){
         mpz_set(*(mpzstrDest+destLen-i-1), *(mpzstrSrc+srcLen-i-1));
     }
+}
+
+mpz_t* mpzstr_get_i_left(mpz_t* mpzstr, int i)
+{
+    return (mpzstr+i);
+}
+
+mpz_t* mpzstr_get_i_right(mpz_t* mpzstr, int i)
+{
+    const int len = mpzstr_len(mpzstr);
+    return (mpzstr+(len-i-1));
 }
 
 mpz_t* mpzstr_init_malloc(int n)
@@ -98,13 +110,34 @@ void mpzstr_set_zero(mpz_t* mpzstr)
     }
 }
 
+void mpzstr_set_ints_right(mpz_t* mpzstr, int* ints, int n)
+{
+    const int len = mpzstr_len(mpzstr);
+    for(int i=0; i<n; i++){
+        mpz_set_si(*(mpzstr+len-i-1), ints[n-i-1]);
+    }
+}
+
 void mpzstr_print(mpz_t* mpzstr)
 {
     const int n = mpzstr_len(mpzstr);
     for(int i=0; i<n; i++){
         mpz_t* theMpz = mpzstr+i;
-        if(i==n-1) gmp_printf("%Zd\n", *theMpz);
+        if(i==n-1) gmp_printf("%Zd", *theMpz);
         else gmp_printf("%Zd, ", *theMpz);
+    }
+}
+
+void mpzstr_sprint(char* buff, mpz_t* mpzstr)
+{
+    const int n = mpzstr_len(mpzstr);
+    for(int i=0; i<n; i++){
+        char tempBuff[300] = {0};
+        mpz_t* theMpz = mpzstr+i;
+        if(i==n-1) gmp_sprintf(tempBuff, "%Zd", *theMpz);
+        else gmp_sprintf(tempBuff, "%Zd, ", *theMpz);
+
+        strcat(buff, tempBuff);
     }
 }
 
@@ -176,16 +209,10 @@ void mpz_get_mpzstr(mpz_t* digits, int littlebase, mpz_t index)
 
 }
 
-bool mpzstr_basenorm(mpz_t* opmpzstr, int digits, int base, mpz_t* carry)
+bool mpzstr_basenorm_temps(mpz_t* opmpzstr, int digits, int base, mpz_t* carry, mpz_t poo1, mpz_t poo2)
 {
     // mpz_t* tempStr = mpzstr_clone(opmpzstr);
     mpz_t* tempStr = opmpzstr;
-    
-    // instead of making different mpz_ts we can do this i suppose
-    mpz_t* poos = mpzstr_init_malloc(2);
-
-    mpz_t* poo1 = poos+0;
-    mpz_t* poo2 = poos+1;
 
     const int mpzstrLen = mpzstr_len(tempStr);
     const int n = MIN(digits, mpzstrLen);
@@ -196,7 +223,7 @@ bool mpzstr_basenorm(mpz_t* opmpzstr, int digits, int base, mpz_t* carry)
 
         mpz_t* currentDigit = tempStr+currentIndex;
 
-        gmp_printf("currentdigit %Zd\n", *currentDigit);
+        // gmp_printf("currentdigit %Zd\n", *currentDigit);
         
         // digit overflow
         if(mpz_cmp_ui(*currentDigit, base) >= 0){
@@ -204,12 +231,12 @@ bool mpzstr_basenorm(mpz_t* opmpzstr, int digits, int base, mpz_t* carry)
             mpz_t* nextDigit = tempStr+nextIndex;
             if(nextIndex < 0)nextDigit = carry; // nextIndex<0 == overflowed
 
-            mpz_fdiv_q_ui(*poo1, *currentDigit, base);
+            mpz_fdiv_q_ui(poo1, *currentDigit, base);
             mpz_fdiv_r_ui(*currentDigit, *currentDigit, base);
-            if(nextDigit != NULL)mpz_add(*nextDigit, *nextDigit, *poo1);
+            if(nextDigit != NULL)mpz_add(*nextDigit, *nextDigit, poo1);
             if(nextIndex < 0)return true;
 
-            // gmp_printf("poo1 %Zd. nextDigit overflowed to %Zd\n", *poo1, *nextDigit);
+            // gmp_printf("poo1 %Zd. nextDigit overflowed to %Zd\n", poo1, *nextDigit);
         
         // digit underflow
         }else if(mpz_cmp_si(*currentDigit, -1) <= 0){
@@ -217,20 +244,33 @@ bool mpzstr_basenorm(mpz_t* opmpzstr, int digits, int base, mpz_t* carry)
             mpz_t* nextDigit = tempStr+nextIndex;
             if(nextIndex < 0)nextDigit = carry; // nextIndex<0 == underflowed
 
-            mpz_set_si(*poo2, -base);
-            mpz_cdiv_q(*poo1, *currentDigit, *poo2);
-            mpz_cdiv_r(*currentDigit, *currentDigit, *poo2);
-            if(nextDigit != NULL)mpz_sub(*nextDigit, *nextDigit, *poo1);
+            mpz_set_si(poo2, -base);
+            mpz_cdiv_q(poo1, *currentDigit, poo2);
+            mpz_cdiv_r(*currentDigit, *currentDigit, poo2);
+            if(nextDigit != NULL)mpz_sub(*nextDigit, *nextDigit, poo1);
             if(nextIndex < 0)return true;
 
-            // gmp_printf("poo1 %Zd. current %Zd. nextDigit %Zd\n", *poo1, *currentDigit, *nextDigit);
+            // gmp_printf("poo1 %Zd. current %Zd. nextDigit %Zd\n", poo1, *currentDigit, *nextDigit);
         }
     }
 
     // mpzstr_copy(rmpzstr, tempStr);
 
     // mpzstr_clear_free(tempStr);
-    mpzstr_clear_free(poos);
+    // mpzstr_clear_free(poos);
 
     return false;
+}
+
+bool mpzstr_basenorm(mpz_t* opmpzstr, int digits, int base, mpz_t* carry)
+{
+    mpz_t* poos = mpzstr_init_malloc(2);
+    mpz_t* poo1 = poos+0;
+    mpz_t* poo2 = poos+1;
+    
+    bool result = mpzstr_basenorm_temps(opmpzstr, digits, base, carry, *poo1, *poo2);
+
+    mpzstr_clear_free(poos);
+
+    return result;
 }

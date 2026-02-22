@@ -7,6 +7,7 @@
 #include "gmp_mpzstr.h"
 #include "mpz_helpers.h"
 #include "monotone_tm.h"
+#include "gmp_mpzstr.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -31,10 +32,110 @@ void test_all(test_opt_t* testopt)
     test_turing_enumerate(testopt);
     test_monotone_tm(testopt);
     test_mpz_helpers(testopt);
+    test_mpzstring(testopt);
 
     mpz_clears(runopt_9999_nocheck.max_steps,NULL);
 
     printf("Testing complete.\n\n");
+}
+
+void test_mpzstring(test_opt_t* testopt)
+{
+    printf("    MpzString Tests\n");
+    {
+        unittest_begin(&unitstate, "dummy", testopt);
+        unittest_finish(&unitstate);
+    }
+
+    {
+        unittest_begin(&unitstate, "(mpz 1234) == (mpz 1234 -> base 10 mpzstring 1234 -> mpz 1234)", testopt);
+
+        mpz_t temp1; mpz_init(temp1);
+        mpz_t* mpzstr = mpzstr_init_malloc(4);
+
+        mpzstr_set_ints_right(mpzstr, (int*)(int[]){1,2,3,4}, 4);
+
+        mpz_set_mpzstr(temp1, mpzstr, 10);
+
+        char buff[12] = {0};
+        char testStr[] = "1, 2, 3, 4";
+
+        mpzstr_set_zero(mpzstr);
+
+        mpz_get_mpzstr(mpzstr, 10, temp1);
+        
+        mpzstr_sprint(buff, mpzstr);
+
+        int strDiff = strcmp(buff, testStr);
+        // printf("str '%s', diff id %d\n", buff,strDiff);
+
+        unittest_assert_true(&unitstate, strDiff == 0);
+
+        mpzstr_clear_free(mpzstr);
+        mpz_clear(temp1);
+
+        unittest_finish(&unitstate);
+    }
+
+    {
+        unittest_begin(&unitstate, "(mpzstr base 10 1234 -> mpz) == (mpzstr base 2 10011010010 -> mpz)", testopt);
+
+        mpz_t temp1; mpz_init(temp1);
+        mpz_t* mpzstr1 = mpzstr_init_malloc(11);
+
+        mpzstr_set_ints_right(mpzstr1, (int*)(int[]){1,2,3,4}, 4);
+        mpz_set_mpzstr(temp1, mpzstr1, 10);
+        int mpz1ui = mpz_get_ui(temp1);
+        // mpzstr_print(mpzstr1);
+        // printf(". got %d\n", mpz1ui);
+
+        mpzstr_set_ints_right(mpzstr1, (int*)(int[]){1,0,0,1,1,0,1,0,0,1,0}, 11);
+        mpz_set_mpzstr(temp1, mpzstr1, 2);
+        int mpz2ui = mpz_get_ui(temp1);
+        // mpzstr_print(mpzstr1);
+        // printf(". got %d\n", mpz2ui);
+
+        unittest_assert_true(&unitstate, mpz1ui == mpz2ui);
+
+        mpzstr_clear_free(mpzstr1);
+        mpz_clear(temp1);
+
+        unittest_finish(&unitstate);
+    }
+
+
+    {
+        unittest_begin(&unitstate, "(mpzstr 1,2,3,0 base 10 -> mpz + 401) == (mpzstr 1,2,3,401 base 10 -> mpz) == (basenorm(mpzstr 1,2,3,401 base 10) -> mpz)", testopt);
+
+        mpz_t temp1; mpz_init(temp1);
+        mpz_t* mpzstr1 = mpzstr_init_malloc(4);
+
+        mpzstr_set_ints_right(mpzstr1, (int*)(int[]){1,2,3,0}, 4);
+        mpz_set_mpzstr(temp1, mpzstr1, 10);
+        int mpz1ui = mpz_get_ui(temp1) + 401;
+        // mpzstr_print(mpzstr1);
+        // printf(". got %d\n", mpz1ui);
+
+        mpzstr_set_ints_right(mpzstr1, (int*)(int[]){1,2,3,401}, 4);
+        mpz_set_mpzstr(temp1, mpzstr1, 10);
+        int mpz2ui = mpz_get_ui(temp1);
+        // mpzstr_print(mpzstr1);
+        // printf(". got %d\n", mpz2ui);
+
+        mpzstr_set_ints_right(mpzstr1, (int*)(int[]){1,2,3,401}, 4);
+        mpzstr_basenorm(mpzstr1, 4, 10, NULL);
+        mpz_set_mpzstr(temp1, mpzstr1, 10);
+        int mpz3ui = mpz_get_ui(temp1);
+        // mpzstr_print(mpzstr1);
+        // printf(". got %d\n", mpz2ui);
+
+        unittest_assert_true(&unitstate, mpz1ui == mpz2ui && mpz1ui == mpz3ui);
+
+        mpzstr_clear_free(mpzstr1);
+        mpz_clear(temp1);
+
+        unittest_finish(&unitstate);
+    }
 }
 
 void test_monotone_tm(test_opt_t* testopt)

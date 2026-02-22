@@ -43,51 +43,10 @@ int main(){
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
 
-        return 0;
+        // return 0;
     }
 
-    // return 0;
-
-    // mpzstr testing
-
-    int digits = 16;
-    int baseConvert = 27;
-    mpz_t* mpzstr = mpzstr_init_malloc(digits);
-    // gmp_printf("%Zd\n", *mpzstr);
-    // mpzstr_set_zero(mpzstr);
-    
-    mpz_set_si(*(mpzstr+(digits-4)), 3);
-    mpz_set_si(*(mpzstr+(digits-3)), 5);
-    mpz_set_si(*(mpzstr+(digits-2)), 10);
-    mpz_set_si(*(mpzstr+(digits-1)), -100000);
-
-    mpz_t shartPoop; mpz_init(shartPoop);
-
-    mpzstr_basenorm(mpzstr+1, mpzstr_len(mpzstr), 7, &shartPoop);
-    gmp_printf("carry %Zd, in base 7: ", shartPoop);
-    mpzstr_print(mpzstr);
-
-
-    mpz_set_mpzstr(shartPoop, mpzstr, 7);
-    gmp_printf("as base 10: %Zd\n", shartPoop);
-
-    mpzstr_set_zero(mpzstr);
-
-    printf("as base 7: "); // what the sigma
-    mpz_get_mpzstr(mpzstr, 7, shartPoop);
-    mpzstr_print(mpzstr);
-    mpz_t* mpzstr2 = mpzstr_init_malloc(mpzstr_len(mpzstr));
-    mpzstr_copy(mpzstr2, mpzstr);
-
-    printf("heres a copy i hope, ");
-    mpzstr_print(mpzstr2);
-
-
-    mpzstr_clear_free(mpzstr);
-    mpzstr_clear_free(mpzstr2);
-    mpz_clear(shartPoop);
-
-    // return 1;
+    return 1;
 
     // mtm testing
 

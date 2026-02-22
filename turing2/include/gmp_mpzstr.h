@@ -12,13 +12,19 @@ int mpzstr_len(mpz_t* mpzstr);
 mpz_t* mpzstr_clone(mpz_t* mpzstr);
 void mpzstr_copy(mpz_t* mpzstrDest, mpz_t* mpzstrSrc);
 
+mpz_t* mpzstr_get_i_left(mpz_t* mpzstr, int i);
+mpz_t* mpzstr_get_i_right(mpz_t* mpzstr, int i);
+
 // i am assuming the mpz has not been initialized yet. or at least cleared.
 void mpz_null_terminate(mpz_t* mpz);
 bool mpz_is_null_terminated(mpz_t* mpz);
 
 void mpzstr_set_zero(mpz_t* mpzstr);
 
+void mpzstr_set_ints_right(mpz_t* mpzstr, int* ints, int n);
+
 void mpzstr_print(mpz_t* mpzstr);
+void mpzstr_sprint(char* buff, mpz_t* mpzstr);
 
 
 // this treats an mpzstr as a string of digits whose values can be any integer but should but in the specified base.
@@ -27,6 +33,7 @@ void mpzstr_print(mpz_t* mpzstr);
 // this is useful for when you want to add/subtract to the digits and then make sure the digits still represents valid digits in a certain base.
 // returns true if overflowed/underflowed past most significant digit of rmpzstr.
 bool mpzstr_basenorm(mpz_t* opmpzstr, int digits, int base, mpz_t* carry);
+bool mpzstr_basenorm_temps(mpz_t* opmpzstr, int digits, int base, mpz_t* carry, mpz_t poo1, mpz_t poo2);
 
 // this converts an mpzstr in base base into an integer rop
 void mpz_set_mpzstr(mpz_t rop, mpz_t* mpzstr, int base);
