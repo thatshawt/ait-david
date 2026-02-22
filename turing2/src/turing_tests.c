@@ -113,6 +113,40 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_clears(counter,temp,NULL);
     }
     
+    // mtm table increment tests
+    {
+        mpz_t counter,temp;
+        mpz_inits(counter,temp,NULL);
+        char testTitle[200] = {0};
+
+        const int statesMax = 1;
+        const int worktapesMax = 1;
+        for(int states=1; states<=statesMax; states++){
+            for(int worktapes=1; worktapes<=worktapesMax; worktapes++){
+                // check if incrementing follows the from digit thing
+                sprintf(testTitle, "mtm table increment == mtm from index++ == mtm get index (%d states, %d worktapes)", states, worktapes);
+
+                unittest_begin(&unitstate, testTitle, testopt);
+
+                // while true
+                // load table2 from index
+                // check if they are the same table
+                
+                // load index of table1 into temp
+                // check if index == temp
+                
+                // increment table1
+                // increment table2 index
+                // break if table1 overflows
+                
+                unittest_finish(&unitstate);
+                
+            }
+        }
+        
+        mpz_clears(counter,temp,NULL);
+    }
+
     // do{
     //     entry = mtm_table_get_entry(table, &index);
     // }while(!mtm_entry_index_increment(&index, states, worktapes));

@@ -1,0 +1,3 @@
+[submodule "rocq-fun/busycoq"]
+	path = rocq-fun/busycoq
+	url = https://github.com/meithecatte/busycoq.git
