@@ -70,93 +70,22 @@ int main(){
 
     // mpz_set_str(tableIndexHEEHEE, "661390083969", 10);
 
-    mtm_get_table_index(tableIndexHEEHEE, &table);
+    // mtm_get_table_index(tableIndexHEEHEE, &table);
 
-    int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
-    gmp_printf("loaded %d bits from table index %Zd\n", loadedBitsFromIndex123123, tableIndexHEEHEE);
-    for(int i=0; i<10; i++){
-        mtm_print_table_summary(&table);
-        printf("\n");
-        mtm_print_table(&table);
-        mtm_table_increment(&table);
-    }
+    // int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
+    // gmp_printf("loaded %d bits from table index %Zd\n", loadedBitsFromIndex123123, tableIndexHEEHEE);
+    // for(int i=0; i<10; i++){
+    //     mtm_print_table_summary(&table);
+    //     printf("\n");
+    //     mtm_print_table(&table);
+    //     mtm_table_increment(&table);
+    // }
 
-    mtm_table_free(&table);
+    // mtm_table_free(&table);
 
-    mpz_clears(tableIndexHEEHEE, temp123123, NULL);
+    // mpz_clears(tableIndexHEEHEE, temp123123, NULL);
 
-    return 1;
-
-    int barencoded = 863;
-    mpz_t thing1; mpz_init_set_ui(thing1, barencoded);
-    mpz_t decodedX; mpz_init(decodedX);
-    int lengthx;
-
-    mpz_bar_decode_left_pop(decodedX, &lengthx, thing1);
-
-    gmp_printf("bar encode %d -> x: %Zd, lengthX: %d, thingAfter: %Zd\n",
-        barencoded, decodedX, lengthx, thing1);
-
-    mpz_clears(thing1, decodedX, NULL);
-
-    mpz_t bar_encoded; mpz_init(bar_encoded);
-    mpz_t apos_encoded; mpz_init(apos_encoded);
-    mpz_t x; mpz_init(x);
-    mpz_t xFromApos; mpz_init(xFromApos);
-    mpz_t bitlength; mpz_init(bitlength);
-    mpz_t bitinteger; mpz_init(bitinteger);
-    mpz_t xFromIntAndLength; mpz_init(xFromIntAndLength);
-
-    mpz_t prefixXFromAposX; mpz_init(prefixXFromAposX);
-
-    mpz_t decodedBarX; mpz_init(decodedBarX);
-    mpz_t decodedAposX; mpz_init(decodedAposX);
-    for(int i=0;i<25;i++){
-        mpz_set_ui(x,i);
-
-        mpz_prefix_index_get_bit_length(x, bitlength);
-        mpz_prefix_index_get_bit_integer(x, bitinteger);
-
-        mpz_get_prefix_index_from_int_and_length(xFromIntAndLength, bitinteger, bitlength);
-
-        gmp_printf("(%Zd    -> length:%Zd, int:%Zd -> %Zd)\n",
-                x, bitlength, bitinteger, xFromIntAndLength
-        );
-
-        mpz_bar_encode(bar_encoded, bitinteger, mpz_get_ui(bitlength));
-
-        mpz_apos_encode_prefix_index(apos_encoded, x);
-
-        int decodedBarLengthX;
-        mpz_bar_decode_left(decodedBarX, &decodedBarLengthX, bar_encoded);
-
-        gmp_printf("(bar:%Zd -> length:%d, int:%Zd) \n",
-            bar_encoded, decodedBarLengthX, decodedBarX
-        );
-
-        int decodedAposLengthX;
-        mpz_apos_decode_left(decodedAposX, &decodedAposLengthX, apos_encoded);
-
-        mpz_apos_decode_prefix_index_left(xFromApos, apos_encoded);
-
-        mpz_apos_decode_prefix_index_left(prefixXFromAposX, x);
-
-        gmp_printf(
-            "(apos:%Zd -> length: %d, int:%Zd -> %Zd) (xprefixApos: %Zd)\n",
-            apos_encoded, decodedAposLengthX, decodedAposX, xFromApos, prefixXFromAposX
-        );
-
-        printf("\n");
-
-    }
-    mpz_clears(bitlength,bitinteger,x,bar_encoded,
-        apos_encoded,decodedBarX,decodedAposX,xFromIntAndLength,xFromApos,
-        prefixXFromAposX,
-        NULL);
-
-    printf("\n\n");
-
-    return 1;
+    // return 1;
 
     mtm_table_init(&table, states, worktapes);
     mtm_table_zero(&table);
@@ -248,29 +177,29 @@ int main(){
     mtm_transition_entry_t* entryIdk = mtm_table_get_entry(&mtm.table, &mtm.tempIndex);
     entryIdk->inputTapeMove = 1;
     entryIdk->outputTapeWrite = 1;
-    entryIdk->nextState = 3;
+    entryIdk->nextState = 2;
 
-    // mtm_tape_load_str(&mtm.inputTape, "1000000000101");
+    mtm_tape_load_str(&mtm.inputTape, "100001");
 
     mpz_t mtmCode; mpz_init(mtmCode);
     mtm_print(&mtm);
-    int mtmcodebits = mtm_get_code(&mtm, mtmCode);
+    int mtmcodebits = mtm_get_code(&mtm, "", mtmCode);
     char poopooBuffer[1000] = {0};
 
     gmp_printf("\nbits %d, mtmCode %Zd\n", mtmcodebits, mtmCode);
 
     mtm_load_from_code(&mtm, mtmCode);
-    mtmcodebits = mtm_get_code(&mtm, mtmCode);
+    mtmcodebits = mtm_get_code(&mtm, "",mtmCode);
     mpz_get_str(poopooBuffer, 62, mtmCode);
     gmp_printf("\nbits %d, mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
     mtm_print(&mtm);
 
-    for(int i=0;i<5;i++){
+    for(int i=0;i<1;i++){
         printf("on i %d\n", i);
         // mpz_add_ui(mtmCode, mtmCode, 1);
         // mtm_load_from_code(&mtm, mtmCode);
         mtm_table_increment(&mtm.table);
-        mtmcodebits = mtm_get_code(&mtm, mtmCode);
+        mtmcodebits = mtm_get_code(&mtm, "",mtmCode);
         mpz_get_str(poopooBuffer, 62, mtmCode);
         gmp_printf("\n%d bits mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
         mtm_print(&mtm);
@@ -279,7 +208,7 @@ int main(){
     mpz_clears(mtmCode, NULL);
     mtm_destroy(&mtm);
 
-    // return 1;
+    return 1;
 
     printf("%d states, %d worktapes = %d bits\n", states, worktapes, mtm_get_entry_bits(states, worktapes));
 

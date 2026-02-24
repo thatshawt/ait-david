@@ -1,6 +1,7 @@
 #include "mpz_helpers.h"
 #include "gmp_mpzstr.h"
 #include <mpfr.h>
+#include <string.h>
 
 inline void mpz_ior_bits_lshift(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
 {
@@ -422,6 +423,14 @@ void mpz_apos_encode_temps(mpz_t apos_encoded, mpz_t x, int lengthX,
     // mpz_clears(poo1,poo2,NULL);
 }
 
+void mpz_apos_encode_temps_str(mpz_t apos_encoded, char* str, mpz_t temp, mpz_t temp2, mpz_t bits, mpz_t poo1, mpz_t poo2, mpz_t x)
+{
+    int lengthX = strlen(str);
+    mpz_set_str(x, str, 2);
+
+    mpz_apos_encode_temps(apos_encoded, x, lengthX, temp, temp2, bits, poo1, poo2);
+}
+
 void mpz_apos_encode(mpz_t apos_encoded, mpz_t x, int lengthX)
 {
     mpz_t temp; mpz_init(temp);
@@ -435,6 +444,20 @@ void mpz_apos_encode(mpz_t apos_encoded, mpz_t x, int lengthX)
 
     mpz_clears(temp, temp2, bits, NULL);
     mpz_clears(poo1,poo2,NULL);
+}
+
+void mpz_apos_encode_str(mpz_t apos_encoded, char* str)
+{
+    mpz_t temp; mpz_init(temp);
+    mpz_t x; mpz_init(x);
+    mpz_t temp2; mpz_init(temp2);
+    mpz_t bits; mpz_init(bits);
+
+    mpz_t poo1,poo2; mpz_inits(poo1,poo2,NULL);
+
+    mpz_apos_encode_temps_str(apos_encoded, str, temp, temp2, bits, poo1, poo2, x);
+
+    mpz_clears(temp, temp2, bits, x, poo1,poo2, NULL);
 }
 
 void mpz_apos_encode_prefix_index_temps(mpz_t apos_encoded, mpz_t prefixIndex,
@@ -472,42 +495,39 @@ void mpz_apos_encode_prefix_index(mpz_t apos_encoded, mpz_t prefixIndex)
 int mpz_apos_decode_left_temps(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left, mpz_t temp, mpz_t temp2, mpz_t temp3)
 {
     if(mpz_cmp_ui(number_with_apos_encoded_left,0) == 0){
-        *lengthx = 0;
-        mpz_set_ui(x, 0);
+        if(lengthx != NULL)*lengthx = 0;
+        if(x != NULL)mpz_set_ui(x, 0);
         return 0;
     }
 
     const int lengthOfFullNumber = mpz_sizeinbase(number_with_apos_encoded_left,2);
 
     int lengthOfLength;
-    // mpz_t temp; mpz_init(temp);
-    // mpz_t temp2; mpz_init(temp2);
 
     mpz_bar_decode_left(temp, &lengthOfLength, number_with_apos_encoded_left);
 
     mpz_set_ui(temp2, lengthOfLength);
     mpz_get_prefix_index_from_int_and_length_temps(temp, temp, temp2, temp3);
-    *lengthx = mpz_get_ui(temp);
+    if(lengthx != NULL)*lengthx = mpz_get_ui(temp);
+    int theLengthx = mpz_get_ui(temp);
 
-    int shifted = lengthOfFullNumber - lengthOfLength - lengthOfLength - 1 - *lengthx;
+    int shifted = lengthOfFullNumber - lengthOfLength - lengthOfLength - 1 - theLengthx;
     if(shifted < 0){
-        *lengthx = 0;
-        mpz_set_ui(x, 0);
-
-        // mpz_clears(temp, temp2, NULL);
+        if(lengthx != NULL)*lengthx = 0;
+        if(x != NULL)mpz_set_ui(x, 0);
 
         return 0;
     }
 
-    // gmp_printf("shifted %d\n", shifted);
-    mpz_load_number_of_n_ones(temp, *lengthx);
-    mpz_lshift(temp, temp, shifted);
-    mpz_and(temp, temp, number_with_apos_encoded_left);
-    mpz_rshift(x, temp, shifted);
+    if(x != NULL){
+        // gmp_printf("shifted %d\n", shifted);
+        mpz_load_number_of_n_ones(temp, theLengthx);
+        mpz_lshift(temp, temp, shifted);
+        mpz_and(temp, temp, number_with_apos_encoded_left);
+        mpz_rshift(x, temp, shifted);
+    }
 
-    // mpz_clears(temp, temp2, NULL);
-
-    return 2*lengthOfLength + 1 + *lengthx;
+    return 2*lengthOfLength + 1 + theLengthx;
 }
 
 // int mpz_apos_decode_left(mpz_t x, int* lengthx, mpz_t number_with_apos_encoded_left, mpz_t temp, mpz_t temp2, mpz_t temp3);

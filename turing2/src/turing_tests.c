@@ -138,6 +138,8 @@ void test_mpzstring(test_opt_t* testopt)
     }
 }
 
+bool testDebugMode = false;
+
 void test_monotone_tm(test_opt_t* testopt)
 {
     printf("    Monotone Turing Machine Tests\n");
@@ -248,9 +250,70 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_clears(counter,temp,NULL);
     }
 
-    // do{
-    //     entry = mtm_table_get_entry(table, &index);
-    // }while(!mtm_entry_index_increment(&index, states, worktapes));
+    // 1 state 1 worktape "100001" input tape, mtm get code -> load code, until overflow
+    {
+        unittest_begin(&unitstate, "(mtm -> code -> mtm) == (mtm), 1 state 1 worktape '100001' input tape, from init machine to overflow machine", testopt);
+
+        mtm_t mtm1, mtm2;
+        mtm_init(&mtm1, 1, 1);
+        mtm_init(&mtm2, 1, 1);
+
+        mtm_tape_load_str(&mtm1.inputTape, "100001");
+
+        mpz_t mtmCode; mpz_init(mtmCode);
+
+        // mtm_print(&mtm);
+        char poopooBuffer[1000] = {0};
+
+        // stops at i = 1,048,575
+        for(int i=0;i<999999999;i++){
+            if(i == 65535)testDebugMode = true;
+            // printf("on i %d\n", i);
+            
+            int mtmcodebits = mtm_get_code(&mtm1, "", mtmCode);
+            
+            // mpz_add_ui(mtmCode, mtmCode, 1);
+            int loadedbits = mtm_load_from_code(&mtm2, mtmCode);
+
+            bool mtmEquals = mtm_equals(&mtm1, &mtm2);
+            unittest_assert_true(&unitstate, mtmEquals);
+
+            // gmp_printf("\n%d bits mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
+            // mtm_print(&mtm1);
+            // mtm_print(&mtm2);
+
+            // if(i == 65535){
+            //     testDebugMode = true;
+            //     printf("one before fail %d\n", i);
+            //     mtm_print(&mtm1);
+            //     mpz_get_str(poopooBuffer, 62, mtmCode);
+            //     gmp_printf("\n%d bits mtmCode %Zd, %d loaded, base62: %s\n", mtmcodebits, mtmCode, loadedbits, poopooBuffer);
+            //     mtm_print(&mtm2);
+            // }
+            
+            if(!mtmEquals || (i == -1)){ //65535
+                printf("failed at i %d\n", i);
+                mtm_print(&mtm1);
+                mpz_get_str(poopooBuffer, 62, mtmCode);
+                gmp_printf("\n%d bits mtmCode %Zd, %d loaded, base62: %s\n", mtmcodebits, mtmCode, loadedbits, poopooBuffer);
+                mtm_print(&mtm2);
+                break;
+            }
+
+            if(mtm_table_increment(&mtm1.table)){
+                // printf("finished at %d\n", i);
+                break;
+            }
+            testDebugMode = false;
+        }
+        testDebugMode = false;
+        
+        mpz_clears(mtmCode, NULL);
+        mtm_destroy(&mtm1);
+        mtm_destroy(&mtm2);
+
+        unittest_finish(&unitstate);
+    }
 }
 
 void test_mpz_helpers(test_opt_t* testopt)
@@ -326,6 +389,83 @@ void test_mpz_helpers(test_opt_t* testopt)
 
         mpzstr_clear_free(poopooooos);
         mpz_clear(z);
+
+        unittest_finish(&unitstate);
+    }
+
+    // big encoding test of bar encoding and apos encoding
+    {
+        unittest_begin(&unitstate,
+            "Validate bar/apos encode/decode from x=0 to x=10000: "
+            "(x -> length,int -> x) == (x)"
+            " && (bar x -> length,int) == (x -> length,int)"
+            " && (apos x -> length,int) == (x -> length,int)"
+            " && (apos x -> x) == (x)"
+            , testopt);
+
+        mpz_t bar_encoded; mpz_init(bar_encoded);
+        mpz_t apos_encoded; mpz_init(apos_encoded);
+        mpz_t x; mpz_init(x);
+        mpz_t xFromApos; mpz_init(xFromApos);
+        mpz_t bitlength; mpz_init(bitlength);
+        mpz_t bitinteger; mpz_init(bitinteger);
+        mpz_t xFromIntAndLength; mpz_init(xFromIntAndLength);
+
+        mpz_t prefixXFromAposX; mpz_init(prefixXFromAposX);
+
+        mpz_t decodedBarX; mpz_init(decodedBarX);
+        mpz_t decodedAposX; mpz_init(decodedAposX);
+        for(int i=0;i<10000;i++){
+            mpz_set_ui(x,i);
+
+            mpz_prefix_index_get_bit_length(x, bitlength);
+            mpz_prefix_index_get_bit_integer(x, bitinteger);
+
+            mpz_get_prefix_index_from_int_and_length(xFromIntAndLength, bitinteger, bitlength);
+
+            // gmp_printf("(%Zd    -> length:%Zd, int:%Zd -> %Zd)\n",
+            //         x, bitlength, bitinteger, xFromIntAndLength
+            // );
+
+            unittest_assert_true(&unitstate, mpz_cmp(x, xFromIntAndLength) == 0);
+
+            mpz_bar_encode(bar_encoded, bitinteger, mpz_get_ui(bitlength));
+
+            mpz_apos_encode_prefix_index(apos_encoded, x);
+
+            int decodedBarLengthX;
+            mpz_bar_decode_left(decodedBarX, &decodedBarLengthX, bar_encoded);
+
+            // gmp_printf("(bar:%Zd -> length:%d, int:%Zd) \n",
+            //     bar_encoded, decodedBarLengthX, decodedBarX
+            // );
+
+            unittest_assert_true(&unitstate, mpz_get_ui(bitlength) == decodedBarLengthX);
+            unittest_assert_true(&unitstate, mpz_cmp(bitinteger, decodedBarX) == 0);
+
+            int decodedAposLengthX;
+            mpz_apos_decode_left(decodedAposX, &decodedAposLengthX, apos_encoded);
+
+            mpz_apos_decode_prefix_index_left(xFromApos, apos_encoded);
+
+            mpz_apos_decode_prefix_index_left(prefixXFromAposX, x);
+
+            // gmp_printf(
+            //     "(apos:%Zd -> length: %d, int:%Zd -> %Zd) (xprefixApos: %Zd)\n",
+            //     apos_encoded, decodedAposLengthX, decodedAposX, xFromApos, prefixXFromAposX
+            // );
+
+            unittest_assert_true(&unitstate, mpz_get_ui(bitlength) == decodedAposLengthX);
+            unittest_assert_true(&unitstate, mpz_cmp(bitinteger, decodedAposX) == 0);
+            unittest_assert_true(&unitstate, mpz_cmp(x, xFromApos) == 0);
+
+            // printf("\n");
+
+        }
+        mpz_clears(bitlength,bitinteger,x,bar_encoded,
+            apos_encoded,decodedBarX,decodedAposX,xFromIntAndLength,xFromApos,
+            prefixXFromAposX,
+            NULL);
 
         unittest_finish(&unitstate);
     }

@@ -47,9 +47,9 @@ int mpz_apos_decode_prefix_index_left_temps(mpz_t prefixIndex, mpz_t number_with
     mpz_t xint, mpz_t temp, mpz_t temp2, mpz_t temp3, mpz_t temp4 
 );
 void mpz_apos_encode(mpz_t apos_encoded, mpz_t x, int lengthX);
-void mpz_apos_encode_temps(mpz_t apos_encoded, mpz_t x, int lengthX,
-    mpz_t temp, mpz_t temp2, mpz_t bits, mpz_t poo1, mpz_t poo2
-);
+void mpz_apos_encode_str(mpz_t apos_encoded, char* str);
+void mpz_apos_encode_temps(mpz_t apos_encoded, mpz_t x, int lengthX, mpz_t temp, mpz_t temp2, mpz_t bits, mpz_t poo1, mpz_t poo2);
+void mpz_apos_encode_temps_str(mpz_t apos_encoded, char* str, mpz_t temp, mpz_t temp2, mpz_t bits, mpz_t poo1, mpz_t poo2, mpz_t poo3);
 void mpz_apos_encode_prefix_index(mpz_t apos_encoded, mpz_t prefixIndex);
 void mpz_apos_encode_prefix_index_temps(mpz_t apos_encoded, mpz_t prefixIndex,
     mpz_t temp, mpz_t poo1, mpz_t poo2, mpz_t poo3, mpz_t poo4, mpz_t poo5

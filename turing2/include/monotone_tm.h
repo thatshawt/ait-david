@@ -88,6 +88,7 @@ void mtm_table_init(mtm_transition_table_t* table, int states, int workTapes);
 mtm_transition_entry_t* mtm_table_get_entry(mtm_transition_table_t* table, mtm_entry_index_t* entryIndex);
 void mtm_table_free(mtm_transition_table_t* table);
 bool mtm_table_increment(mtm_transition_table_t* table);
+bool mtm_table_equals(mtm_transition_table_t* table1, mtm_transition_table_t* table2);
 void mtm_table_zero(mtm_transition_table_t* table);
 
 void mtm_print_table(mtm_transition_table_t* table);
@@ -107,6 +108,8 @@ typedef struct{
     mpz_t temp1;
     mpz_t temp2;
 } mtm_tape_t;
+
+bool mtm_tape_equals(mtm_tape_t* tape1, mtm_tape_t* tape2);
 
 void mtm_tape_goto_leftmost(mtm_tape_t* tape);
 void mtm_tape_goto_rightmost(mtm_tape_t* tape);
@@ -169,8 +172,13 @@ void mtm_unlock(mtm_t* mtm);
 void mtm_init(mtm_t* mtm, int states, int worktapes);
 void mtm_destroy(mtm_t* mtm);
 
+void mtm_reset(mtm_t* mtm);
+
 int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode);
-int mtm_get_code(mtm_t* mtm, mpz_t mtmCode);
+int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode);
+
+
+bool mtm_equals(mtm_t* mtm1, mtm_t* mtm2);
 
 void mtm_print(mtm_t* mtm);
 
