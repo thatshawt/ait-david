@@ -590,7 +590,7 @@ void mtm_entry_get_digit(mpz_t digit, mtm_transition_entry_t* entry, int states,
 
 void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes, mpz_t bits, mpz_t number, mpz_t temp)
 {
-    if(2*worktapes > 64){
+    if(2*worktapes > sizeof(unsigned long long)){
         fprintf(stderr, __FILE__ ":%d, %d worktapes too high\n",__LINE__, worktapes);
         exit(1);
     }
@@ -618,7 +618,7 @@ void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int 
     mpz_set_ui(temp, states-1);
     mpz_set_ui(bits, mpz_sizeinbase(temp, 2));
     mpz_pop_nbits_right(bits, number, mpz_get_ui(bits));
-    entry->nextState = mpz_get_ui(bits);
+    entry->nextState = mpz_get_ui(bits) % states;
 }
 
 void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes)
@@ -1216,6 +1216,8 @@ int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
         mpz_rshift(temp3, temp3, mpz_sizeinbase(temp3,2)-sideInfoLen);
         // if(testDebugMode)gmp_printf("fonud not empty apos\n");
     }
+
+    // int aposSideInfoBits = mpz_sizeinbase(temp3,2);
 
     // load table
     int tableBits = mtm_load_table_from_index(&mtm->table, temp1);

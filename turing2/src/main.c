@@ -92,7 +92,7 @@ int main(){
 
     mpz_t tableIndex; mpz_init(tableIndex);
 
-    mpz_set_str(tableIndex, "36773560824", 10);
+    mpz_set_str(tableIndex, "364837856", 10);
     mpz_t temp1; mpz_init(temp1);
     for(int i=0; i<10; i++){
         int loadedBitsFromIndex = mtm_load_table_from_index(&table, tableIndex);

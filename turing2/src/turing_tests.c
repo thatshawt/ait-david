@@ -14,6 +14,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#define MIN(a,b) ((a)<(b) ? (a):(b))
+#define MAX(a,b) ((a)>(b) ? (a):(b))
+
 unittest_state_t unitstate;
 tm_t tm;
 
@@ -314,6 +317,8 @@ void test_monotone_tm(test_opt_t* testopt)
 
         unittest_finish(&unitstate);
     }
+
+
 }
 
 void test_mpz_helpers(test_opt_t* testopt)
@@ -350,6 +355,33 @@ void test_mpz_helpers(test_opt_t* testopt)
         }
         mpzstr_clear_free(poopooooos);
         mpz_clear(z);
+
+        unittest_finish(&unitstate);
+    }
+
+    {
+        unittest_begin(&unitstate, "cantor ui ui pair == unpair from 0,0 to 99,99", testopt);
+        const int aMax = 99;
+        const int bMax = 99;
+
+        int maxZ,maxA,maxB = -1;
+        for(int a=0; a<=aMax; a++){for(int b=0; b<=bMax; b++){
+            unsigned long long z = mpz_cantor_pair_ui_ui(a, b);
+            unsigned long long rx, ry = -1;
+            mpz_cantor_unpair_ui_ui(&rx, &ry, z);
+
+            unittest_assert_true(&unitstate, a == rx && b == ry);
+
+            if(z > maxZ){
+                maxZ = z;
+                maxA = a;
+                maxB = b;
+            }
+            // if(ry==rx)
+            // printf("(%d,%d) = %d\n", rx, ry, z);
+        }}
+
+        // printf("(%d,%d) = %d\n", maxA, maxB, maxZ);
 
         unittest_finish(&unitstate);
     }

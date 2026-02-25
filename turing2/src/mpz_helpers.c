@@ -2,6 +2,7 @@
 #include "gmp_mpzstr.h"
 #include <mpfr.h>
 #include <string.h>
+#include <math.h>
 
 inline void mpz_ior_bits_lshift(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
 {
@@ -73,27 +74,37 @@ int mpz_count_leading_ones(mpz_t numberWithLeadingOnes)
 // cantors pairing function
 void mpz_cantor_pair_temps(mpz_t rz, mpz_t x, mpz_t y, mpz_t t1)
 {
-    // rz = (x*x + 3x + 2xy + y + y*y)/2
-    mpz_set_ui(rz, 0);
+    // it fits into 64 bit unsigned long long or fits into 32 bits
+    if((sizeof(unsigned long long) >= 64 && mpz_cmp_ui(x, 2600000000) < 0 && mpz_cmp_ui(y, 2600000000) < 0)
+    || (sizeof(unsigned long long) >= 32 && mpz_cmp_ui(x, 42400) < 0 && mpz_cmp_ui(y, 42400) < 0)
+    ){
+        unsigned long long z = mpz_cantor_pair_ui_ui(mpz_get_ui(x),mpz_get_ui(y));
+        mpz_set_ui(rz, z);
+    // just do mpz otherwise
+    }else
+    {
+        // rz = (x*x + 3x + 2xy + y + y*y)/2
+        mpz_set_ui(rz, 0);
 
-    mpz_set(t1, x);
-    mpz_mul(t1, t1, t1);
-    mpz_add(rz, rz, t1);
+        mpz_set(t1, x);
+        mpz_mul(t1, t1, t1);
+        mpz_add(rz, rz, t1);
 
-    mpz_mul_ui(t1, x, 3);
-    mpz_add(rz, rz, t1);
+        mpz_mul_ui(t1, x, 3);
+        mpz_add(rz, rz, t1);
 
-    mpz_mul_ui(t1, x, 2);
-    mpz_mul(t1, t1, y);
-    mpz_add(rz, rz, t1);
-    
-    mpz_add(rz, rz, y);
+        mpz_mul_ui(t1, x, 2);
+        mpz_mul(t1, t1, y);
+        mpz_add(rz, rz, t1);
+        
+        mpz_add(rz, rz, y);
 
-    mpz_set(t1, y);
-    mpz_mul(t1, t1, t1);
-    mpz_add(rz, rz, t1);
+        mpz_set(t1, y);
+        mpz_mul(t1, t1, t1);
+        mpz_add(rz, rz, t1);
 
-    mpz_fdiv_q_ui(rz, rz, 2);
+        mpz_fdiv_q_ui(rz, rz, 2);
+    }
 }
 
 void mpz_cantor_pair_ui_temps(mpz_t rz, int intX, int intY, mpz_t t1, mpz_t x, mpz_t y)
@@ -113,26 +124,53 @@ void mpz_cantor_pair(mpz_t rz, mpz_t x, mpz_t y)
     mpz_clear(t1);
 }
 
-void mpz_cantor_unpair_temps(mpz_t rx, mpz_t ry, mpz_t z, mpz_t i)
+unsigned long long mpz_cantor_pair_ui_ui(unsigned long long x, unsigned long long y)
+{
+    // rz = (x*x + 3x + 2xy + y + y*y)/2
+    return (x*x + 3*x + 2*x*y + y + y*y)/2;
+}
+
+void mpz_cantor_unpair_ui_ui(unsigned long long* rx, unsigned long long* ry, unsigned long long z)
 {
     // i = fdiv_q_ui(-1 + sqrt(1 + 8z), 2);
-    mpz_mul_ui(i, z, 8);
-    mpz_add_ui(i, i, 1);
-    mpz_sqrt(i, i);
-    mpz_sub_ui(i, i, 1);
-    mpz_fdiv_q_ui(i, i, 2);
-
+    unsigned long long i = (-1 + (unsigned long long)sqrt(1 + 8*z))/2;
+    
     // rx = z - (i*(1+i))/2
-    mpz_add_ui(rx, i, 1);
-    mpz_mul(rx, rx, i);
-    mpz_fdiv_q_ui(rx, rx, 2);
-    mpz_sub(rx, z, rx);
+    *rx = z - (i*(1+i))/2;
 
     // ry = (i*(3+i))/2 - z
-    mpz_add_ui(ry, i, 3);
-    mpz_mul(ry, ry, i);
-    mpz_fdiv_q_ui(ry, ry, 2);
-    mpz_sub(ry, ry, z);
+    *ry = (i*(3+i))/2 - z;
+}
+
+void mpz_cantor_unpair_temps(mpz_t rx, mpz_t ry, mpz_t z, mpz_t i)
+{
+    // if z fits into an unsigned long long
+    if(mpz_cmp_ui(z, (unsigned long long)-1) < 0){
+        unsigned long long rxInt, ryInt;
+        mpz_cantor_unpair_ui_ui(&rxInt, &ryInt, mpz_get_ui(z));
+        mpz_set_ui(rx, rxInt);
+        mpz_set_ui(ry, ryInt);
+    }else
+    { //otherwise do the mpz version
+        // i = fdiv_q_ui(-1 + sqrt(1 + 8z), 2);
+        mpz_mul_ui(i, z, 8);
+        mpz_add_ui(i, i, 1);
+        mpz_sqrt(i, i);
+        mpz_sub_ui(i, i, 1);
+        mpz_fdiv_q_ui(i, i, 2);
+
+        // rx = z - (i*(1+i))/2
+        mpz_add_ui(rx, i, 1);
+        mpz_mul(rx, rx, i);
+        mpz_fdiv_q_ui(rx, rx, 2);
+        mpz_sub(rx, z, rx);
+
+        // ry = (i*(3+i))/2 - z
+        mpz_add_ui(ry, i, 3);
+        mpz_mul(ry, ry, i);
+        mpz_fdiv_q_ui(ry, ry, 2);
+        mpz_sub(ry, ry, z);
+    }
 }
 void mpz_cantor_unpair(mpz_t rx, mpz_t ry, mpz_t z)
 {
