@@ -177,6 +177,7 @@ void mtm_reset(mtm_t* mtm);
 int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode);
 int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode);
 
+bool mtm_increment(mtm_t* mtm, char* sideInfoStr);
 
 bool mtm_equals(mtm_t* mtm1, mtm_t* mtm2);
 

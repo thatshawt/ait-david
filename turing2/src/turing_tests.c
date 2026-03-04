@@ -146,6 +146,7 @@ bool testDebugMode = false;
 void test_monotone_tm(test_opt_t* testopt)
 {
     printf("    Monotone Turing Machine Tests\n");
+    // dummy
     {
         unittest_begin(&unitstate, "dummy", testopt);
         unittest_finish(&unitstate);
@@ -268,8 +269,8 @@ void test_monotone_tm(test_opt_t* testopt)
         // mtm_print(&mtm);
         char poopooBuffer[1000] = {0};
 
-        // stops at i = 1,048,575
-        for(int i=0;i<999999999;i++){
+        // stops at i = 1048575
+        for(int i=0; i<1048575 ;i++){
             if(i == 65535)testDebugMode = true;
             // printf("on i %d\n", i);
             
@@ -318,7 +319,104 @@ void test_monotone_tm(test_opt_t* testopt)
         unittest_finish(&unitstate);
     }
 
+    // various tapes -> code -> back to tape
+    {
+        unittest_begin(&unitstate, "tape equality code validation", testopt);
 
+        int thing = 0;
+
+        mtm_tape_t tape1, tape2;
+        mtm_tape_init(&tape1);
+        mtm_tape_init(&tape2);
+
+        mpz_t tapeCode; mpz_init(tapeCode);
+
+        char buff[100] = {0};
+        
+        sprintf(buff, "");
+
+        TAPE_CHECK:
+        mtm_tape_reset(&tape1);
+        mtm_tape_reset(&tape2);
+
+        mtm_tape_load_str(&tape1, buff);
+        mtm_tape_get_code(&tape1, tapeCode);
+        mtm_tape_load_from_code(&tape2, tapeCode);
+
+        bool tapeequals = mtm_tape_equals(&tape1, &tape2);
+
+        unittest_assert_true(&unitstate, tapeequals);
+
+        if(!tapeequals){
+            printf("tape not equal buff:%s,\n", buff);
+            mtm_tape_print(&tape1);
+            mtm_tape_print(&tape2);
+        }
+
+        memset(buff, 0, 100);
+        switch(thing++){
+            case 0: sprintf(buff, "0"); goto TAPE_CHECK;
+            case 1: sprintf(buff, "1"); goto TAPE_CHECK;
+            case 2: sprintf(buff, "01"); goto TAPE_CHECK;
+            case 3: sprintf(buff, "10"); goto TAPE_CHECK;
+            case 4: sprintf(buff, "11"); goto TAPE_CHECK;
+            case 5: sprintf(buff, "110101000101010"); goto TAPE_CHECK;
+            case 6: sprintf(buff, "11001010101010100101101010"); goto TAPE_CHECK;
+            default: goto END;
+        }
+
+        END:
+
+        mtm_tape_destroy(&tape1);
+        mtm_tape_destroy(&tape2);
+
+        mpz_clear(tapeCode);
+
+        unittest_finish(&unitstate);
+    }
+
+    // tape move write test
+    {
+        unittest_begin(&unitstate, "tape move write test", testopt);
+
+        mtm_tape_t tape;
+        mtm_tape_init(&tape);
+
+        // mtm_tape_print(&tape);//2
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        mtm_tape_move_right(&tape);
+        // mtm_tape_print(&tape);//4
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        mtm_tape_write(&tape, 1);
+        mtm_tape_move_left(&tape);
+        // mtm_tape_print(&tape);//5
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        mtm_tape_move_left(&tape);
+        mtm_tape_write(&tape, 1);
+        // mtm_tape_print(&tape);//13
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        mtm_tape_move_left(&tape);
+        // mtm_tape_print(&tape);//21
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        mtm_tape_move_left(&tape);
+        // mtm_tape_print(&tape);//37
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        for(int i=0;i<6;i++)mtm_tape_move_right(&tape);
+        // mtm_tape_print(&tape);//148
+        // printf("under head: %d\n\n", mtm_tape_read(&tape));
+
+        unittest_assert_true(&unitstate, mpz_cmp_ui(tape.tapeMemory, 148) == 0);
+
+        mtm_tape_destroy(&tape);
+
+        unittest_finish(&unitstate);
+    }
 }
 
 void test_mpz_helpers(test_opt_t* testopt)

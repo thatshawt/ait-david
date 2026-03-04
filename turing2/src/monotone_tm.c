@@ -962,7 +962,7 @@ void mtm_tape_init(mtm_tape_t* tape)
 
 void mtm_tape_reset(mtm_tape_t* tape)
 {
-    mpz_set_ui(tape->tapeMemory, 2); // binary 1 0
+    mpz_set_ui(tape->tapeMemory, 2); // 10b
     tape->headBitIndex = 0;
 }
 
@@ -1017,8 +1017,8 @@ void mtm_tape_move_left(mtm_tape_t* tape)
     // need to grow tape
     if(headBitIndex == tapeSize-2){
         // add another leading 1 and remove the previous one
-        mpz_clrbit(tape->tapeMemory, tapeSize-1);
         mpz_setbit(tape->tapeMemory, tapeSize);
+        mpz_clrbit(tape->tapeMemory, tapeSize-1);
     }
 
     tape->headBitIndex++;
@@ -1072,6 +1072,8 @@ int mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode)
 int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode)
 {
     mpz_set(tape->tapeMemory, tapeCode);
+
+    mtm_tape_goto_leftmost(tape);
 
     return mpz_sizeinbase(tapeCode,2);
 
@@ -1127,6 +1129,11 @@ void mtm_tape_load_str(mtm_tape_t* tape, char* str)
 {
     // god, i pray for null terminated strings.
     int strLen = strlen(str);
+
+    if(strlen == 0){
+        mtm_tape_reset(tape);
+        return;
+    }
 
     // load the base 2 string
     mpz_set_str(tape->tapeMemory, str, 2);
@@ -1245,21 +1252,21 @@ int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
 // mtm code ['1', apos sideInfo, table, inputTape]
 int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
 {
-    mpz_set_ui(mtmCode, 0);
+    if(mtmCode)mpz_set_ui(mtmCode, 0);
 
     mpz_t temp1; mpz_init(temp1);
     
     //push 1 and apos side info
-    mpz_set_ui(mtmCode, 1);
+    if(mtmCode)mpz_set_ui(mtmCode, 1);
     mpz_apos_encode_str(temp1, sideInfoStr);
-    mpz_lshift(mtmCode, mtmCode, mpz_sizeinbase(temp1,2));
-    mpz_ior(mtmCode, mtmCode, temp1);
+    if(mtmCode)mpz_lshift(mtmCode, mtmCode, mpz_sizeinbase(temp1,2));
+    if(mtmCode)mpz_ior(mtmCode, mtmCode, temp1);
     // if(testDebugMode)gmp_printf("mtmcode with sideinfo %Zd\n", mtmCode);
 
     // push table encoding
     int tableBits = mtm_get_table_index(temp1, &mtm->table);
-    mpz_lshift(mtmCode, mtmCode, mpz_sizeinbase(temp1,2));
-    mpz_ior(mtmCode, mtmCode, temp1);
+    if(mtmCode)mpz_lshift(mtmCode, mtmCode, mpz_sizeinbase(temp1,2));
+    if(mtmCode)mpz_ior(mtmCode, mtmCode, temp1);
 
     //push inputTape encoding
     int inputTapeBits = mtm_tape_get_code(&mtm->inputTape, temp1)-1;
@@ -1273,8 +1280,8 @@ int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
     
     // if(testDebugMode)gmp_printf("inputCode: %Zd, tableIndex: %Zd\n", temp1, mtmCode);
 
-    mpz_lshift(mtmCode, mtmCode, inputTapeBits);
-    mpz_ior(mtmCode, mtmCode, temp1);
+    if(mtmCode)mpz_lshift(mtmCode, mtmCode, inputTapeBits);
+    if(mtmCode)mpz_ior(mtmCode, mtmCode, temp1);
 
     mpz_clears(temp1, NULL);
 
@@ -1282,6 +1289,23 @@ int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
 
     return tableBits + inputTapeBits;
 }
+
+// bool mtm_increment(mtm_t* mtm, char* sideInfoStr)
+// {
+//     // try to increment table...
+//     bool tableOverflow = mtm_table_increment(&mtm->table);
+
+//     // if table overflowed do the <state,worktapes> pair next
+//     if(tableOverflow){
+//         int stateWorktapePair = mpz_cantor_pair_ui_ui(mtm->table.states, mtm->table.workTapes);
+
+//         do{
+
+//         }while();
+//     }
+
+//     return false;
+// }
 
 bool mtm_equals(mtm_t* mtm1, mtm_t* mtm2)
 {

@@ -43,7 +43,7 @@ int main(){
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
 
-        return 0;
+        // return 0;
     }
 
     // mtm testing
@@ -119,55 +119,7 @@ int main(){
 
     mpz_clears(tableIndex, temp1, NULL);
 
-    mtm_tape_t tape;
-    mtm_tape_init(&tape);
-    mpz_t tapeCode; mpz_init(tapeCode);
-
-    mtm_tape_print(&tape);
-    mtm_tape_get_code(&tape, tapeCode);
-    gmp_printf("tape code %Zd\n", tapeCode);
-    mtm_tape_load_from_code(&tape, tapeCode);
-    printf("under head: %d\n\n", mtm_tape_read(&tape));
-
-    mtm_tape_move_right(&tape);
-    mtm_tape_print(&tape);
-    mtm_tape_get_code(&tape, tapeCode);
-    gmp_printf("tape code %Zd\n", tapeCode);
-    mtm_tape_load_from_code(&tape, tapeCode);
-    printf("under head: %d\n\n", mtm_tape_read(&tape));
-
-    mtm_tape_write(&tape, 1);
-    mtm_tape_move_left(&tape);
-    mtm_tape_print(&tape);
-    mtm_tape_get_code(&tape, tapeCode);
-    gmp_printf("tape code %Zd\n", tapeCode);
-    mtm_tape_load_from_code(&tape, tapeCode);
-    printf("under head: %d\n\n", mtm_tape_read(&tape));
-
-    mtm_tape_move_left(&tape);
-    mtm_tape_write(&tape, 1);
-    mtm_tape_print(&tape);
-    mtm_tape_get_code(&tape, tapeCode);
-    gmp_printf("tape code %Zd\n", tapeCode);
-    mtm_tape_load_from_code(&tape, tapeCode);
-    printf("under head: %d\n\n", mtm_tape_read(&tape));
-
-    mtm_tape_move_left(&tape);
-    mtm_tape_print(&tape);
-    mtm_tape_get_code(&tape, tapeCode);
-    gmp_printf("tape code %Zd\n", tapeCode);
-    mtm_tape_load_from_code(&tape, tapeCode);
-    printf("under head: %d\n\n", mtm_tape_read(&tape));
-
-    mtm_tape_move_left(&tape);
-    mtm_tape_print(&tape);
-    mtm_tape_get_code(&tape, tapeCode);
-    gmp_printf("tape code %Zd\n", tapeCode);
-    mtm_tape_load_from_code(&tape, tapeCode);
-    printf("under head: %d\n\n", mtm_tape_read(&tape));
-
-    mtm_tape_destroy(&tape);
-    mpz_clear(tapeCode);
+    return 1;
 
     mtm_t mtm;
     mtm_init(&mtm, 3, 1);

@@ -26,6 +26,8 @@ void mpz_cantor_pair_mpzstr_temps(mpz_t rz, mpz_t* mpzstr, mpz_t poo1, mpz_t poo
 void mpz_cantor_unpair_mpzstr(mpz_t* rmpzstr, mpz_t z, int n);
 void mpz_cantor_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, mpz_t poo2, mpz_t poo3);
 
+// readings/ElegantPairing.pdf
+// implement elegant_pair
 
 
 // bijective map between natural numbers and binary strings.
