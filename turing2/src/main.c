@@ -43,7 +43,7 @@ int main(){
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
 
-        // return 0;
+        return 0;
     }
 
     // mtm testing

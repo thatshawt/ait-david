@@ -27,7 +27,18 @@ void mpz_cantor_unpair_mpzstr(mpz_t* rmpzstr, mpz_t z, int n);
 void mpz_cantor_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, mpz_t poo2, mpz_t poo3);
 
 // readings/ElegantPairing.pdf
-// implement elegant_pair
+void mpz_elegant_pair(mpz_t rz, mpz_t x, mpz_t y);
+void mpz_elegant_pair_temps(mpz_t rz, mpz_t x, mpz_t y);
+void mpz_elegant_unpair(mpz_t rx, mpz_t ry, mpz_t z);
+void mpz_elegant_unpair_temps(mpz_t rx, mpz_t ry, mpz_t z, mpz_t left, mpz_t right);
+
+unsigned long long mpz_elegant_pair_ui_ui(unsigned long long x, unsigned long long y);
+void mpz_elegant_unpair_ui_ui(unsigned long long* rx, unsigned long long* ry, unsigned long long z);
+
+void mpz_elegant_pair_mpzstr(mpz_t rz, mpz_t* mpzstr);
+void mpz_elegant_pair_mpzstr_temps(mpz_t rz, mpz_t* mpzstr, mpz_t poo1);
+void mpz_elegant_unpair_mpzstr(mpz_t* rmpzstr, mpz_t z, int n);
+void mpz_elegant_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, mpz_t poo2, mpz_t poo3, mpz_t poo4);
 
 
 // bijective map between natural numbers and binary strings.

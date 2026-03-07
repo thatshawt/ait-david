@@ -248,6 +248,192 @@ void mpz_cantor_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, 
 
 }
 
+void mpz_elegant_pair_temps(mpz_t rz, mpz_t x, mpz_t y)
+{
+    /*
+    if x >= y:
+        return x*x + x + y
+    else:
+        return y*y + x
+    */
+
+    // it fits into 64 bit unsigned long long or fits into 32 bits
+    if((sizeof(unsigned long long) >= 64 && mpz_cmp_ui(x, 4000000000) < 0 && mpz_cmp_ui(y, 4000000000) < 0)
+    || (sizeof(unsigned long long) >= 32 && mpz_cmp_ui(x, 60000) < 0 && mpz_cmp_ui(y, 60000) < 0)
+    ){
+        unsigned long long z = mpz_elegant_pair_ui_ui(mpz_get_ui(x),mpz_get_ui(y));
+        mpz_set_ui(rz, z);
+    // just do mpz otherwise
+    }else{
+        if(mpz_cmp(x,y) >= 0){
+            mpz_set_ui(rz, 1);
+
+            mpz_mul(rz, rz, x);
+            mpz_mul(rz, rz, x);
+
+            mpz_add(rz, rz, x);
+
+            mpz_add(rz, rz, y);
+        }else{
+            mpz_set_ui(rz, 1);
+
+            mpz_mul(rz, rz, y);
+            mpz_mul(rz, rz, y);
+
+            mpz_add(rz, rz, x);
+        }
+    }
+}
+void mpz_elegant_pair(mpz_t rz, mpz_t x, mpz_t y)
+{
+    mpz_elegant_pair_temps(rz, x, y);
+}
+
+
+void mpz_elegant_unpair_temps(mpz_t rx, mpz_t ry, mpz_t z, mpz_t left, mpz_t right)
+{
+    /*  
+    left = z - int(math.sqrt(z))*int(math.sqrt(z))
+    right = int(math.sqrt(z))
+    
+    if left < right:
+        return (left,right)
+    else:
+        return (right, left-right)
+    */
+
+    // if z fits into an unsigned long long
+    if(mpz_cmp_ui(z, (unsigned long long)-1) < 0){
+        unsigned long long rxInt, ryInt;
+        mpz_elegant_unpair_ui_ui(&rxInt, &ryInt, mpz_get_ui(z));
+        mpz_set_ui(rx, rxInt);
+        mpz_set_ui(ry, ryInt);
+    }else{
+        mpz_sqrt(left, z);
+        mpz_mul(left, left, left);
+        mpz_sub(left, z, left);
+
+        mpz_sqrt(right, z);
+
+        if(mpz_cmp(left, right) < 0){
+            mpz_set(rx, left);
+            mpz_set(ry, right);
+        }else{
+            mpz_set(rx, right);
+            mpz_sub(ry, left, right);
+        }
+    }
+}
+
+void mpz_elegant_unpair(mpz_t rx, mpz_t ry, mpz_t z)
+{
+    mpz_t* poo = mpzstr_init_malloc(2);
+    mpz_t* left = poo+0;
+    mpz_t* right = poo+1;
+
+    mpz_elegant_unpair_temps(rx, ry, z, *left, *right);
+
+    mpzstr_clear_free(poo);
+}
+
+unsigned long long mpz_elegant_pair_ui_ui(unsigned long long x, unsigned long long y)
+{
+    /*
+    if x >= y:
+        return x*x + x + y
+    else:
+        return y*y + x
+    */
+
+    if(x >= y)
+        return x*x + x + y;
+    else
+        return y*y + x;
+}
+
+void mpz_elegant_unpair_ui_ui(unsigned long long* rx, unsigned long long* ry, unsigned long long z)
+{
+    /*  
+    left = z - int(math.sqrt(z))*int(math.sqrt(z))
+    right = int(math.sqrt(z))
+    
+    if left < right:
+        return (left,right)
+    else:
+        return (right, left-right)
+    */
+    unsigned long long left = z - (unsigned long long)(sqrt(z)) * (unsigned long long)(sqrt(z));
+    unsigned long long right = (unsigned long long)(sqrt(z));
+
+    if(left < right){
+        *rx = left;
+        *ry = right;
+    }else{
+        *rx = right;
+        *ry = left-right;
+    }
+}
+
+void mpz_elegant_pair_mpzstr_temps(mpz_t rz, mpz_t* mpzstr, mpz_t poo1)
+{
+    const int n = mpzstr_len(mpzstr);
+
+    if(n < 2){
+        // we need 2 at least...
+        mpz_set_si(rz, -1);
+        return;
+    }
+
+    //pair the first two
+    mpz_elegant_pair_temps(rz, *(mpzstr_get_i_left(mpzstr, 0)), *(mpzstr_get_i_left(mpzstr, 1)));
+
+    //pair the rest
+    for(int i=2;i<n;i++){
+        // mpz_t* digit = mpzstr_get_i_left(mpzstr, i);
+        mpz_elegant_pair_temps(poo1, rz, *(mpzstr_get_i_left(mpzstr, i)));
+        mpz_set(rz, poo1);
+    }
+}
+void mpz_elegant_pair_mpzstr(mpz_t rz, mpz_t* mpzstr)
+{
+    mpz_t* temps = mpzstr_init_malloc(1);
+
+    mpz_elegant_pair_mpzstr_temps(rz, mpzstr, *(temps+0));
+
+    mpzstr_clear_free(temps);
+}
+
+void mpz_elegant_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, mpz_t poo2, mpz_t poo3, mpz_t poo4)
+{
+    const int len = mpzstr_len(rmpzstr);
+
+    if(len < n || n < 2){
+        // the mpzstr cant fit the desired amount
+        // or there are less than 2 
+        mpzstr_set_zero(rmpzstr);
+        return;
+    }
+
+    // start with z
+    mpz_set(poo2, z);
+    
+    for(int i=n-3;i>=0;i--){
+        mpz_elegant_unpair_temps(poo1, *(mpzstr_get_i_left(rmpzstr, i)), poo2, poo3, poo4);
+        mpz_set(poo2, poo1);
+    }
+    //do the final pair
+    mpz_elegant_unpair_temps(*(mpzstr_get_i_left(rmpzstr, 0)), *(mpzstr_get_i_left(rmpzstr, 1)), poo2, poo3, poo4);
+}
+void mpz_elegant_unpair_mpzstr(mpz_t* rmpzstr, mpz_t z, int n)
+{
+    mpz_t* temps = mpzstr_init_malloc(4);
+
+    mpz_elegant_unpair_mpzstr_temps(rmpzstr, z, n, *(temps+0),*(temps+1),*(temps+2),*(temps+3));
+
+    mpzstr_clear_free(temps);
+}
+
+
 // x is the prefix index
 // bitlength = floor(log(x+1)/log(2))
 void mpz_prefix_index_get_bit_length_temps(mpz_t x, mpz_t bitlength, mpz_t tempMpz)

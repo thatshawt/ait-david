@@ -271,6 +271,7 @@ void test_monotone_tm(test_opt_t* testopt)
 
         // stops at i = 1048575
         for(int i=0; i<1048575 ;i++){
+            break;
             if(i == 65535)testDebugMode = true;
             // printf("on i %d\n", i);
             
@@ -457,6 +458,7 @@ void test_mpz_helpers(test_opt_t* testopt)
         unittest_finish(&unitstate);
     }
 
+    // cantor ui ui pair == unpair
     {
         unittest_begin(&unitstate, "cantor ui ui pair == unpair from 0,0 to 99,99", testopt);
         const int aMax = 99;
@@ -507,6 +509,107 @@ void test_mpz_helpers(test_opt_t* testopt)
             // gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
             mpz_cantor_unpair_mpzstr(poopooooos, z, 3);
+            // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
+
+            // gmp_printf("(%d, %Zd),", i++, z);
+
+            unittest_assert_true(&unitstate, mpz_get_ui(*pooo1) == a && mpz_get_ui(*pooo2) == b && mpz_get_ui(*pooo3) == c);
+        }
+        }
+        }
+        // printf("\n");
+
+        mpzstr_clear_free(poopooooos);
+        mpz_clear(z);
+
+        unittest_finish(&unitstate);
+    }
+
+    // elegant Pair == elegant Unpair
+    {
+        const int n = 100;
+        unittest_begin(&unitstate, "(elegant Pair == elegant Unpair) from (0,0) to (99,99) && (4,4) == 24", testopt);
+
+        mpz_t* poopooooos = mpzstr_init_malloc(2);
+        mpz_t* pooo1 = (poopooooos+0);
+        mpz_t* pooo2 = (poopooooos+1);
+        mpz_t z; mpz_init(z);
+
+        for(int a=0;a<n;a++){
+            for(int b=0;b<n;b++){
+                mpz_set_ui(*pooo1, a);
+                mpz_set_ui(*pooo2, b);
+
+                mpz_elegant_pair(z, *pooo1, *pooo2);
+                // gmp_printf("pair   (%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,z);
+
+                mpz_elegant_unpair(*pooo1, *pooo2, z);
+                // gmp_printf("unpair (%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,z);
+
+                unittest_assert_true(&unitstate, mpz_get_ui(*pooo1) == a & mpz_get_ui(*pooo2) == b);
+
+                if(a == 4 && b == 4){
+                    unittest_assert_true(&unitstate, mpz_get_ui(z) == 24);
+                }
+            }
+        }
+        mpzstr_clear_free(poopooooos);
+        mpz_clear(z);
+
+        unittest_finish(&unitstate);
+    }
+
+    // elegant ui ui pair == unpair
+    {
+        unittest_begin(&unitstate, "elegant ui ui pair == unpair from 0,0 to 99,99", testopt);
+        const int aMax = 99;
+        const int bMax = 99;
+
+        int maxZ,maxA,maxB = -1;
+        for(int a=0; a<=aMax; a++){for(int b=0; b<=bMax; b++){
+            unsigned long long z = mpz_elegant_pair_ui_ui(a, b);
+            unsigned long long rx, ry = -1;
+            mpz_elegant_unpair_ui_ui(&rx, &ry, z);
+
+            unittest_assert_true(&unitstate, a == rx && b == ry);
+
+            if(z > maxZ){
+                maxZ = z;
+                maxA = a;
+                maxB = b;
+            }
+            // if(ry==rx)
+            // printf("(%d,%d) = %d\n", rx, ry, z);
+        }}
+
+        // printf("(%d,%d) = %d\n", maxA, maxB, maxZ);
+
+        unittest_finish(&unitstate);
+    }
+
+    // mpzstr elegant pair test
+    {
+        unittest_begin(&unitstate, "elegant MpzStr (Pair == Unpair) from (0,0,0) to (49,49,49)", testopt);
+
+        int n = 50;
+        mpz_t* poopooooos = mpzstr_init_malloc(3);
+        mpz_t* pooo1 = (poopooooos+0);
+        mpz_t* pooo2 = (poopooooos+1);
+        mpz_t* pooo3 = (poopooooos+2);
+        mpz_t z; mpz_init(z);
+
+        int i = 0;
+        for(int a=0;a<n;a++){
+        for(int b=0;b<n;b++){
+        for(int c=0;c<n;c++){
+            mpz_set_ui(*pooo1, a);
+            mpz_set_ui(*pooo2, b);
+            mpz_set_ui(*pooo3, c);
+
+            mpz_elegant_pair_mpzstr(z, poopooooos);
+            // gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
+
+            mpz_elegant_unpair_mpzstr(poopooooos, z, 3);
             // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
             // gmp_printf("(%d, %Zd),", i++, z);

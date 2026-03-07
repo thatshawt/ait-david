@@ -1290,6 +1290,8 @@ int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
     return tableBits + inputTapeBits;
 }
 
+
+// idea: increment like this right to left: elegantPair <states,worktapes,inputStringLength>, mtm->table.
 // bool mtm_increment(mtm_t* mtm, char* sideInfoStr)
 // {
 //     // try to increment table...
