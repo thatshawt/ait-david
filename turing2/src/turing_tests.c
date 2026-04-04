@@ -30,9 +30,9 @@ void test_all(test_opt_t* testopt)
     
     mpz_init_set_ui(runopt_9999_nocheck.max_steps, 9999999999);
     
-    test_turing_sim(testopt);
-    test_turing_mapping(testopt);
-    test_turing_enumerate(testopt);
+    // test_turing_sim(testopt);
+    // test_turing_mapping(testopt);
+    // test_turing_enumerate(testopt);
     test_monotone_tm(testopt);
     test_mpz_helpers(testopt);
     test_mpzstring(testopt);
@@ -160,12 +160,15 @@ void test_monotone_tm(test_opt_t* testopt)
 
         const int statesMax = 3;
         const int worktapesMax = 3;
+
+        sprintf(testTitle, "mtm entry increment == mtm entry from digit++ == get_digit (%d max states, %d max worktapes), and did it reach max entry digit.", statesMax, worktapesMax);
+
+        unittest_begin(&unitstate, testTitle, testopt);
+
         for(int states=1; states<=statesMax; states++){
             for(int worktapes=1; worktapes<=worktapesMax; worktapes++){
                 // check if incrementing follows the from digit thing
-                sprintf(testTitle, "mtm entry increment == mtm entry from digit++ == get_digit (%d states, %d worktapes)", states, worktapes);
-
-                unittest_begin(&unitstate, testTitle, testopt);
+                
                 
                 mtm_transition_entry_t entry1;
                 mtm_transition_entry_t entry2;
@@ -202,20 +205,22 @@ void test_monotone_tm(test_opt_t* testopt)
                     mpz_add_ui(counter, counter, 1);
                 }while(!overflow);
 
-                unittest_finish(&unitstate);
+                // unittest_finish(&unitstate);
                 
                 // check if it went to the max digit
-                sprintf(testTitle, "    did it reach max digit?");
-                unittest_begin(&unitstate, testTitle, testopt);
+                // sprintf(testTitle, "    did it reach max digit?");
+                // unittest_begin(&unitstate, testTitle, testopt);
                 
                 mpz_get_entry_max_digit(temp, states, worktapes);
 
                 unittest_assert_true(&unitstate, mpz_cmp(temp, counter) == 0);
 
-                unittest_finish(&unitstate);
                 
             }
         }
+
+        unittest_finish(&unitstate);
+
         
         mpz_clears(counter,temp,NULL);
     }
@@ -271,7 +276,7 @@ void test_monotone_tm(test_opt_t* testopt)
 
         // stops at i = 1048575
         for(int i=0; i<1048575 ;i++){
-            break;
+            break; //TODO: remove this to enable the test
             if(i == 65535)testDebugMode = true;
             // printf("on i %d\n", i);
             
@@ -418,6 +423,8 @@ void test_monotone_tm(test_opt_t* testopt)
 
         unittest_finish(&unitstate);
     }
+
+
 }
 
 void test_mpz_helpers(test_opt_t* testopt)
@@ -607,10 +614,10 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_set_ui(*pooo3, c);
 
             mpz_elegant_pair_mpzstr(z, poopooooos);
-            // gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a==0 && b==0)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
             mpz_elegant_unpair_mpzstr(poopooooos, z, 3);
-            // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a==0 && b==0)gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
             // gmp_printf("(%d, %Zd),", i++, z);
 

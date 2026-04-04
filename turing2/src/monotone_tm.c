@@ -854,6 +854,7 @@ int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table)
     return result;
 }
 
+// [apos cantorpair(states,worktapes)]
 int mpz_table_index_pop_states_worktape_temps(mpz_t tableIndex, int* states, int* worktapes,
     mpz_t temp, mpz_t temp2, mpz_t poo1, mpz_t poo2, mpz_t poo3, mpz_t poo4, mpz_t poo5)
 {
@@ -902,6 +903,7 @@ int mpz_table_index_pop_states_worktape(mpz_t tableIndex, int* states, int* work
 
 // }
 
+// [<states,worktapes>, entryMap]
 int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex)
 {
     // zero the table if index is zero
@@ -1203,6 +1205,8 @@ int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
 
     mpz_set(temp1, mtmCode);
 
+    int sideInfoLength = 0;
+
     // apos sideInfo is zero which means empty string
     if(!mpz_tstbit(temp1, mpz_sizeinbase(temp1,2)-2)){
         // remove leading 1 and the 0 after it
@@ -1216,18 +1220,31 @@ int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
         //remove leading 1 and pop the apos sideInfo
         mpz_clrbit(temp1, mpz_sizeinbase(temp1,2)-1);
 
-        int sideInfoLen = mpz_apos_decode_left(NULL, NULL, temp1);
+        int sideInfoLen = mpz_apos_decode_left(temp3, &sideInfoLength, temp1);
+
+        // pop the apos side info
+        mpz_load_number_of_n_ones(temp2, mpz_sizeinbase(temp1,2) - sideInfoLen);
+        mpz_and(temp1, temp1, temp2);
 
         // load the apos sideInfo into temp3 for later
-        mpz_set(temp3, temp1);
-        mpz_rshift(temp3, temp3, mpz_sizeinbase(temp3,2)-sideInfoLen);
-        // if(testDebugMode)gmp_printf("fonud not empty apos\n");
+        // mpz_set(temp3, temp1);
+        // mpz_rshift(temp3, temp3, mpz_sizeinbase(temp3,2)-sideInfoLen);
+        gmp_printf("fonud not empty apos %Zd\n", temp3);
     }
 
     // int aposSideInfoBits = mpz_sizeinbase(temp3,2);
 
+    gmp_printf("table from index: %Zd\n", temp1);
     // load table
     int tableBits = mtm_load_table_from_index(&mtm->table, temp1);
+
+    if(tableBits == -1){
+        // printf("");
+        return -1;
+    }
+
+    // mtm_print_table(&mtm->table);
+    gmp_printf("input tape: %Zd\n", temp1);
     mpz_load_number_of_n_ones(temp2, mpz_sizeinbase(temp1,2) - tableBits);
     mpz_setbit(temp1, mpz_sizeinbase(temp1,2) - tableBits - 1);// add leading 1 for input tape code
     mpz_and(temp1, temp1, temp2);
@@ -1287,11 +1304,16 @@ int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
 
     // printf("tableBits %d, inputTapeBits %d\n", tableBits, inputTapeBits);
 
-    return tableBits + inputTapeBits;
+    // return tableBits + inputTapeBits;
+    return mpz_sizeinbase(mtmCode, 2);
 }
 
 
-// idea: increment like this right to left: elegantPair <states,worktapes,inputStringLength>, mtm->table.
+// idea: increment like this right to left: elegantPair <states,worktapes,inputStringPrefixInt>, mtm->table.
+bool mtm_increment(mtm_t* mtm, char* sideInfoStr)
+{
+    
+}
 // bool mtm_increment(mtm_t* mtm, char* sideInfoStr)
 // {
 //     // try to increment table...

@@ -24,7 +24,7 @@
 #include "mpz_helpers.h"
 
 // this is somewhere i forgor where it is
-extern uint64_t current_timestamp();// its in milliseconds
+extern uint64_t current_timestamp(); // its in milliseconds
 
 int main(){
 
@@ -43,7 +43,7 @@ int main(){
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
 
-        return 0;
+        // return 0;
     }
 
     // mtm testing
@@ -103,7 +103,7 @@ int main(){
         gmp_printf("table %Zd:\n", tableIndex);
         gmp_printf("entry bits for %Zd is %d\n", tableIndex, mtm_get_entry_bits(table.states, table.workTapes));
 
-        printf(" %d bits from index\n", loadedBitsFromIndex);
+        printf(" %d bits from table index\n", loadedBitsFromIndex);
         mtm_print_table_summary(&table);
         printf("\n");
 
@@ -119,10 +119,10 @@ int main(){
 
     mpz_clears(tableIndex, temp1, NULL);
 
-    return 1;
+    // return 1;
 
     mtm_t mtm;
-    mtm_init(&mtm, 3, 1);
+    mtm_init(&mtm, 1, 1);
 
     mtm.tempIndex.inputRead = 1;
 
@@ -135,12 +135,15 @@ int main(){
 
     mpz_t mtmCode; mpz_init(mtmCode);
     mtm_print(&mtm);
-    int mtmcodebits = mtm_get_code(&mtm, "", mtmCode);
+    int mtmcodebits = mtm_get_code(&mtm, "111", mtmCode);
     char poopooBuffer[1000] = {0};
 
     gmp_printf("\nbits %d, mtmCode %Zd\n", mtmcodebits, mtmCode);
 
-    mtm_load_from_code(&mtm, mtmCode);
+    if(mtm_load_from_code(&mtm, mtmCode) == -1){
+        printf("error'd out when mtm_load_from_code()\n");
+        return 1;
+    }
     mtmcodebits = mtm_get_code(&mtm, "",mtmCode);
     mpz_get_str(poopooBuffer, 62, mtmCode);
     gmp_printf("\nbits %d, mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
