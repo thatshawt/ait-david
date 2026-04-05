@@ -1229,12 +1229,12 @@ int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
         // load the apos sideInfo into temp3 for later
         // mpz_set(temp3, temp1);
         // mpz_rshift(temp3, temp3, mpz_sizeinbase(temp3,2)-sideInfoLen);
-        gmp_printf("fonud not empty apos %Zd\n", temp3);
+        // gmp_printf("fonud not empty apos %Zd\n", temp3);
     }
 
     // int aposSideInfoBits = mpz_sizeinbase(temp3,2);
 
-    gmp_printf("table from index: %Zd\n", temp1);
+    // gmp_printf("table from index: %Zd\n", temp1);
     // load table
     int tableBits = mtm_load_table_from_index(&mtm->table, temp1);
 
@@ -1244,10 +1244,10 @@ int mtm_load_from_code(mtm_t* mtm, mpz_t mtmCode)
     }
 
     // mtm_print_table(&mtm->table);
-    gmp_printf("input tape: %Zd\n", temp1);
     mpz_load_number_of_n_ones(temp2, mpz_sizeinbase(temp1,2) - tableBits);
-    mpz_setbit(temp1, mpz_sizeinbase(temp1,2) - tableBits - 1);// add leading 1 for input tape code
+    mpz_setbit(temp1, mpz_sizeinbase(temp1,2) - tableBits - 1); // add leading 1 for input tape code
     mpz_and(temp1, temp1, temp2);
+    // gmp_printf("input tape: %Zd\n", temp1);
 
     // add apos sideInfo to the left of inputTape code, and load it
     mpz_lshift(temp3, temp3, mpz_sizeinbase(temp1,2));

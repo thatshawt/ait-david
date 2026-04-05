@@ -261,7 +261,7 @@ void test_monotone_tm(test_opt_t* testopt)
 
     // 1 state 1 worktape "100001" input tape, mtm get code -> load code, until overflow
     {
-        unittest_begin(&unitstate, "(mtm -> code -> mtm) == (mtm), 1 state 1 worktape '100001' input tape, from init machine to overflow machine", testopt);
+        unittest_begin(&unitstate, "(mtm -> code -> mtm) == (mtm), 1 state 1 worktape '100001' input tape, from init to overflow machine", testopt);
 
         mtm_t mtm1, mtm2;
         mtm_init(&mtm1, 1, 1);
@@ -275,9 +275,10 @@ void test_monotone_tm(test_opt_t* testopt)
         char poopooBuffer[1000] = {0};
 
         // stops at i = 1048575
-        for(int i=0; i<1048575 ;i++){
+        for(int i=0; i<1048575 ; i++){
             break; //TODO: remove this to enable the test
-            if(i == 65535)testDebugMode = true;
+
+            // if(i == 65535)testDebugMode = true;
             // printf("on i %d\n", i);
             
             int mtmcodebits = mtm_get_code(&mtm1, "", mtmCode);
@@ -291,7 +292,6 @@ void test_monotone_tm(test_opt_t* testopt)
             // gmp_printf("\n%d bits mtmCode %Zd, base62: %s\n", mtmcodebits, mtmCode, poopooBuffer);
             // mtm_print(&mtm1);
             // mtm_print(&mtm2);
-
             // if(i == 65535){
             //     testDebugMode = true;
             //     printf("one before fail %d\n", i);
@@ -300,15 +300,14 @@ void test_monotone_tm(test_opt_t* testopt)
             //     gmp_printf("\n%d bits mtmCode %Zd, %d loaded, base62: %s\n", mtmcodebits, mtmCode, loadedbits, poopooBuffer);
             //     mtm_print(&mtm2);
             // }
-            
-            if(!mtmEquals || (i == -1)){ //65535
-                printf("failed at i %d\n", i);
-                mtm_print(&mtm1);
-                mpz_get_str(poopooBuffer, 62, mtmCode);
-                gmp_printf("\n%d bits mtmCode %Zd, %d loaded, base62: %s\n", mtmcodebits, mtmCode, loadedbits, poopooBuffer);
-                mtm_print(&mtm2);
-                break;
-            }
+            // if(!mtmEquals || (i == -1)){ //65535
+            //     printf("failed at i %d\n", i);
+            //     mtm_print(&mtm1);
+            //     mpz_get_str(poopooBuffer, 62, mtmCode);
+            //     gmp_printf("\n%d bits mtmCode %Zd, %d loaded, base62: %s\n", mtmcodebits, mtmCode, loadedbits, poopooBuffer);
+            //     mtm_print(&mtm2);
+            //     break;
+            // }
 
             if(mtm_table_increment(&mtm1.table)){
                 // printf("finished at %d\n", i);
@@ -321,6 +320,54 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_clears(mtmCode, NULL);
         mtm_destroy(&mtm1);
         mtm_destroy(&mtm2);
+
+        unittest_finish(&unitstate);
+    }
+
+    // make the test about mtm_load_from_code from a mtm_get_code with side info.
+    // see main.c to see what i was working on last...
+    {
+        unittest_begin(&unitstate, "(mtm -> code with side info \"111\" -> mtm) == (mtm + \"111\"), 1 state 1 worktape '1001' input tape, from init to overflow machine", testopt);
+
+        mtm_t mtm1, mtm2;
+        mtm_init(&mtm1, 1, 1);
+        mtm_init(&mtm2, 1, 1);
+
+        mpz_t mtmCode; mpz_init(mtmCode);
+
+        for(int i=0; i<1048575 ; i++){
+            // break; // comment this to enable test
+            mtm_tape_load_str(&mtm1.inputTape, "1001");
+
+            mtm_get_code(&mtm1, "111", mtmCode);
+
+            mtm_load_from_code(&mtm2, mtmCode);
+
+            mtm_tape_load_str(&mtm1.inputTape, "1111001");
+
+            bool mtmEquals = mtm_equals(&mtm1, &mtm2);
+
+            unittest_assert_true(&unitstate, mtmEquals);
+
+            if(!mtmEquals){
+                gmp_printf("failed at %d\n", i);
+                break;
+            }
+
+            if(mtm_table_increment(&mtm1.table)){
+                // printf("finished at %d\n", i);
+                break;
+            }
+        }
+        
+        // load an mtm from a code
+        // get code from mtm, with side info
+        // load mtm from code
+        // assert_true the first loaded mtm is equal to the second loaded mtm plus the side info
+
+        mtm_destroy(&mtm1);
+        mtm_destroy(&mtm2);
+        mpz_clears(mtmCode,NULL);
 
         unittest_finish(&unitstate);
     }
