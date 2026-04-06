@@ -39,11 +39,17 @@ int main(){
 
         turing_threading_self_init();
 
+        for(int states=1; states<=3; states++){
+            for(int worktapes=1; worktapes<=3; worktapes++){
+                const int bitsi = mtm_get_entry_bits(states, worktapes);
+                printf("states %d, worktapes %d -> entry bits %d\n", states,worktapes, bitsi);
+        }}
+
         test_opt_t testOptions;
         testOptions.onlyPrintFailingTests = false;
         test_all(&testOptions);
 
-        // return 0;
+        return 0;
     }
 
     // mtm testing
@@ -51,44 +57,8 @@ int main(){
     int states = 2;
     int worktapes = 1;
 
-    const int bitsi = mtm_get_entry_bits(states, worktapes);
-
-    printf("entry bits %d\n", bitsi);
-
     mtm_transition_table_t table;
     mtm_table_init(&table, states, worktapes);
-    mpz_t tableIndexHEEHEE; mpz_init(tableIndexHEEHEE);
-    mpz_t temp123123; mpz_init(temp123123);
-
-    // 2 states, 2 worktapes -> 153
-    // 153 << (16*4), 16 cus each entry is 16 bits long when using 2 states 2 worktapes.
-    // 4260087681 encodes 4 entries
-    // mpz_set_ui(tableIndexHEEHEE, 153);
-    // mpz_lshift(tableIndexHEEHEE, tableIndexHEEHEE, 16*4);
-    // mpz_set_str(temp123123, "4260087681", 10);
-    // mpz_add(tableIndexHEEHEE,tableIndexHEEHEE,temp123123);
-
-    // mpz_set_str(tableIndexHEEHEE, "661390083969", 10);
-
-    // mtm_get_table_index(tableIndexHEEHEE, &table);
-
-    // int loadedBitsFromIndex123123 = mtm_load_table_from_index(&table, tableIndexHEEHEE);
-    // gmp_printf("loaded %d bits from table index %Zd\n", loadedBitsFromIndex123123, tableIndexHEEHEE);
-    // for(int i=0; i<10; i++){
-    //     mtm_print_table_summary(&table);
-    //     printf("\n");
-    //     mtm_print_table(&table);
-    //     mtm_table_increment(&table);
-    // }
-
-    // mtm_table_free(&table);
-
-    // mpz_clears(tableIndexHEEHEE, temp123123, NULL);
-
-    // return 1;
-
-    mtm_table_init(&table, states, worktapes);
-    mtm_table_zero(&table);
 
     mpz_t tableIndex; mpz_init(tableIndex);
 

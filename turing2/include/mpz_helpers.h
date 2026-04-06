@@ -2,6 +2,11 @@
 #define MPZ_HELPERS_H
 
 #include <gmp.h>
+#include <stdbool.h>
+
+bool lincrement_int(int n, int* sizes, int* digits);
+bool ldecrement_int(int n, int* sizes, int* digits);
+bool rincrement_int(int n, int* sizes, int* digits);
 
 // various mpz bit manipulating funcs
 void mpz_lshift(mpz_t rop, mpz_t number, int n);

@@ -298,51 +298,14 @@ void mtm_entry_index_zero(mtm_entry_index_t* entryIndex)
     entryIndex->inputRead = 0;
     for(int i=0;i<MTM_MAX_WORK_TAPES;i++) entryIndex->workTapeReads[i] = 0;
 }
-
-// increments leftmost digit and overflows rightwards.
-// digits goes to 0 when overflowed
-// returns true if overflowed on every digit.
-bool lincrement_int(int n, int* sizes, int* digits)
+//UNTESTED
+void mtm_entry_index_last(mtm_entry_index_t* entryIndex, int states, int worktapes)
 {
-    // start on first digit
-    int digiti = 0;
-    INCREMENT:
-    if(digiti < n){
-        digits[digiti]++;
+    mtm_entry_index_zero(entryIndex);
 
-        //overflows, try increment next digit
-        if(digits[digiti] >= sizes[digiti]){
-            digits[digiti] = 0;
-            digiti++;
-            goto INCREMENT;
-        }
-    }else{//if we go too far we overflowed past last digit
-        return true;
-    }
-
-    return false;
-}
-
-// starts on right side and overflows leftwards.
-bool rincrement_int(int n, int* sizes, int* digits)
-{
-    // start on last digit
-    int digiti = n-1;
-    INCREMENT:
-    if(digiti >= 0){
-        digits[digiti]++;
-
-        //overflows, try increment next digit
-        if(digits[digiti] >= sizes[digiti]){
-            digits[digiti] = 0;
-            digiti--;
-            goto INCREMENT;
-        }
-    }else{//if we go too far we overflowed past last digit
-        return true;
-    }
-
-    return false;
+    entryIndex->state = states-1;
+    entryIndex->inputRead = 1;
+    for(int i=0;i<worktapes;i++) entryIndex->workTapeReads[i] = 1;
 }
 
 //TODO change this to use mpz maybe?
@@ -370,7 +333,41 @@ bool mtm_entry_index_increment(mtm_entry_index_t* entryIndex, int states, int wo
     for(int i=0;i<worktapes;i++) digits[i+2] = entryIndex->workTapeReads[i];
 
     // do the increment on the digits
-    bool returnval = lincrement_int(n, sizes, digits);
+    bool returnval = rincrement_int(n, sizes, digits);
+
+    // load the digits back into the entryIndex so we did something
+    entryIndex->state = digits[0];
+    entryIndex->inputRead = digits[1];
+    for(int i=0;i<worktapes;i++)  entryIndex->workTapeReads[i] = digits[i+2];
+    
+    return returnval;
+}
+
+bool mtm_entry_index_decrement(mtm_entry_index_t* entryIndex, int states, int worktapes)
+{
+    // entry index encoding
+    // domain {0..states-1},{0,1},{0,1}^worktapes.
+    // sizes    states,         2,  2^worktapes.
+    // encoding <state, inputread, worktapereads>
+    // each worktaperead has size 2 and there are table->worktapes number of work tapes.
+
+    // n is this much cus yea
+    int n = worktapes+2;
+    
+    // set the sizes
+    int sizes[2+MTM_MAX_WORK_TAPES] = {0};
+    sizes[0] = states;
+    sizes[1] = 2;
+    for(int i=0;i<worktapes;i++) sizes[i+2] = 2;
+    
+    // set the digits
+    int digits[2+MTM_MAX_WORK_TAPES] = {0};
+    digits[0] = entryIndex->state;
+    digits[1] = entryIndex->inputRead;
+    for(int i=0;i<worktapes;i++) digits[i+2] = entryIndex->workTapeReads[i];
+
+    // do the increment on the digits
+    bool returnval = ldecrement_int(n, sizes, digits);
 
     // load the digits back into the entryIndex so we did something
     entryIndex->state = digits[0];
@@ -595,6 +592,8 @@ void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int 
         exit(1);
     }
 
+    // gmp_printf("entry digit %Zd\n", digit);
+
     mpz_set(number, digit);
 
     unsigned long long intbits = 0;
@@ -603,12 +602,16 @@ void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int 
     mpz_set_ui(temp, 0);
 
     mpz_pop_nbits_right(bits, number, 3);
+    // gmp_printf("bits %Zd, ", bits);
     intbits = mpz_get_ui(bits);
     entry->inputTapeMove = (intbits & 1<<0)>>0;
     entry->outputTapeWrite = (intbits & 1<<1)>>1;
     entry->outputTapeMove = (intbits & 1<<2)>>2;
 
+    // printf("entry->inputTapeMove %d ", entry->inputTapeMove);
+
     mpz_pop_nbits_right(bits, number, 2*worktapes);
+    // gmp_printf("bits %Zd, ", bits);
     intbits = mpz_get_ui(bits);
     for(int i=0; i<worktapes; i++){
         entry->workTapeWrites[i] = (intbits & 1<<i)>>i;
@@ -618,7 +621,10 @@ void mtm_entry_from_digit_temps(mtm_transition_entry_t* entry, mpz_t digit, int 
     mpz_set_ui(temp, states-1);
     mpz_set_ui(bits, mpz_sizeinbase(temp, 2));
     mpz_pop_nbits_right(bits, number, mpz_get_ui(bits));
+    // gmp_printf("bits %Zd\n", bits);
     entry->nextState = mpz_get_ui(bits) % states;
+
+
 }
 
 void mtm_entry_from_digit(mtm_transition_entry_t* entry, mpz_t digit, int states, int worktapes)
@@ -750,6 +756,7 @@ int mpz_pop_entry_left(mpz_t number, mtm_transition_entry_t* entry, int states, 
     return result;
 }
 
+// HERE
 int mpz_pop_table_entry_map_left_temps(mpz_t number, mtm_transition_table_t* table, mpz_t temp1, mpz_t temp2)
 {
     // const int numberFullLength = mpz_sizeinbase(number,2);
@@ -773,10 +780,14 @@ int mpz_pop_table_entry_map_left_temps(mpz_t number, mtm_transition_table_t* tab
     // mpz_t temp1,temp2;
     // mpz_inits(temp1,temp2,NULL);
     do{
+        // mtm_print_entry_index_short(&index, worktapes);
+        // gmp_printf("%Zd\n", number);
         entry = mtm_table_get_entry(table, &index);
 
         int removed = mpz_pop_entry_left_temps(number, entry, states, worktapes, temp1, temp2);
         
+        // mtm_print_entry_short(entry, worktapes);
+
         if(removed == 0)break;
 
         totalBitsRemoved += removed;
@@ -784,6 +795,8 @@ int mpz_pop_table_entry_map_left_temps(mpz_t number, mtm_transition_table_t* tab
     }while(!mtm_entry_index_increment(&index, states, worktapes));
 
     // mpz_clears(temp1, temp2, NULL);
+
+    // mtm_print_table(table);
 
     return totalBitsRemoved;
 }
@@ -955,6 +968,13 @@ void mtm_tape_print(mtm_tape_t* tape)
     gmp_printf("tape head: %d, tapeMemory: %Zd\n", tape->headBitIndex, tape->tapeMemory);
 }
 
+void mtm_tape_print_binary(mtm_tape_t* tape)
+{
+    char* binStr = mpz_get_str(NULL, 2, tape->tapeMemory);
+    gmp_printf("tape head: %d, tapeMemory: %s\n", tape->headBitIndex, binStr);
+    free(binStr);
+}
+
 void mtm_tape_init(mtm_tape_t* tape)
 {
     mpz_inits(tape->tapeMemory, tape->temp1, tape->temp2, NULL);
@@ -1102,6 +1122,43 @@ int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode)
         return aposLength1;
     }
     
+}
+
+void mtm_tape_get_prefix_int_temps(mtm_tape_t* tape, mpz_t prefixInt, mpz_t poo1)
+{
+    const int tapeMemlength = mpz_sizeinbase(tape->tapeMemory,2);
+
+    // set the bitinteger by removing the leading 1
+    mpz_set(tape->temp1, tape->tapeMemory);
+    mpz_clrbit(tape->temp1, tapeMemlength-1);
+
+    // get the final bitlength
+    mpz_set_ui(tape->temp2, tapeMemlength-1);
+
+    // gmp_printf("tape->tapeMemory %Zd, temp2 %Zd, tapeMemLength %d\n",tape->tapeMemory, tape->temp2, tapeMemlength);
+    // gmp_printf("tape->temp1 %Zd, tape->temp2 %Zd\n", tape->temp1, tape->temp2);
+
+    mpz_get_prefix_index_from_int_and_length_temps(prefixInt, tape->temp1, tape->temp2, poo1);
+
+    mtm_tape_goto_leftmost(tape);
+}
+
+void mtm_tape_from_prefix_int(mtm_tape_t* tape, mpz_t prefixInt)
+{
+    if(mpz_cmp_ui(prefixInt, 0) == 0){
+        mtm_tape_reset(tape);
+    }else{
+        //tapeMemory = bitinteger
+        mpz_prefix_index_get_bit_integer_temps(prefixInt, tape->tapeMemory, tape->temp2, tape->temp1);
+
+        //temp2 = bitlength
+        mpz_prefix_index_get_bit_length_temps(prefixInt, tape->temp2, tape->temp1);
+
+        // add leading one to tapeMemory
+        mpz_setbit(tape->tapeMemory, mpz_get_ui(tape->temp2));
+    }
+
+    mtm_tape_goto_leftmost(tape);
 }
 
 bool mtm_tape_equals(mtm_tape_t* tape1, mtm_tape_t* tape2)
@@ -1309,27 +1366,49 @@ int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
 }
 
 
-// idea: increment like this right to left: elegantPair <states,worktapes,inputStringPrefixInt>, mtm->table.
-bool mtm_increment(mtm_t* mtm, char* sideInfoStr)
+// increment like this right to left: elegantPair <states,worktapes,inputStringPrefixInt>, mtm->table.
+bool mtm_increment_temps(mtm_t* mtm,
+    mpz_t poo1, mpz_t poo2, mpz_t poo3, mpz_t poo4, mpz_t poo5, mpz_t poo6)
 {
-    
+    bool tableOverflow = mtm_table_increment(&mtm->table);
+
+    if(tableOverflow){
+        mpz_t* pairMpzstr = mpzstr_init_malloc(3);
+        // pair up the things
+        mpz_set_ui(*mpzstr_get_i_left(pairMpzstr, 0), mtm->table.states);
+        mpz_set_ui(*mpzstr_get_i_left(pairMpzstr, 1), mtm->table.workTapes);
+        
+        mtm_tape_get_prefix_int_temps(&mtm->inputTape, poo6, poo1);
+        mpz_set(*mpzstr_get_i_left(pairMpzstr, 2), poo6);
+        
+        mpz_elegant_pair_mpzstr_temps(poo1, pairMpzstr, poo2);
+        
+        // keep incrementing until we find a valid mtm
+        while(true){
+            // increment by 1
+            mpz_add_ui(poo1, poo1, 1);
+
+            // unpair and load the values
+            mpz_elegant_unpair_mpzstr_temps(pairMpzstr, poo1, 3, poo2, poo3, poo4, poo5);
+
+            mtm->table.states = mpz_get_ui(*mpzstr_get_i_left(pairMpzstr, 0));
+            mtm->table.workTapes = mpz_get_ui(*mpzstr_get_i_left(pairMpzstr, 1));
+            mtm_tape_from_prefix_int(&mtm->inputTape, *mpzstr_get_i_left(pairMpzstr, 2));
+
+            if(mtm->table.states <= 0 || mtm->table.workTapes <= 0){
+               continue;
+            }else{
+                break;
+            }
+        }
+        
+
+        mpzstr_clear_free(pairMpzstr);
+    }
+
+    // i guess we never return true...
+    return false;
 }
-// bool mtm_increment(mtm_t* mtm, char* sideInfoStr)
-// {
-//     // try to increment table...
-//     bool tableOverflow = mtm_table_increment(&mtm->table);
-
-//     // if table overflowed do the <state,worktapes> pair next
-//     if(tableOverflow){
-//         int stateWorktapePair = mpz_cantor_pair_ui_ui(mtm->table.states, mtm->table.workTapes);
-
-//         do{
-
-//         }while();
-//     }
-
-//     return false;
-// }
 
 bool mtm_equals(mtm_t* mtm1, mtm_t* mtm2)
 {
@@ -1364,8 +1443,8 @@ bool mtm_equals(mtm_t* mtm1, mtm_t* mtm2)
 void mtm_print(mtm_t* mtm)
 {
     printf("mtm:\nstate:%d\ninputTape,outputTape:\n",mtm->state);
-    mtm_tape_print(&mtm->inputTape);
-    mtm_tape_print(&mtm->outputTape);
+    mtm_tape_print_binary(&mtm->inputTape);
+    mtm_tape_print_binary(&mtm->outputTape);
     mtm_print_table_summary(&mtm->table);
     printf("\n");
     mtm_print_table(&mtm->table);

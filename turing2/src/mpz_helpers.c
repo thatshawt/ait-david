@@ -4,6 +4,74 @@
 #include <string.h>
 #include <math.h>
 
+// increments leftmost digit and overflows rightwards.
+// digits goes to 0 when overflowed
+// returns true if overflowed on every digit.
+bool lincrement_int(int n, int* sizes, int* digits)
+{
+    // start on first digit
+    int digiti = 0;
+    INCREMENT:
+    if(digiti < n){
+        digits[digiti]++;
+
+        //overflows, try increment next digit
+        if(digits[digiti] >= sizes[digiti]){
+            digits[digiti] = 0;
+            digiti++;
+            goto INCREMENT;
+        }
+    }else{//if we go too far we overflowed past last digit
+        return true;
+    }
+
+    return false;
+}
+
+//UNTESTED
+bool ldecrement_int(int n, int* sizes, int* digits)
+{
+    // start on first digit
+    int digiti = 0;
+    DECREMENT:
+    if(digiti < n){
+        digits[digiti]--;
+
+        //underflows, try increment next digit
+        if(digits[digiti] < 0){
+            digits[digiti] = sizes[digiti]-1;
+            digiti++;
+            goto DECREMENT;
+        }
+    }else{//if we go too far we underflowed past last digit
+        return true;
+    }
+
+    return false;
+}
+
+// starts on right side and overflows leftwards.
+bool rincrement_int(int n, int* sizes, int* digits)
+{
+    // start on last digit
+    int digiti = n-1;
+    INCREMENT:
+    if(digiti >= 0){
+        digits[digiti]++;
+
+        //overflows, try increment next digit
+        if(digits[digiti] >= sizes[digiti]){
+            digits[digiti] = 0;
+            digiti--;
+            goto INCREMENT;
+        }
+    }else{//if we go too far we overflowed past last digit
+        return true;
+    }
+
+    return false;
+}
+
 inline void mpz_ior_bits_lshift(mpz_t rop, mpz_t temp, mpz_t bits, mp_bitcnt_t biti)
 {
     // rop |= bits<<biti;
@@ -495,6 +563,7 @@ inline void mpz_get_prefix_index_from_int_and_length_temps(mpz_t x, mpz_t bitint
     // mpz_t temp; mpz_init(temp);
 
     mpz_set_ui(temp, 1);
+    // gmp_printf("temp %Zd, bitlength %Zd\n", temp, bitlength);
     mpz_mul_2exp(temp, temp, mpz_get_ui(bitlength));
     mpz_add(temp, temp, bitinteger);
     mpz_sub_ui(x, temp, 1);

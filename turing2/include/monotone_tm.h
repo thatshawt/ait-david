@@ -73,7 +73,9 @@ typedef struct{
 } mtm_entry_index_t;
 
 void mtm_entry_index_zero(mtm_entry_index_t* entryIndex);
+void mtm_entry_index_last(mtm_entry_index_t* entryIndex, int states, int worktapes);
 bool mtm_entry_index_increment(mtm_entry_index_t* entryIndex, int states, int worktapes);
+bool mtm_entry_index_decrement(mtm_entry_index_t* entryIndex, int states, int worktapes);
 void mtm_print_entry_index(mtm_entry_index_t* entryIndex, int workTapes);
 
 typedef struct{
@@ -101,6 +103,9 @@ int mtm_get_table_index(mpz_t tableIndex, mtm_transition_table_t* table);
 int mtm_load_table_from_index(mtm_transition_table_t* table, mpz_t tableIndex);
 
 // mtm tapes are binary and go left and right.
+// they also have a head to specify what location to do operations on
+// the operations are read and write.
+// you can also move the head left or right.
 typedef struct{
     mpz_t tapeMemory;
     unsigned int headBitIndex;
@@ -118,9 +123,14 @@ void mtm_tape_load_str(mtm_tape_t* tape, char* str);
 int mtm_tape_get_code(mtm_tape_t* tape, mpz_t tapeCode);
 int mtm_tape_load_from_code(mtm_tape_t* tape, mpz_t tapeCode);
 
+// void mtm_tape_get_prefix_int(mtm_tape_t* tape, mpz_t prefixInt);
+void mtm_tape_get_prefix_int_temps(mtm_tape_t* tape, mpz_t prefixInt, mpz_t poo1);
+void mtm_tape_from_prefix_int(mtm_tape_t* tape, mpz_t prefixInt);
+
 bool mtm_tape_increment(mtm_tape_t* tape);
 
 void mtm_tape_print(mtm_tape_t* tape);
+void mtm_tape_print_binary(mtm_tape_t* tape);
 
 void mtm_tape_init(mtm_tape_t* tape);
 void mtm_tape_reset(mtm_tape_t* tape);
