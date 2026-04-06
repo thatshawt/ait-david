@@ -121,9 +121,10 @@ void mpzstr_set_ints_right(mpz_t* mpzstr, int* ints, int n)
 void mpzstr_print(mpz_t* mpzstr)
 {
     const int n = mpzstr_len(mpzstr);
+    printf("(");
     for(int i=0; i<n; i++){
         mpz_t* theMpz = mpzstr+i;
-        if(i==n-1) gmp_printf("%Zd", *theMpz);
+        if(i==n-1) gmp_printf("%Zd)\n", *theMpz);
         else gmp_printf("%Zd, ", *theMpz);
     }
 }

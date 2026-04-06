@@ -652,6 +652,7 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_cantor_pair_mpzstr(z, poopooooos);
             // if(a < 10 && b < 10 && c < 10)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
+            mpzstr_set_zero(poopooooos);
             mpz_cantor_unpair_mpzstr(poopooooos, z, 3);
             // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
@@ -753,8 +754,9 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_elegant_pair_mpzstr(z, poopooooos);
             // if(a < 10 && b < 10 && c < 10)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
+            mpzstr_set_zero(poopooooos);
             mpz_elegant_unpair_mpzstr(poopooooos, z, 3);
-            // if(a==0 && b==0 || true)gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
+            // if(mpz_get_ui(z) == 16 || mpz_get_ui(z) == 25)gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
             // gmp_printf("(%d, %Zd),", i++, z);
 

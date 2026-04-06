@@ -979,13 +979,15 @@ void mtm_tape_init(mtm_tape_t* tape)
 {
     mpz_inits(tape->tapeMemory, tape->temp1, tape->temp2, NULL);
     mpz_set_ui(tape->tapeMemory, 2); // binary 1 0
-    tape->headBitIndex = 0;
+    mtm_tape_goto_leftmost(tape);
+    // tape->headBitIndex = 0;
 }
 
 void mtm_tape_reset(mtm_tape_t* tape)
 {
     mpz_set_ui(tape->tapeMemory, 2); // 10b
-    tape->headBitIndex = 0;
+    mtm_tape_goto_leftmost(tape);
+    // tape->headBitIndex = 0;
 }
 
 void mtm_tape_destroy(mtm_tape_t* tape)
@@ -1370,7 +1372,8 @@ int mtm_get_code(mtm_t* mtm, char* sideInfoStr, mpz_t mtmCode)
 bool mtm_increment_temps(mtm_t* mtm,
     mpz_t poo1, mpz_t poo2, mpz_t poo3, mpz_t poo4, mpz_t poo5, mpz_t poo6)
 {
-    bool tableOverflow = mtm_table_increment(&mtm->table);
+    // bool tableOverflow = mtm_table_increment(&mtm->table);
+    bool tableOverflow = true;
 
     if(tableOverflow){
         mpz_t* pairMpzstr = mpzstr_init_malloc(3);
@@ -1381,25 +1384,50 @@ bool mtm_increment_temps(mtm_t* mtm,
         mtm_tape_get_prefix_int_temps(&mtm->inputTape, poo6, poo1);
         mpz_set(*mpzstr_get_i_left(pairMpzstr, 2), poo6);
         
-        mpz_elegant_pair_mpzstr_temps(poo1, pairMpzstr, poo2);
+        // mpz_elegant_pair_mpzstr_temps(poo1, pairMpzstr, poo2);
+        mpz_elegant_pair_mpzstr(poo1, pairMpzstr);
         
         // keep incrementing until we find a valid mtm
+        int i = 0;
         while(true){
+            if(i >= 30)break;
             // increment by 1
             mpz_add_ui(poo1, poo1, 1);
 
             // unpair and load the values
-            mpz_elegant_unpair_mpzstr_temps(pairMpzstr, poo1, 3, poo2, poo3, poo4, poo5);
-
+            mpzstr_set_zero(pairMpzstr);
+            // mpz_elegant_unpair_mpzstr_temps(pairMpzstr, poo1, 3, poo2, poo3, poo4, poo5);
+            mpz_elegant_unpair_mpzstr(pairMpzstr, poo1, 3);
+            
+            printf("\ni: %d\n", i);
+            gmp_printf("pairInt %Zd\n", poo1);
+            mpzstr_print(pairMpzstr);
+            
             mtm->table.states = mpz_get_ui(*mpzstr_get_i_left(pairMpzstr, 0));
             mtm->table.workTapes = mpz_get_ui(*mpzstr_get_i_left(pairMpzstr, 1));
             mtm_tape_from_prefix_int(&mtm->inputTape, *mpzstr_get_i_left(pairMpzstr, 2));
+            
+            //reset table with correct states and worktapes
+            mtm_table_free(&mtm->table);
+            mtm_table_init(&mtm->table, mtm->table.states, mtm->table.workTapes);
 
             if(mtm->table.states <= 0 || mtm->table.workTapes <= 0){
-               continue;
+                printf("SKIPPED\n");
+                gmp_printf("tape prefix int %Zd\n", *mpzstr_get_i_left(pairMpzstr, 2));
+                mtm_print_table_summary(&mtm->table);
+                putc('\n', stdout);
+                mtm_tape_print_binary(&mtm->inputTape);
+                printf("\n");
+            //    continue;
             }else{
-                break;
+                gmp_printf("tape prefix int %Zd\n", *mpzstr_get_i_left(pairMpzstr, 2));
+                mtm_print_table_summary(&mtm->table);
+                putc('\n', stdout);
+                mtm_tape_print_binary(&mtm->inputTape);
+                printf("\n");
+                // break;
             }
+            i++;
         }
         
 

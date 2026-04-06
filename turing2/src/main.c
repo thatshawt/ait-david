@@ -52,6 +52,18 @@ int main(){
         return 0;
     }
 
+    mtm_t mtm;
+    mtm_init(&mtm, 1, 1);
+
+    mpz_t* mpzstrPoos = mpzstr_init_malloc(6);
+
+    mtm_increment_temps(&mtm,
+    *mpzstr_get_i_left(mpzstrPoos,0), *mpzstr_get_i_left(mpzstrPoos,1), *mpzstr_get_i_left(mpzstrPoos,2), *mpzstr_get_i_left(mpzstrPoos,3), *mpzstr_get_i_left(mpzstrPoos,4), *mpzstr_get_i_left(mpzstrPoos,5));
+
+    mtm_destroy(&mtm);
+
+    return 0;
+
     // mtm testing
 
     int states = 2;

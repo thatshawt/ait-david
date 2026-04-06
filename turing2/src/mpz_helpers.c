@@ -485,7 +485,7 @@ void mpz_elegant_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1,
     // start with z
     mpz_set(poo2, z);
     
-    for(int i=n-3;i>=0;i--){
+    for(int i=n-3; i>=0; i--){
         mpz_elegant_unpair_temps(poo1, *(mpzstr_get_i_left(rmpzstr, i)), poo2, poo3, poo4);
         mpz_set(poo2, poo1);
     }
