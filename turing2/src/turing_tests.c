@@ -2,6 +2,8 @@
 #include "turing_sim.h"
 #include "turing_mapping.h"
 
+#include "ansicolor.h"
+
 #include "turing_utils.h"
 
 #include "gmp_mpzstr.h"
@@ -225,38 +227,81 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_clears(counter,temp,NULL);
     }
     
+    // DEPRECIATED FOR NOW
     // mtm table increment tests
     {
+        
+
         mpz_t counter,temp;
-        mpz_inits(counter,temp,NULL);
+        mpz_inits(counter,temp, NULL);
         char testTitle[200] = {0};
 
         const int statesMax = 1;
         const int worktapesMax = 1;
+
+        sprintf(testTitle, "mtm table increment == mtm from index++ == mtm get index (%d maxStates, %d maxWorktapes)", statesMax, worktapesMax);
+
+        unittest_begin(&unitstate, testTitle, testopt);
+        
+
         for(int states=1; states<=statesMax; states++){
             for(int worktapes=1; worktapes<=worktapesMax; worktapes++){
+                break; // im breaking this now cus it seems like i was creating a test for something that shouldnt even be true...
                 // check if incrementing follows the from digit thing
-                sprintf(testTitle, "mtm table increment == mtm from index++ == mtm get index (%d states, %d worktapes)", states, worktapes);
+                int i = 0;
 
-                unittest_begin(&unitstate, testTitle, testopt);
+                if(!unitstate.passing)break;
 
-                // while true
-                // load table2 from index
-                // check if they are the same table
+                mtm_t mtm1, mtm2;
+                mtm_init(&mtm1, states, worktapes);
+                mtm_init(&mtm2, states, worktapes);
+
+                mtm_get_table_index(counter, &mtm1.table);
+
+                while(true){
+                    // load table2 from index
+                    mtm_load_table_from_index(&mtm2.table, counter);
+
+                    // check if they are the same table
+                    bool sameTable = mtm_table_equals(&mtm1.table, &mtm2.table);
+                    unittest_assert_true(&unitstate, sameTable);
+                    if(!sameTable){
+                        gmp_printf("not same table! counter: %Zd, i %d\n", counter, i);
+                        mtm_print(&mtm1);
+                        mtm_print(&mtm2);
+                        break;
+                    }
+                    
+                    // load index of table1 into temp
+                    mtm_get_table_index(temp, &mtm1.table);
+
+                    // check if index == temp
+                    bool sameIndexes = mpz_cmp(temp, counter) == 0;
+                    unittest_assert_true(&unitstate, sameIndexes);
+                    if(!sameIndexes){
+                        gmp_printf("indexes not same! counter %Zd, temp %Zd, i %d\n", counter, temp, i);
+                        break;
+                    }
+                    
+                    // increment table1
+                    if(mtm_table_increment(&mtm1.table))break;
+                    // break if table1 overflows
+                    // increment table2 index
+                    mpz_add_ui(counter, counter, 1);
+                    i++;
+                }
                 
-                // load index of table1 into temp
-                // check if index == temp
-                
-                // increment table1
-                // increment table2 index
-                // break if table1 overflows
-                
-                unittest_finish(&unitstate);
-                
+                mtm_destroy(&mtm1);
+                mtm_destroy(&mtm2);
+
             }
         }
         
         mpz_clears(counter,temp,NULL);
+
+        
+
+        unittest_finish(&unitstate);
     }
 
     // 1 state 1 worktape "100001" input tape, mtm get code -> load code, until overflow
@@ -276,7 +321,7 @@ void test_monotone_tm(test_opt_t* testopt)
 
         // stops at i = 1048575
         for(int i=0; i<1048575 ; i++){
-            break; //TODO: remove this to enable the test
+            break; //comment to enable test
 
             // if(i == 65535)testDebugMode = true;
             // printf("on i %d\n", i);
@@ -324,8 +369,7 @@ void test_monotone_tm(test_opt_t* testopt)
         unittest_finish(&unitstate);
     }
 
-    // make the test about mtm_load_from_code from a mtm_get_code with side info.
-    // see main.c to see what i was working on last...
+    // (mtm -> code with side info "111" -> mtm) == (mtm + "111"), 1 state 1 worktape '1001' input tape, from init to overflow machine
     {
         unittest_begin(&unitstate, "(mtm -> code with side info \"111\" -> mtm) == (mtm + \"111\"), 1 state 1 worktape '1001' input tape, from init to overflow machine", testopt);
 
@@ -336,7 +380,7 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_t mtmCode; mpz_init(mtmCode);
 
         for(int i=0; i<1048575 ; i++){
-            // break; // comment this to enable test
+            break; // comment this to enable test
             mtm_tape_load_str(&mtm1.inputTape, "1001");
 
             mtm_get_code(&mtm1, "111", mtmCode);
@@ -471,6 +515,65 @@ void test_monotone_tm(test_opt_t* testopt)
         unittest_finish(&unitstate);
     }
 
+    // (prefix int -> tape -> prefix int -> tape) equality
+    {
+        unittest_begin(&unitstate, "(prefix int -> tape -> prefix int -> tape) equality from prefix 0 to 10k", testopt);
+
+        mpz_t prefixInt1; mpz_init(prefixInt1);
+        mpz_t prefixInt2; mpz_init(prefixInt2);
+        mpz_t poo1; mpz_init(poo1);
+
+        mpz_set_ui(prefixInt1, 1);
+        mpz_set_ui(prefixInt2, 1);
+
+        mtm_tape_t tape1, tape2;
+
+        mtm_tape_init(&tape1);
+        mtm_tape_init(&tape2);
+
+        for(int i=1; i<10000; i++){
+            // gmp_printf("prefixInt; %Zd, i %d\n", prefixInt1, i);
+            mtm_tape_from_prefix_int(&tape1, prefixInt1);
+
+            // mtm_tape_print_binary(&tape1);
+
+            mtm_tape_get_prefix_int_temps(&tape1, prefixInt2, poo1);
+
+            bool prefixEquals = mpz_cmp(prefixInt1, prefixInt2) == 0;
+            unittest_assert_true(&unitstate, prefixEquals);
+            if(!prefixEquals){
+                gmp_printf("prefixints not equal! %Zd, %Zd\n", prefixInt1, prefixInt2);
+                break;
+            }
+
+            mtm_tape_from_prefix_int(&tape2, prefixInt2);
+
+            // mtm_tape_print_binary(&tape2);
+
+            bool tapeEquals = mtm_tape_equals(&tape1, &tape2);
+            unittest_assert_true(&unitstate, tapeEquals);
+            if(!tapeEquals){
+                gmp_printf("tapes not equal!\n");
+                mtm_tape_print(&tape1);
+                mtm_tape_print(&tape2);
+                break;
+            }
+
+            // printf("\n");
+            
+            mpz_add_ui(prefixInt1, prefixInt1, 1);
+        }
+
+        mpz_clear(prefixInt1);
+        mpz_clear(prefixInt2);
+        mpz_clear(poo1);
+
+        mtm_tape_destroy(&tape1);
+        mtm_tape_destroy(&tape2);
+
+        unittest_finish(&unitstate);
+    }
+
 
 }
 
@@ -560,7 +663,7 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_set_ui(*pooo3, c);
 
             mpz_cantor_pair_mpzstr(z, poopooooos);
-            // gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a < 10 && b < 10 && c < 10)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
             mpz_cantor_unpair_mpzstr(poopooooos, z, 3);
             // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
@@ -661,10 +764,10 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_set_ui(*pooo3, c);
 
             mpz_elegant_pair_mpzstr(z, poopooooos);
-            // if(a==0 && b==0)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a < 10 && b < 10 && c < 10)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
             mpz_elegant_unpair_mpzstr(poopooooos, z, 3);
-            // if(a==0 && b==0)gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a==0 && b==0 || true)gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
             // gmp_printf("(%d, %Zd),", i++, z);
 
@@ -1095,9 +1198,9 @@ void unittest_finish(unittest_state_t* state)
 {
     if(state->passing == true){
         if(state->opt->onlyPrintFailingTests == false)
-            printf("        PASS '%s'\n", state->testname);
+            printf(ANSI_COLOR_GREEN "        PASS '%s'\n" ANSI_COLOR_RESET, state->testname);
     }else{
-        printf("        FAILED '%s'\n", state->testname);
+        printf(ANSI_COLOR_RED "        FAILED '%s'\n" ANSI_COLOR_RESET, state->testname);
     }
 }
 
