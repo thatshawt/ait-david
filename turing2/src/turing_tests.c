@@ -227,81 +227,68 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_clears(counter,temp,NULL);
     }
     
-    // DEPRECIATED FOR NOW
-    // mtm table increment tests
+    // mtm table increment count test states 1 worktapes 1
     {
+        int states = 1;
+        int worktapes = 1;
+        // bool done = false;
+        // int iter = 0;
+
+        // DOTEST_TABLE_COUNT:
+
+        int count = 1;
+
+        mtm_transition_table_t table;
+        mtm_table_init(&table, states, worktapes);
+
+        char testtitle[100] = {0};
+        sprintf(testtitle, "table increment count (%d states, %d worktapes)", states, worktapes);
+        unittest_begin(&unitstate, testtitle, testopt);
         
-
-        mpz_t counter,temp;
-        mpz_inits(counter,temp, NULL);
-        char testTitle[200] = {0};
-
-        const int statesMax = 1;
-        const int worktapesMax = 1;
-
-        sprintf(testTitle, "mtm table increment == mtm from index++ == mtm get index (%d maxStates, %d maxWorktapes)", statesMax, worktapesMax);
-
-        unittest_begin(&unitstate, testTitle, testopt);
-        
-
-        for(int states=1; states<=statesMax; states++){
-            for(int worktapes=1; worktapes<=worktapesMax; worktapes++){
-                break; // im breaking this now cus it seems like i was creating a test for something that shouldnt even be true...
-                // check if incrementing follows the from digit thing
-                int i = 0;
-
-                if(!unitstate.passing)break;
-
-                mtm_t mtm1, mtm2;
-                mtm_init(&mtm1, states, worktapes);
-                mtm_init(&mtm2, states, worktapes);
-
-                mtm_get_table_index(counter, &mtm1.table);
-
-                while(true){
-                    // load table2 from index
-                    mtm_load_table_from_index(&mtm2.table, counter);
-
-                    // check if they are the same table
-                    bool sameTable = mtm_table_equals(&mtm1.table, &mtm2.table);
-                    unittest_assert_true(&unitstate, sameTable);
-                    if(!sameTable){
-                        gmp_printf("not same table! counter: %Zd, i %d\n", counter, i);
-                        mtm_print(&mtm1);
-                        mtm_print(&mtm2);
-                        break;
-                    }
-                    
-                    // load index of table1 into temp
-                    mtm_get_table_index(temp, &mtm1.table);
-
-                    // check if index == temp
-                    bool sameIndexes = mpz_cmp(temp, counter) == 0;
-                    unittest_assert_true(&unitstate, sameIndexes);
-                    if(!sameIndexes){
-                        gmp_printf("indexes not same! counter %Zd, temp %Zd, i %d\n", counter, temp, i);
-                        break;
-                    }
-                    
-                    // increment table1
-                    if(mtm_table_increment(&mtm1.table))break;
-                    // break if table1 overflows
-                    // increment table2 index
-                    mpz_add_ui(counter, counter, 1);
-                    i++;
-                }
-                
-                mtm_destroy(&mtm1);
-                mtm_destroy(&mtm2);
-
+        // printf("%d states, %d worktapes\n", states, worktapes);
+        while(true){
+            if(mtm_table_increment(&table)){
+                break;
             }
+            count++;
+            // if(count % 1000000 == 0){
+            //     printf("at %d count\n", count);
+            //     mtm_print_table(&table);
+            // }
         }
-        
-        mpz_clears(counter,temp,NULL);
 
-        
+        // printf("got %d\n", count);
+
+        // (2^5)^4
+        unittest_assert_true(&unitstate, count == 1048576);
 
         unittest_finish(&unitstate);
+
+        mtm_table_free(&table);
+
+        // switch(iter){
+        //     case 0:
+        //         states = 1;
+        //         worktapes = 1;
+        //         break;
+        //     case 1:
+        //         states = 1;
+        //         worktapes = 2;
+        //         break;
+        //     case 2:
+        //         states = 2;
+        //         worktapes = 2;
+        //         done = true;
+        //         break;
+        //     case 3:
+        //         done = true;
+        //         break;
+        // }
+        // iter++;
+
+        // if(done)goto END_TABLE_COUNT;
+        // else goto DOTEST_TABLE_COUNT;
+        // END_TABLE_COUNT:;
     }
 
     // 1 state 1 worktape "100001" input tape, mtm get code -> load code, until overflow
@@ -523,15 +510,15 @@ void test_monotone_tm(test_opt_t* testopt)
         mpz_t prefixInt2; mpz_init(prefixInt2);
         mpz_t poo1; mpz_init(poo1);
 
-        mpz_set_ui(prefixInt1, 1);
-        mpz_set_ui(prefixInt2, 1);
-
         mtm_tape_t tape1, tape2;
 
         mtm_tape_init(&tape1);
         mtm_tape_init(&tape2);
 
-        for(int i=1; i<10000; i++){
+        // start out
+        mtm_tape_get_prefix_int_temps(&tape1, prefixInt1, poo1);
+
+        for(int i=0; i<10000; i++){
             // gmp_printf("prefixInt; %Zd, i %d\n", prefixInt1, i);
             mtm_tape_from_prefix_int(&tape1, prefixInt1);
 
