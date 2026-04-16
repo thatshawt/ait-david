@@ -212,6 +212,7 @@ void mpz_cantor_unpair_ui_ui(unsigned long long* rx, unsigned long long* ry, uns
 
 void mpz_cantor_unpair_temps(mpz_t rx, mpz_t ry, mpz_t z, mpz_t i)
 {
+    // gmp_printf("mpz_cantor_unpair_temps(rx %Zd, ry %Zd, z %Zd, pooi %Zd)\n", rx, ry, z, i);
     // if z fits into an unsigned long long
     if(mpz_cmp_ui(z, (unsigned long long)-1) < 0){
         unsigned long long rxInt, ryInt;
@@ -304,15 +305,18 @@ void mpz_cantor_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1, 
         return;
     }
 
+    // gmp_printf("cantor unpair mpzstr, len %d, n %d\n", len, n);
     // start with z
     mpz_set(poo2, z);
     
-    for(int i=n-3;i>=0;i--){
+    for(int i=n-1;i>=2;i--){
         mpz_cantor_unpair_temps(poo1, *(mpzstr_get_i_left(rmpzstr, i)), poo2, poo3);
+        // gmp_printf("mpzstr+%d = %Zd\n", i, *(mpzstr_get_i_left(rmpzstr, i)));
         mpz_set(poo2, poo1);
     }
     //do the final pair
     mpz_cantor_unpair_temps(*(mpzstr_get_i_left(rmpzstr, 0)), *(mpzstr_get_i_left(rmpzstr, 1)), poo2, poo3);
+    // gmp_printf("last pair z %Zd\n", poo2);
 
 }
 
@@ -485,7 +489,7 @@ void mpz_elegant_unpair_mpzstr_temps(mpz_t* rmpzstr, mpz_t z, int n, mpz_t poo1,
     // start with z
     mpz_set(poo2, z);
     
-    for(int i=n-3; i>=0; i--){
+    for(int i=n-1; i>=2; i--){
         mpz_elegant_unpair_temps(poo1, *(mpzstr_get_i_left(rmpzstr, i)), poo2, poo3, poo4);
         mpz_set(poo2, poo1);
     }

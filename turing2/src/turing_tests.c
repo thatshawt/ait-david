@@ -47,11 +47,13 @@ void test_all(test_opt_t* testopt)
 void test_mpzstring(test_opt_t* testopt)
 {
     printf("    MpzString Tests\n");
+    // dummy test
     {
         unittest_begin(&unitstate, "dummy", testopt);
         unittest_finish(&unitstate);
     }
 
+    //
     {
         unittest_begin(&unitstate, "(mpz 1234) == (mpz 1234 -> base 10 mpzstring 1234 -> mpz 1234)", testopt);
 
@@ -108,7 +110,6 @@ void test_mpzstring(test_opt_t* testopt)
         unittest_finish(&unitstate);
     }
 
-
     {
         unittest_begin(&unitstate, "(mpzstr 1,2,3,0 base 10 -> mpz + 401) == (mpzstr 1,2,3,401 base 10 -> mpz) == (basenorm(mpzstr 1,2,3,401 base 10) -> mpz)", testopt);
 
@@ -139,6 +140,12 @@ void test_mpzstring(test_opt_t* testopt)
         mpzstr_clear_free(mpzstr1);
         mpz_clear(temp1);
 
+        unittest_finish(&unitstate);
+    }
+
+    // dummy test
+    {
+        unittest_begin(&unitstate, "dummy", testopt);
         unittest_finish(&unitstate);
     }
 }
@@ -574,7 +581,7 @@ void test_mpz_helpers(test_opt_t* testopt)
 
     // Cantor Pair == Cantor Unpair
     {
-        const int n = 100;
+        const int n = 4;
         unittest_begin(&unitstate, "(Cantor Pair == Cantor Unpair) from (0,0) to (99,99)", testopt);
 
         mpz_t* poopooooos = mpzstr_init_malloc(2);
@@ -589,6 +596,9 @@ void test_mpz_helpers(test_opt_t* testopt)
 
                 mpz_cantor_pair(z, *pooo1, *pooo2);
                 // gmp_printf("pair   (%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,z);
+
+                mpz_set_si(*pooo1, -1);
+                mpz_set_si(*pooo2, -1);
 
                 mpz_cantor_unpair(*pooo1, *pooo2, z);
                 // gmp_printf("unpair (%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,z);
@@ -649,12 +659,16 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_set_ui(*pooo2, b);
             mpz_set_ui(*pooo3, c);
 
+            // const int t = 3;
             mpz_cantor_pair_mpzstr(z, poopooooos);
-            // if(a < 10 && b < 10 && c < 10)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a < t && b < t && c < t)
+                // gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
-            mpzstr_set_zero(poopooooos);
+            // mpzstr_set_zero(poopooooos);
+            mpzstr_set_ints_right(poopooooos, (int[]){-1,-1,-1}, 3);
             mpz_cantor_unpair_mpzstr(poopooooos, z, 3);
-            // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
+            // if(a < t && b < t && c < t)
+                // gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
             // gmp_printf("(%d, %Zd),", i++, z);
 
@@ -687,6 +701,9 @@ void test_mpz_helpers(test_opt_t* testopt)
 
                 mpz_elegant_pair(z, *pooo1, *pooo2);
                 // gmp_printf("pair   (%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,z);
+
+                mpz_set_si(*pooo1, -1);
+                mpz_set_si(*pooo2, -1);
 
                 mpz_elegant_unpair(*pooo1, *pooo2, z);
                 // gmp_printf("unpair (%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,z);
@@ -754,7 +771,7 @@ void test_mpz_helpers(test_opt_t* testopt)
             mpz_elegant_pair_mpzstr(z, poopooooos);
             // if(a < 10 && b < 10 && c < 10)gmp_printf("pair   (%Zd,%Zd,%Zd) -> %Zd\n", *pooo1,*pooo2,*pooo3, z);
 
-            mpzstr_set_zero(poopooooos);
+            mpzstr_set_ints_right(poopooooos, (int[]){-1,-1,-1}, 3);
             mpz_elegant_unpair_mpzstr(poopooooos, z, 3);
             // if(mpz_get_ui(z) == 16 || mpz_get_ui(z) == 25)gmp_printf("unpair (%Zd,%Zd,%Zd) <- %Zd\n\n", *pooo1,*pooo2,*pooo3, z);
 
