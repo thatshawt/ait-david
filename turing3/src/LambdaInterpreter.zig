@@ -91,6 +91,16 @@ pub const LambdaInterpreter = struct {
         return error.CANT_REDUCE;
     }
 
+    pub fn greedyTraverseReduce() 
+    error{
+        CANT_REDUCE,
+        MAX_TRAVERSES,
+        OutOfMemory
+    } !*LambdaExpression
+    {
+
+    }
+
     pub fn reduceUntilCantReduce(self:*LambdaInterpreter, expr: *const LambdaExpression, maxTraverses: ?u32, maxReducesMaybe: ?u32)
     error{
         MAX_REDUCES,
@@ -107,6 +117,8 @@ pub const LambdaInterpreter = struct {
 
                 const resultExpr = self.reduce(expression, maxTraverses);
                 if(resultExpr) |reducedExpr| {
+                    reducedExpr.traversePrint();
+                    std.debug.print("\n",.{});
                     expression = reducedExpr;
                     reduces = reduces + 1;
                 }else |err| switch(err) {
@@ -120,6 +132,8 @@ pub const LambdaInterpreter = struct {
                 const resultExpr = self.reduce(expression, maxTraverses);
                 if(resultExpr) |reducedExpr| {
                     expression = reducedExpr;
+                    reducedExpr.traversePrint();
+                    std.debug.print("\n",.{});
                 }else |err| switch(err) {
                     error.CANT_REDUCE => return expression,
                     error.MAX_TRAVERSES => return error.MAX_TRAVERSES,

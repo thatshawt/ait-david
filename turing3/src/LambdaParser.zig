@@ -74,7 +74,7 @@ pub const LambdaExpression = union(enum) {
     pub fn traversePrint(self: *const LambdaExpression) void {
         switch(self.*){
             .lambda => |lambdaExpr| {
-                std.debug.print("LAMBDA(",.{});
+                std.debug.print("/(",.{});
                 LambdaExpression.traversePrint(lambdaExpr.expr);
                 std.debug.print(")",.{});
             },
@@ -82,7 +82,7 @@ pub const LambdaExpression = union(enum) {
                 std.debug.print("{}",.{varExpr.value});
             },
             .apply => |applyExpr| {
-                std.debug.print("APPLY(", .{});
+                std.debug.print("(", .{});
                 LambdaExpression.traversePrint(applyExpr.lexpr);
                 std.debug.print(" ", .{});
                 LambdaExpression.traversePrint(applyExpr.rexpr);
@@ -96,21 +96,32 @@ pub const LambdaExpression = union(enum) {
     fn findMatchCloseParens(tokenSlice: []const LambdaToken) error{DID_NOT_FIND_MATCHING_PAREN}!usize {
         var paren: u32 = 1;
         for (tokenSlice, 0..) |token, index| {
-            if(paren == 0)return index;
-            // std.debug.print("checking i {}: ",.{index});
-            // token.print();
-            // std.debug.print("\n",.{});
+            if(paren == 0){
+                std.debug.print("\n",.{});
+                return index;
+            }
+            // std.debug.print("{}: ",.{index});
+            token.print();
+            std.debug.print(", ",.{});
             paren = switch(token.tokenType){
                 LambdaTokenType.LPAREN  => paren+1,
                 LambdaTokenType.RPAREN  => paren-1,
                 else  => paren
             };
         }
+        std.debug.print("\n",.{});
         if(paren == 0)return tokenSlice.len;
         return error.DID_NOT_FIND_MATCHING_PAREN;
     }
 
-    pub fn parseFromTokens(allocator: std.mem.Allocator, tokenSlice: []const LambdaToken) 
+    fn printNTimesTabs(N:u32) void {
+        var i:u32 = 0;
+        while (i < N) : (i += 1) {
+            std.debug.print("\t", .{});
+        }
+    }
+
+    pub fn parseFromTokens(allocator: std.mem.Allocator, tokenSlice: []const LambdaToken, height: u32) 
     error{
         NO_PAREN_AFTER_LAMBDA,
         UNBALANCED_RPAREN_IDK,
@@ -121,13 +132,17 @@ pub const LambdaExpression = union(enum) {
         expression:*LambdaExpression,
         endIndex: usize
     }{
-        std.debug.print("tokens: {}, current token: ",.{tokenSlice.len});
-        tokenSlice[0].print();
-        std.debug.print(", last token: ",.{});
-        tokenSlice[tokenSlice.len-1].print();
+        printNTimesTabs(height);
+        std.debug.print("current token slice: ", .{});
+        LambdaToken.printTokenSlice(tokenSlice);
+        // std.debug.print("tokens: {}, current token: ",.{tokenSlice.len});
+        // tokenSlice[0].print();
+        // std.debug.print(", last token: ",.{});
+        // tokenSlice[tokenSlice.len-1].print();
         std.debug.print("\n",.{});
         return switch(tokenSlice[0].tokenType){
             LambdaTokenType.LAMBDA  => {
+                printNTimesTabs(height);
                 std.debug.print("parsing lambda\n",.{});
                 if(tokenSlice[1].tokenType != LambdaTokenType.LPAREN){
                     tokenSlice[1].print();
@@ -135,9 +150,10 @@ pub const LambdaExpression = union(enum) {
                 }
                 const matchingParenIndex = try LambdaExpression.findMatchCloseParens(tokenSlice[2..]);
 
+                printNTimesTabs(height);
                 std.debug.print("\nmatchingparenIndex:{d}\n",.{matchingParenIndex});
 
-                const parsedExprPtr = try LambdaExpression.parseFromTokens(allocator, tokenSlice[2..matchingParenIndex+1]);
+                const parsedExprPtr = try LambdaExpression.parseFromTokens(allocator, tokenSlice[2..matchingParenIndex+1], height+1);
 
                 const exprPtr = try allocator.create(LambdaExpression);
                 exprPtr.* = .{
@@ -146,20 +162,35 @@ pub const LambdaExpression = union(enum) {
                     }
                 };
 
+                printNTimesTabs(height);
                 std.debug.print("added lambda\n", .{});
 
                 return .{.expression=exprPtr, .endIndex=matchingParenIndex+2};
             },
             LambdaTokenType.LPAREN  => {
+                printNTimesTabs(height);
                 std.debug.print("parsing lparen\n",.{});
                 const matchingParenIndex = try LambdaExpression.findMatchCloseParens(tokenSlice[1..]);
 
-                std.debug.print("   parsing lexpr\n",.{});
+                printNTimesTabs(height);
+                std.debug.print("parsing lexpr\n",.{});
                 const lParsedExpr = try LambdaExpression.parseFromTokens(allocator,
-                    tokenSlice[1..matchingParenIndex]);
-                std.debug.print("   parsing rexpr\n",.{});
-                const rParsedExpr = try LambdaExpression.parseFromTokens(allocator,
-                    tokenSlice[lParsedExpr.endIndex+1..matchingParenIndex]);
+                    tokenSlice[1 .. matchingParenIndex] ,height+1);
+
+                printNTimesTabs(height);
+                std.debug.print("lexpr endindex {}\n", .{lParsedExpr.endIndex});
+
+                printNTimesTabs(height);
+                std.debug.print("parsing rexpr\n",.{});
+
+                const rParsedExpr = switch(lParsedExpr.expression.*){
+                    .apply => try LambdaExpression.parseFromTokens(allocator,
+                        tokenSlice[(lParsedExpr.endIndex+2) .. matchingParenIndex] ,height+1),
+                    else => try LambdaExpression.parseFromTokens(allocator,
+                        tokenSlice[(lParsedExpr.endIndex+1) .. matchingParenIndex] ,height+1)
+                };
+
+                
 
                 const exprPtr = try allocator.create(LambdaExpression);
                 exprPtr.* = .{
@@ -169,12 +200,16 @@ pub const LambdaExpression = union(enum) {
                     }
                 };
 
+                printNTimesTabs(height);
                 std.debug.print("added apply\n", .{});
 
+                printNTimesTabs(height);
+                std.debug.print("returned endindex {}\n",.{matchingParenIndex});
                 return .{.expression=exprPtr, .endIndex=matchingParenIndex};
             },
             LambdaTokenType.RPAREN  => error.UNBALANCED_RPAREN_IDK,
             LambdaTokenType.VAR_NUM => {
+                printNTimesTabs(height);
                 std.debug.print("parsing var\n",.{});
                 const exprPtr = try allocator.create(LambdaExpression);
 
@@ -184,7 +219,11 @@ pub const LambdaExpression = union(enum) {
                     }
                 };
 
+                printNTimesTabs(height);
                 std.debug.print("added var\n", .{});
+
+                printNTimesTabs(height);
+                std.debug.print("returned endindex {}\n",.{1});
 
                 return .{.expression=exprPtr, .endIndex=1};
             },
@@ -209,7 +248,7 @@ pub const LambdaParser = struct {
         }
 
         // parse top expression
-        const parsed = try LambdaExpression.parseFromTokens(allocator, tokens.items);
+        const parsed = try LambdaExpression.parseFromTokens(allocator, tokens.items, 0);
 
         // parsed.expression.traversePrint();
         // std.debug.print("\n",.{});

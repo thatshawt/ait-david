@@ -22,6 +22,14 @@ pub const LambdaToken = struct {
             LambdaTokenType.EOF => std.debug.print("EOF", .{}),
         };
     }
+
+    pub fn printTokenSlice(tokens: []const LambdaToken) void {
+        for(tokens) |tok|{
+            tok.print();
+            std.debug.print(" ",.{});
+        }
+        std.debug.print("\n",.{});
+    }
 };
 
 pub const LambdaLexer = struct {

@@ -6,19 +6,48 @@ const turing3 = @import("turing3");
 const LambdaParser = @import("LambdaParser.zig").LambdaParser;
 const LambdaInterpreter = @import("LambdaInterpreter.zig").LambdaInterpreter;
 
+fn replaceRetSize(comptime T: type, input: []const T, needle: []const T, replacement: []const T, output: []T) usize {
+    const size = std.mem.replacementSize(T, input, needle, replacement);
+    _ = std.mem.replace(T, input, needle, replacement, output[0..size]);
+    return size;
+}
+
 fn doStuff(allocator: std.mem.Allocator) !void {
     const stuffity_stuff = 1+1;
     std.debug.print("did someting!? {} \n", .{stuffity_stuff});
 
     //   ( /(( /((1 (2 2))) /((1 (2 2))) )) 99 )
 
+    const Lzero = "/( /( 1))";
+    const Lincr = "/( /( /((2 ((3 2) 1)))))";
+    const Lplus = "/( /( ((2 /( /( /( (2 ((3 2) 1) ) ) ) ) ) 1)))";
+
+    const stuffityLambda = "(incr zero)";
+
+    var output1: [500]u8 = undefined;
+    var output2: [500]u8 = undefined;
+    @memcpy(output1[0..stuffityLambda.len], stuffityLambda[0..]);
+
+    // std.debug.print("{s}\n",.{output1});
+    // std.debug.print("{s}\n",.{output2});
+
+    var size = replaceRetSize(u8, output1[0..stuffityLambda.len], "incr", Lincr, output2[0..]);
+    size = replaceRetSize(u8, output2[0..size], "plus", Lplus, output1[0..]);
+    size = replaceRetSize(u8, output1[0..size], "zero", Lzero, output2[0..]);
+
+    // std.debug.print("{s}\n",.{output1});
+    // std.debug.print("{s}\n",.{output2});
+
+    const lambdaText = output2[0..size];
     // const lambdaText = " (/(( /((1 /((1(1 3))))) /((1 /((1(1 3))))) )) 99 ) "; //Z fixed-point
     // const lambdaText = "( /( ( 2(2 1))) 99 )"; //idk
-    const lambdaText = "( /((1 1)) /((1 1)) )"; //omega non-terminating reduction
+    // const lambdaText = "/( /( /((2 ((3 2) 1)))))"; //a test
+    // const lambdaText = "( /((1 1)) /((1 1)) )"; //omega non-terminating reduction
     std.debug.print("{s}\n", .{lambdaText});
 
     const topExpr = try LambdaParser.parse(allocator, lambdaText);
     topExpr.traversePrint();
+    std.debug.print("\n",.{});
 
     var interpreter = LambdaInterpreter.init(allocator);
 
