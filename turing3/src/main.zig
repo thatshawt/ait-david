@@ -19,10 +19,12 @@ fn doStuff(allocator: std.mem.Allocator) !void {
     //   ( /(( /((1 (2 2))) /((1 (2 2))) )) 99 )
 
     const Lzero = "/( /( 1))";
-    const Lincr = "/( /( /((2 ((3 2) 1)))))";
-    const Lplus = "/( /( ((2 /( /( /( (2 ((3 2) 1) ) ) ) ) ) 1)))";
+    const Lincr = "/(/(/( (2 ((3 2) 1)) )))";
+    const Lplus = "/(/(((2 /(/(/( (2 ((3 2) 1)) )))) 1)))";
 
-    const stuffityLambda = "(incr zero)";
+    // const stuffityLambda = "(incr zero)";
+    // const stuffityLambda = "(incr (incr zero))";
+    const stuffityLambda = "((plus (incr zero)) (incr(incr zero)))";
 
     var output1: [500]u8 = undefined;
     var output2: [500]u8 = undefined;
@@ -51,7 +53,10 @@ fn doStuff(allocator: std.mem.Allocator) !void {
 
     var interpreter = LambdaInterpreter.init(allocator);
 
-    if(interpreter.reduceUntilCantReduce(topExpr, 100, 100)) |reducedExpr| {
+    // not greedy   /(/((2 ((/(/(1)) 2) 1))))
+    // greedy       
+
+    if(interpreter.reduceUntilCantReduce(topExpr, 100, 100, true)) |reducedExpr| {
         std.debug.print("\n",.{});
         reducedExpr.traversePrint();
         std.debug.print("\n",.{});

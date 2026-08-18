@@ -74,9 +74,9 @@ pub const LambdaExpression = union(enum) {
     pub fn traversePrint(self: *const LambdaExpression) void {
         switch(self.*){
             .lambda => |lambdaExpr| {
-                std.debug.print("/(",.{});
+                std.debug.print("/",.{});
                 LambdaExpression.traversePrint(lambdaExpr.expr);
-                std.debug.print(")",.{});
+                std.debug.print("",.{});
             },
             .variable => |varExpr| {
                 std.debug.print("{}",.{varExpr.value});

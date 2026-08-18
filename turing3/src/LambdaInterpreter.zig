@@ -7,8 +7,14 @@ pub const LambdaVarNumType: type = u32;
 
 pub const LambdaInterpreter = struct {
     allocator: std.mem.Allocator,
+
     replaceExpr: ?*LambdaExpression,
-    traverseCounter: ?u32 = null,
+    reduceTraverseCounter: ?u32 = null,
+
+    greedyTraverseCounter: ?u32 = null,
+    greedyErrorReturn: ?error{OutOfMemory} = null,
+    greedyReduced: ?*LambdaExpression = null,
+    
 
     pub fn init(allocator: std.mem.Allocator) LambdaInterpreter{
         return .{
@@ -18,9 +24,9 @@ pub const LambdaInterpreter = struct {
     }
 
     fn decrementVarsTraverse(foreachExpr: *LambdaExpression, interp:anytype, lambdaHeight:u32) error{Yield}!void {
-        if(interp.traverseCounter) |traverseCount|{
+        if(interp.reduceTraverseCounter) |traverseCount|{
             if(traverseCount == 0){return error.Yield;}
-            else {interp.traverseCounter = traverseCount - 1;}
+            else {interp.reduceTraverseCounter = traverseCount - 1;}
         }
         switch(foreachExpr.*){
             .variable => |varExpr| {
@@ -34,9 +40,9 @@ pub const LambdaInterpreter = struct {
     }
 
     fn replaceVarsWithExprClone(foreachExpr: *LambdaExpression, interp:anytype, lambdaHeight:u32) error{Yield}!void {
-        if(interp.traverseCounter) |traverseCount|{
+        if(interp.reduceTraverseCounter) |traverseCount|{
             if(traverseCount == 0){return error.Yield;}
-            else {interp.traverseCounter = traverseCount - 1;}
+            else {interp.reduceTraverseCounter = traverseCount - 1;}
         }
         switch(foreachExpr.*){
             .variable => |varExpr| {
@@ -49,10 +55,10 @@ pub const LambdaInterpreter = struct {
                         foreachExpr.* = (replaceExpr.deepClone(interp.allocator) catch unreachable).*;
                     }
                 }
-                else if(varExpr.value > lambdaHeight){
-                    // std.debug.print("decremented\n",.{});
-                    foreachExpr.variable.value = foreachExpr.variable.value - 1;
-                }
+                // else if(varExpr.value > lambdaHeight){
+                //     // std.debug.print("decremented\n",.{});
+                //     foreachExpr.variable.value = foreachExpr.variable.value - 1;
+                // }
             },
             else => {}
         }
@@ -75,7 +81,7 @@ pub const LambdaInterpreter = struct {
 
                         // if(self.replaceExpr) |hehe| hehe.traversePrint();
 
-                        self.traverseCounter = maxTraverses;
+                        self.reduceTraverseCounter = maxTraverses;
 
                         // lambdaExprCopy.traverse(decrementVarsTraverse, self, 0) catch return error.MAX_TRAVERSES;
                         lambdaExprCopy.traverse(replaceVarsWithExprClone, self, 0) catch return error.MAX_TRAVERSES;
@@ -91,17 +97,87 @@ pub const LambdaInterpreter = struct {
         return error.CANT_REDUCE;
     }
 
-    pub fn greedyTraverseReduce() 
+    fn greedyReduceTraversal(expr: *LambdaExpression, interp: anytype, lambdaHeight: u32)
+    error{Yield}!void
+    {
+        _ = lambdaHeight;
+        if(interp.greedyTraverseCounter) |traverseCount|{
+            if(traverseCount == 0){return error.Yield;}
+            else {interp.greedyTraverseCounter = traverseCount - 1;}
+        }
+
+        const reducedExprResult = interp.reduce(expr, interp.greedyTraverseCounter);
+
+        if(reducedExprResult) |reducedExpr| {
+            interp.greedyReduced = reducedExpr;
+            expr.* = reducedExpr.*;
+
+            return error.Yield;
+        }else |err| switch(err){
+            error.OutOfMemory => {
+                interp.greedyErrorReturn = error.OutOfMemory;
+                return error.Yield;
+            },
+            error.MAX_TRAVERSES => return error.Yield,
+            else => {}
+        }
+    }
+
+    /// tries to reduce every sub-expression, halts when it reduces one or if it tries every expression.
+    pub fn greedyTraverseReduce(
+        self:*LambdaInterpreter, expr: *const LambdaExpression, maxTraverses: ?u32
+    ) 
     error{
         CANT_REDUCE,
         MAX_TRAVERSES,
         OutOfMemory
     } !*LambdaExpression
     {
+        // run the traverse greedy reduce on top expression
+        // self.topGreedyReduceExpr = expr;
+        self.greedyTraverseCounter = maxTraverses;
+        self.greedyReduced = null;
+        self.greedyErrorReturn = null;
+
+        const returnExpr = try expr.deepClone(self.allocator);
+
+        const traverseResult = returnExpr.traverse(greedyReduceTraversal, self, 0);
+        
+        if(traverseResult) |traverseResultVoid| {
+            _ = traverseResultVoid;
+
+            if(self.greedyErrorReturn)|err|
+            if(err == error.OutOfMemory)return error.OutOfMemory;
+
+            if(self.greedyReduced) |reducedExpr|{
+                _ = reducedExpr;
+                return returnExpr;
+            }else{
+                return error.CANT_REDUCE;
+            }
+        }
+        else |err| switch(err){
+            error.Yield => {
+                if(self.greedyReduced) |reducedExpr|{
+                    _ = reducedExpr;
+                    return returnExpr;
+                }else if(self.greedyErrorReturn) |returnedErr| {
+                    return returnedErr;
+                } else {
+                    return error.MAX_TRAVERSES;
+                }
+            }
+        }
 
     }
 
-    pub fn reduceUntilCantReduce(self:*LambdaInterpreter, expr: *const LambdaExpression, maxTraverses: ?u32, maxReducesMaybe: ?u32)
+    pub fn reduceUntilCantReduce(
+        self:*LambdaInterpreter, 
+        expr: *const LambdaExpression, 
+        maxTraverses: ?u32, 
+        maxReducesMaybe: ?u32,
+        greedy:bool
+    )
     error{
         MAX_REDUCES,
         MAX_TRAVERSES,
@@ -115,7 +191,10 @@ pub const LambdaInterpreter = struct {
             while(true){
                 if(reduces >= maxReduces)return error.MAX_REDUCES;
 
-                const resultExpr = self.reduce(expression, maxTraverses);
+                const resultExpr = 
+                    if(greedy)self.greedyTraverseReduce(expression, maxTraverses)
+                    else self.reduce(expression, maxTraverses);
+                    
                 if(resultExpr) |reducedExpr| {
                     reducedExpr.traversePrint();
                     std.debug.print("\n",.{});
