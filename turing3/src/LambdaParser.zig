@@ -20,7 +20,7 @@ pub const LambdaExpression = union(enum) {
         rexpr: *LambdaExpression
     },
 
-    pub fn deepClone(self: *const LambdaExpression, allocator: std.mem.Allocator) !*LambdaExpression{
+    pub fn deepClone(self: *const LambdaExpression, allocator: std.mem.Allocator) error{OutOfMemory}!*LambdaExpression{
         return switch(self.*){
             .lambda => |lambdaExpr| {
                 const exprPtr = try allocator.create(LambdaExpression);

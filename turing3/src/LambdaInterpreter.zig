@@ -134,7 +134,6 @@ pub const LambdaInterpreter = struct {
     } !*LambdaExpression
     {
         // run the traverse greedy reduce on top expression
-        // self.topGreedyReduceExpr = expr;
         self.greedyTraverseCounter = maxTraverses;
         self.greedyReduced = null;
         self.greedyErrorReturn = null;

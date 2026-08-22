@@ -6,6 +6,14 @@ const turing3 = @import("turing3");
 const LambdaParser = @import("LambdaParser.zig").LambdaParser;
 const LambdaInterpreter = @import("LambdaInterpreter.zig").LambdaInterpreter;
 
+const BigIntManaged = std.math.big.int.Managed;
+const cantorPair = @import("PairingFunction.zig").cantorPair;
+const cantorUnpair = @import("PairingFunction.zig").cantorUnpair;
+
+const generate = @import("LambdaEnumerate.zig").generate;
+
+// https://lambster.dev/ very helpful for confirming what expressions should reduce to
+
 fn replaceRetSize(comptime T: type, input: []const T, needle: []const T, replacement: []const T, output: []T) usize {
     const size = std.mem.replacementSize(T, input, needle, replacement);
     _ = std.mem.replace(T, input, needle, replacement, output[0..size]);
@@ -21,26 +29,24 @@ fn doStuff(allocator: std.mem.Allocator) !void {
     const Lzero = "/( /( 1))";
     const Lincr = "/(/(/( (2 ((3 2) 1)) )))";
     const Lplus = "/(/(((2 /(/(/( (2 ((3 2) 1)) )))) 1)))";
+    const Ltimes = "/( /( ((2 (/(/(((2 /(/(/( (2 ((3 2) 1)) )))) 1))) 1)) /(/( 1)))))";
 
     // const stuffityLambda = "(incr zero)";
     // const stuffityLambda = "(incr (incr zero))";
-    const stuffityLambda = "((plus (incr zero)) (incr(incr zero)))";
+    const stuffityLambda = "((times (incr(incr(incr zero)))) (incr(incr zero)) )";
 
-    var output1: [500]u8 = undefined;
-    var output2: [500]u8 = undefined;
+    const maxProgramLength = 500;
+    var output1: [maxProgramLength]u8 = undefined;
+    var output2: [maxProgramLength]u8 = undefined;
     @memcpy(output1[0..stuffityLambda.len], stuffityLambda[0..]);
 
-    // std.debug.print("{s}\n",.{output1});
-    // std.debug.print("{s}\n",.{output2});
-
-    var size = replaceRetSize(u8, output1[0..stuffityLambda.len], "incr", Lincr, output2[0..]);
+    var size = stuffityLambda.len;
+    size = replaceRetSize(u8, output1[0..size], "incr", Lincr, output2[0..]);
     size = replaceRetSize(u8, output2[0..size], "plus", Lplus, output1[0..]);
     size = replaceRetSize(u8, output1[0..size], "zero", Lzero, output2[0..]);
+    size = replaceRetSize(u8, output2[0..size], "times", Ltimes, output1[0..]);
 
-    // std.debug.print("{s}\n",.{output1});
-    // std.debug.print("{s}\n",.{output2});
-
-    const lambdaText = output2[0..size];
+    const lambdaText = output1[0..size];
     // const lambdaText = " (/(( /((1 /((1(1 3))))) /((1 /((1(1 3))))) )) 99 ) "; //Z fixed-point
     // const lambdaText = "( /( ( 2(2 1))) 99 )"; //idk
     // const lambdaText = "/( /( /((2 ((3 2) 1)))))"; //a test
@@ -53,22 +59,63 @@ fn doStuff(allocator: std.mem.Allocator) !void {
 
     var interpreter = LambdaInterpreter.init(allocator);
 
-    // not greedy   /(/((2 ((/(/(1)) 2) 1))))
-    // greedy       
-
-    if(interpreter.reduceUntilCantReduce(topExpr, 100, 100, true)) |reducedExpr| {
+    if(interpreter.reduceUntilCantReduce(topExpr, 200, 100, true)) |reducedExpr| {
         std.debug.print("\n",.{});
         reducedExpr.traversePrint();
         std.debug.print("\n",.{});
     } else |err| switch (err){
-        // error.MAX_TRAVERSES => {
-        //     std.debug.print("\nhit max traverses!\n", .{});
-        // },
         else => {
             std.debug.print("\n{}\n", .{err});
         }
     }
-    // try expr.traversePrint();
+
+    // cantor pair
+    var cantorResult = try BigIntManaged.init(allocator);
+    defer cantorResult.deinit();
+
+    var a = try BigIntManaged.init(allocator);
+    var b = try BigIntManaged.init(allocator);
+    defer a.deinit();
+    defer b.deinit();
+
+    // var formatBuff: [100]u8 = undefined;
+
+    // var stdout_writer = std.Io.File.writer(std.Io.File.stdout(), std.Io, stdoutBuff);
+
+    const aMax = 5;
+    const bMax = 5;
+    for(0..aMax) |aInt| { for(0..bMax) |bInt|{
+        try a.set(aInt);
+        try b.set(bInt);
+        try cantorPair(allocator, &cantorResult, &a, &b);
+
+        const resultStr = try cantorResult.toString(allocator, 10, std.fmt.Case.lower);
+        defer allocator.free(resultStr);
+
+        std.debug.print("({},{}) => {s}\n", .{aInt, bInt, resultStr});
+
+        try a.set(99999999);
+        try b.set(99999999);
+        try cantorUnpair(allocator, &cantorResult, &a, &b);
+
+        const aString = try a.toString(allocator, 10, std.fmt.Case.lower);
+        const bString = try b.toString(allocator, 10, std.fmt.Case.lower);
+        defer allocator.free(aString);
+        defer allocator.free(bString);
+
+        std.debug.print("({s},{s}) <= {s}\n\n", .{aString, bString,resultStr});
+    }}
+
+    var i = try BigIntManaged.init(allocator);
+    defer i.deinit();
+
+    const iMax = 30;
+    var iInt: u32 = 1;
+    while(iInt < iMax*2):(iInt += 2){
+        try i.set(iInt);
+        try generate(allocator, &i);
+        std.debug.print("\n",.{});
+    }
 
 }
 
