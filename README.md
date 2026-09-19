@@ -1,3 +1,6 @@
+# turing3
+doing experiments with lambda calculus
+
 # turing2
 turing2 is what im working on now. im trying to implement a program that will let me approximate Levin's universal distribution and save my progress, and potentially use multiple computers to aid in the computation. the dream is to be able to get a good enough approximation and see if i can do anything cool with it.
 

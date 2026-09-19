@@ -79,8 +79,6 @@ pub fn generate(allocator: std.mem.Allocator, i: *const BigIntManaged) !*LambdaE
             // defer allocator.free(varStr);
             // std.debug.print("(/", .{}); // lambda(var(n) NAH
 
-            //TODO do we need var(n) here? i didnt use it below...
-
             const lambdaExpr = try allocator.create(LambdaExpression);
 
             lambdaExpr.* = .{

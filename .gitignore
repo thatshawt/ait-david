@@ -1,3 +1,6 @@
 *.out
 */*.out
 turing2/build
+
+turing3/zig-out
+turing3/.zig-cache

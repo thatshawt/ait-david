@@ -4,6 +4,8 @@ const LambdaToken = @import("LambdaLexer.zig").LambdaToken;
 const LambdaTokenType = @import("LambdaLexer.zig").LambdaTokenType;
 const LambdaVarNumType = @import("LambdaInterpreter.zig").LambdaVarNumType;
 
+const ArrayList = std.ArrayList;
+
 // var = positive integer or zero
 // lambda = '/'
 // expr = lambda '(' expr ')' | var | '(' expr expr ')'
@@ -74,9 +76,9 @@ pub const LambdaExpression = union(enum) {
     pub fn traversePrint(self: *const LambdaExpression) void {
         switch(self.*){
             .lambda => |lambdaExpr| {
-                std.debug.print("/",.{});
+                std.debug.print("/(",.{});
                 LambdaExpression.traversePrint(lambdaExpr.expr);
-                std.debug.print("",.{});
+                std.debug.print(")",.{});
             },
             .variable => |varExpr| {
                 std.debug.print("{}",.{varExpr.value});
@@ -89,6 +91,36 @@ pub const LambdaExpression = union(enum) {
                 std.debug.print(")", .{});
             }
         }
+    }
+
+    pub fn loadIntoList(self: *const LambdaExpression, list: ArrayList(u8)) error{OutOfBounds}!void {
+        // var i:usize = 0;
+        // while(true){
+        //     if(i >= buff.len) return error.OutOfBounds;
+        switch(self.*){
+            .lambda => |lambdaExpr| {
+                // std.debug.print("/(",.{});
+                list.append('(');
+                lambdaExpr.expr.loadIntoList(list);
+                // std.debug.print(")",.{});
+                list.append(')');
+            },
+            .variable => |varExpr| {
+                std.debug.print("{}", .{varExpr.value});
+                list.append("VAR NUMBER TODO");
+            },
+            .apply => |applyExpr| {
+                // std.debug.print("(", .{});
+                list.append('(');
+                applyExpr.lexpr.loadIntoList(list);
+                // std.debug.print(" ", .{});
+                list.append(' ');
+                applyExpr.rexpr.loadIntoList(list);
+                // std.debug.print(")", .{});
+                list.append(')');
+            }
+        }
+        // }
     }
 
     /// start this one token after the open(left) paren.

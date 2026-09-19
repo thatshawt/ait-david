@@ -111,17 +111,17 @@ fn doStuff(allocator: std.mem.Allocator) !void {
     var i = try BigIntManaged.init(allocator);
     defer i.deinit();
 
-    const iMax = 300;
+    const iMax = 100;
     var iInt: u32 = 0;
     while(iInt < iMax):(iInt += 1){
-        if(iInt % 2 == 0)continue;
+        // if(iInt % 2 == 0)continue;
 
         try i.set(iInt);
-        std.debug.print("{} ",.{iInt});
+        std.debug.print("{}, ",.{iInt});
         const thing = try generate(allocator, &i);
         // std.debug.print("   ",.{});
         thing.traversePrint();
-        std.debug.print("  ",.{});
+        std.debug.print(" => ",.{});
         expressionToBlc(thing);
         std.debug.print("\n",.{});
     }

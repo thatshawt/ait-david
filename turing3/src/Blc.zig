@@ -2,6 +2,10 @@ const std = @import("std");
 
 const LambdaExpression = @import("LambdaParser.zig").LambdaExpression;
 
+pub fn inputExpressionFromBinary(){
+    
+}
+
 pub fn expressionToBlc (expr: *const LambdaExpression) void {
     switch(expr.*){
         .lambda => |lambdaExpr| {
