@@ -6,14 +6,21 @@ const turing3 = @import("turing3");
 const LambdaParser = @import("LambdaParser.zig").LambdaParser;
 const LambdaInterpreter = @import("LambdaInterpreter.zig").LambdaInterpreter;
 
+const LambdaBuilder = @import("LambdaBuilder.zig").LambdaBuilder;
+
+const JotParser = @import("JotParser.zig").JotParser;
+const JotParserMake = @import("JotParser.zig").JotParserMake;
+
 const BigIntManaged = std.math.big.int.Managed;
 const cantorPair = @import("PairingFunction.zig").cantorPair;
 const cantorUnpair = @import("PairingFunction.zig").cantorUnpair;
 
 const generate = @import("LambdaEnumerate.zig").generate;
 
-const expressionToBlc = @import("Blc.zig").expressionToBlc;
+const blcPrintExpression = @import("Blc.zig").blcPrintExpression;
+const loadBlcExpressionToSlice = @import("Blc.zig").loadBlcExpressionToSlice;
 
+const ArrayList = std.ArrayList;
 // https://lambster.dev/ very helpful for confirming what expressions should reduce to
 
 fn replaceRetSize(comptime T: type, input: []const T, needle: []const T, replacement: []const T, output: []T) usize {
@@ -23,7 +30,7 @@ fn replaceRetSize(comptime T: type, input: []const T, needle: []const T, replace
 }
 
 fn doStuff(allocator: std.mem.Allocator) !void {
-    const stuffity_stuff = 1+1;
+    const stuffity_stuff = 1 + 1;
     std.debug.print("did someting!? {} \n", .{stuffity_stuff});
 
     //   ( /(( /((1 (2 2))) /((1 (2 2))) )) 99 )
@@ -35,7 +42,7 @@ fn doStuff(allocator: std.mem.Allocator) !void {
 
     // const stuffityLambda = "(incr zero)";
     // const stuffityLambda = "(incr (incr zero))";
-    const stuffityLambda = "((times (incr(incr(incr zero)))) (incr(incr zero)) )";
+    const stuffityLambda = "((((((/(/((/(/((/(/((/(/((/(/((/(1) (2 1)))) (2 1)))) (2 1)))) (2 1)))) (2 1)))) /(/(/(((3 1) (2 1)))))) /(/(2))) /(/(/(((3 1) (2 1)))))) /(/(2))) /(/(/(((3 1) (2 1)))))) /(/(2)))";
 
     const maxProgramLength = 500;
     var output1: [maxProgramLength]u8 = undefined;
@@ -53,22 +60,22 @@ fn doStuff(allocator: std.mem.Allocator) !void {
     // const lambdaText = "( /( ( 2(2 1))) 99 )"; //idk
     // const lambdaText = "/( /( /((2 ((3 2) 1)))))"; //a test
     // const lambdaText = "( /((1 1)) /((1 1)) )"; //omega non-terminating reduction
-    std.debug.print("{s}\n", .{lambdaText});
+    std.debug.print("reducing: {s}\n", .{lambdaText});
 
     const topExpr = try LambdaParser.parse(allocator, lambdaText);
-    topExpr.traversePrint();
-    std.debug.print("\n",.{});
+    // topExpr.traversePrint();
+    // std.debug.print("\n", .{});
 
     var interpreter = LambdaInterpreter.init(allocator);
 
-    if(interpreter.reduceUntilCantReduce(topExpr, 200, 100, true)) |reducedExpr| {
-        std.debug.print("\n",.{});
+    if (interpreter.reduceUntilCantReduce(topExpr, 200, 100, true)) |reducedExpr| {
+        std.debug.print("result: ", .{});
         reducedExpr.traversePrint();
-        std.debug.print("\n",.{});
-    } else |err| switch (err){
+        std.debug.print("\n\n", .{});
+    } else |err| switch (err) {
         else => {
             std.debug.print("\n{}\n", .{err});
-        }
+        },
     }
 
     // cantor pair
@@ -86,48 +93,79 @@ fn doStuff(allocator: std.mem.Allocator) !void {
 
     const aMax = 5;
     const bMax = 5;
-    for(0..aMax) |aInt| { for(0..bMax) |bInt|{
-        try a.set(aInt);
-        try b.set(bInt);
-        try cantorPair(allocator, &cantorResult, &a, &b);
+    for (0..aMax) |aInt| {
+        for (0..bMax) |bInt| {
+            try a.set(aInt);
+            try b.set(bInt);
+            try cantorPair(allocator, &cantorResult, &a, &b);
 
-        const resultStr = try cantorResult.toString(allocator, 10, std.fmt.Case.lower);
-        defer allocator.free(resultStr);
+            const resultStr = try cantorResult.toString(allocator, 10, std.fmt.Case.lower);
+            defer allocator.free(resultStr);
 
-        std.debug.print("({},{}) => {s}\n", .{aInt, bInt, resultStr});
+            std.debug.print("({},{}) => {s}\n", .{ aInt, bInt, resultStr });
 
-        try a.set(99999999);
-        try b.set(99999999);
-        try cantorUnpair(allocator, &cantorResult, &a, &b);
+            try a.set(99999999);
+            try b.set(99999999);
+            try cantorUnpair(allocator, &cantorResult, &a, &b);
 
-        const aString = try a.toString(allocator, 10, std.fmt.Case.lower);
-        const bString = try b.toString(allocator, 10, std.fmt.Case.lower);
-        defer allocator.free(aString);
-        defer allocator.free(bString);
+            const aString = try a.toString(allocator, 10, std.fmt.Case.lower);
+            const bString = try b.toString(allocator, 10, std.fmt.Case.lower);
+            defer allocator.free(aString);
+            defer allocator.free(bString);
 
-        std.debug.print("({s},{s}) <= {s}\n\n", .{aString, bString,resultStr});
-    }}
+            std.debug.print("({s},{s}) <= {s}\n\n", .{ aString, bString, resultStr });
+        }
+    }
 
     var i = try BigIntManaged.init(allocator);
     defer i.deinit();
 
-    const iMax = 100;
+    const iMax = 50;
     var iInt: u32 = 0;
-    while(iInt < iMax):(iInt += 1){
+    var list: ArrayList(u8) = .empty;
+    // list.init(allocator);
+    defer list.deinit(allocator);
+
+    const jotParser: JotParser = JotParserMake(allocator);
+
+    var fmtBuffer: [32]u8 = undefined;
+    while (iInt < iMax) : (iInt += 1) {
         // if(iInt % 2 == 0)continue;
+        @memset(&fmtBuffer, 0);
 
         try i.set(iInt);
-        std.debug.print("{}, ",.{iInt});
+
+        const binarySlice = try std.fmt.bufPrint(&fmtBuffer, "{b}", .{iInt});
+        // std.debug.print("{s}|{s}\n\n", .{fmtBuffer});
+
+        std.debug.print("{}|\"{s}\" =generateExpression> ", .{ iInt, fmtBuffer });
         const thing = try generate(allocator, &i);
         // std.debug.print("   ",.{});
         thing.traversePrint();
-        std.debug.print(" => ",.{});
-        expressionToBlc(thing);
-        std.debug.print("\n",.{});
+
+        std.debug.print("\n\"{s}\" =jotParse> ", .{fmtBuffer});
+        const jotExpr = try jotParser.parse(binarySlice);
+        jotExpr.traversePrint();
+
+        std.debug.print("\n", .{});
+        thing.traversePrint();
+        std.debug.print(" =blc> ", .{});
+
+        // blcPrintExpression(thing);
+        // std.debug.print("\n", .{});
+        const blcSliceString = try loadBlcExpressionToSlice(thing, allocator);
+        // for (list.items) |item| {
+        //     std.debug.print("{}", .{item});
+        // }
+        // list.clearRetainingCapacity();
+        std.debug.print("\"{s}\"", .{blcSliceString});
+
+        std.debug.print("\n\n", .{});
     }
 
+    const builder: LambdaBuilder = .{ .allocator = allocator };
+    (try builder.apply(.{ .expr = try builder.apply(.{ .text = "999999" }, .{ .text = "/(/(/(((3 1) (2 1)))))" }) }, .{ .text = "/(/(2))" })).traversePrint();
 }
-
 
 pub fn main(init: std.process.Init) !void {
     std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
