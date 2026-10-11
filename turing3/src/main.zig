@@ -42,7 +42,13 @@ fn doStuff(allocator: std.mem.Allocator) !void {
 
     // const stuffityLambda = "(incr zero)";
     // const stuffityLambda = "(incr (incr zero))";
-    const stuffityLambda = "((((((/(/((/(/((/(/((/(/((/(/((/(1) (2 1)))) (2 1)))) (2 1)))) (2 1)))) (2 1)))) /(/(/(((3 1) (2 1)))))) /(/(2))) /(/(/(((3 1) (2 1)))))) /(/(2))) /(/(/(((3 1) (2 1)))))) /(/(2)))";
+    // const stuffityLambda = "((times (incr (incr zero))) (incr (incr zero)))";
+    // const stuffityLambda = "(/(1) (2 1))";
+    // const stuffityLambda = "/(/(((/(/(2)) 1) (2 1))))";
+    // const stuffityLambda = "/( (/(/(/(3))) 1) )";
+    // const stuffityLambda = "((/(1) /(/(/(((3 1) (2 1)))))) /(/(2)))";
+    const stuffityLambda = "(/(/( ((4 2) /((1 3))) )) /((5 1)))"; // => /(((3 /((6 1))) /((1 /((7 1))))))
+    // const stuffityLambda = "(/(/(2)) 1)"; // => /(2)
 
     const maxProgramLength = 500;
     var output1: [maxProgramLength]u8 = undefined;
@@ -68,7 +74,7 @@ fn doStuff(allocator: std.mem.Allocator) !void {
 
     var interpreter = LambdaInterpreter.init(allocator);
 
-    if (interpreter.reduceUntilCantReduce(topExpr, 200, 100, true)) |reducedExpr| {
+    if (interpreter.reduceUntilCantReduce(topExpr, 400, 100, true)) |reducedExpr| {
         std.debug.print("result: ", .{});
         reducedExpr.traversePrint();
         std.debug.print("\n\n", .{});
@@ -120,7 +126,7 @@ fn doStuff(allocator: std.mem.Allocator) !void {
     var i = try BigIntManaged.init(allocator);
     defer i.deinit();
 
-    const iMax = 50;
+    const iMax = 5;
     var iInt: u32 = 0;
     var list: ArrayList(u8) = .empty;
     // list.init(allocator);
@@ -146,6 +152,16 @@ fn doStuff(allocator: std.mem.Allocator) !void {
         std.debug.print("\n\"{s}\" =jotParse> ", .{fmtBuffer});
         const jotExpr = try jotParser.parse(binarySlice);
         jotExpr.traversePrint();
+        std.debug.print("\n", .{});
+
+        if (interpreter.reduceUntilCantReduce(jotExpr, 99, 99, true)) |reducedExpr| {
+            std.debug.print("\t=> ", .{});
+            reducedExpr.traversePrint();
+        } else |err| switch (err) {
+            else => {
+                std.debug.print("\t=> {}", .{err});
+            },
+        }
 
         std.debug.print("\n", .{});
         thing.traversePrint();

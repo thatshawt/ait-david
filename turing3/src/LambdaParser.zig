@@ -43,19 +43,33 @@ pub const LambdaExpression = union(enum) {
         };
     }
 
-    pub fn traverse(self: *LambdaExpression, comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{Yield}!void, args: anytype, lambdaHeight: u32) error{Yield}!void {
-        try foreach(self, args, lambdaHeight);
-        switch (self.*) {
-            .lambda => |lambdaExpr| {
-                try lambdaExpr.expr.traverse(foreach, args, lambdaHeight + 1);
-            },
-            .variable => {
-                //nothing i guess
-            },
-            .apply => |applyExpr| {
-                try applyExpr.lexpr.traverse(foreach, args, lambdaHeight);
-                try applyExpr.rexpr.traverse(foreach, args, lambdaHeight);
-            },
+    const traverseDebug = false;
+    fn traverseDebugPrint(comptime fmt: []const u8, args: anytype) void {
+        if (traverseDebug) std.debug.print("Traverse::" ++ fmt, args);
+    }
+
+    pub fn traverse(
+        self: *LambdaExpression, //
+        comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{Yield}!bool, //
+        args: anytype, //
+        lambdaHeight: u32, //
+    ) error{Yield}!void {
+        const goFurther = try foreach(self, args, lambdaHeight);
+        if (goFurther) {
+            switch (self.*) {
+                .lambda => |lambdaExpr| {
+                    traverseDebugPrint("hit lambda\n", .{});
+                    try lambdaExpr.expr.traverse(foreach, args, lambdaHeight + 1);
+                },
+                .variable => {
+                    //nothing i guess
+                },
+                .apply => |applyExpr| {
+                    traverseDebugPrint("hit application\n", .{});
+                    try applyExpr.lexpr.traverse(foreach, args, lambdaHeight);
+                    try applyExpr.rexpr.traverse(foreach, args, lambdaHeight);
+                },
+            }
         }
     }
 
