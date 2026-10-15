@@ -93,6 +93,34 @@ pub const LambdaExpression = union(enum) {
         }
     }
 
+    // https://arxiv.org/pdf/1210.2610
+    // the sizes i used are like this:
+    // var a = 0
+    // lambda t = size(t) + 1
+    // app(a, b) = size(a) + size(b) + 1
+    pub fn size(self: *const LambdaExpression) u32 {
+        switch (self.*) {
+            .lambda => |lambdaExpr| {
+                // std.debug.print("/(", .{});
+                return lambdaExpr.expr.size() + 1;
+                // std.debug.print(")", .{});
+            },
+            .variable => {
+                // std.debug.print("{}", .{varExpr.value});
+                return 0;
+            },
+            .apply => |applyExpr| {
+                // std.debug.print("(", .{});
+                // const size1 = LambdaExpression.traversePrint(applyExpr.lexpr);
+                // std.debug.print(" ", .{});
+                // const size2 = LambdaExpression.traversePrint(applyExpr.rexpr);
+                // std.debug.print(")", .{});
+
+                return applyExpr.lexpr.size() + applyExpr.rexpr.size() + 1;
+            },
+        }
+    }
+
     pub fn loadIntoList(self: *const LambdaExpression, list: ArrayList(u8)) error{OutOfBounds}!void {
         // var i:usize = 0;
         // while(true){

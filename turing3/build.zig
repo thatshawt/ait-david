@@ -57,6 +57,12 @@ pub fn build(b: *std.Build) void {
     //
     // If neither case applies to you, feel free to delete the declaration you
     // don't need and to put everything under a single module.
+
+    const bfp = b.dependency("BFP", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const exe = b.addExecutable(.{
         .name = "turing3",
         .root_module = b.createModule(.{
@@ -79,6 +85,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "turing3", .module = mod },
+                .{ .name = "BFP", .module = bfp.module("BFP") },
             },
         }),
     });

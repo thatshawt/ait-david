@@ -4,7 +4,8 @@ const LambdaParser = @import("LambdaParser.zig").LambdaParser;
 const LambdaBuilder = @import("LambdaBuilder.zig").LambdaBuilder;
 
 pub fn JotParserMake(allocator: std.mem.Allocator) JotParser {
-    return .{ .builder = .{ .allocator = allocator } };
+    const arena: std.heap.ArenaAllocator = .init(allocator);
+    return .{ .builder = .{ .arena = arena } };
 }
 
 const doDebugPrintParse = false;
@@ -22,7 +23,11 @@ pub const JotParser = struct {
     // allocator: std.mem.Allocator,
     builder: LambdaBuilder,
 
-    pub fn parse(self: *const JotParser, binaryStr: []const u8) !*LambdaExpression {
+    pub fn deinit(self: *const JotParser) void {
+        self.builder.deinit();
+    }
+
+    pub fn parse(self: *JotParser, binaryStr: []const u8) !*LambdaExpression {
         debugPrintParser("called parse()\n", .{});
         if (binaryStr.len == 0) {
             debugPrintParser("len() == 0\n", .{});

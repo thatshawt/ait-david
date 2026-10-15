@@ -55,32 +55,36 @@ fn debugPrintBuilder(comptime fmt: []const u8, args: anytype) void {
 }
 
 pub const LambdaBuilder = struct {
-    allocator: std.mem.Allocator,
+    arena: std.heap.ArenaAllocator,
 
-    pub fn apply(self: *const LambdaBuilder, lexpr: ExprOrText, rexpr: ExprOrText) !*LambdaExpression {
+    pub fn deinit(self: *const LambdaBuilder) void {
+        self.arena.deinit();
+    }
+
+    pub fn apply(self: *LambdaBuilder, lexpr: ExprOrText, rexpr: ExprOrText) !*LambdaExpression {
         debugPrintBuilder("apply()\n", .{});
-        const expr = try self.allocator.create(LambdaExpression);
-        expr.* = .{ .apply = .{ .lexpr = try lexpr.toExpr(self.allocator), .rexpr = try rexpr.toExpr(self.allocator) } };
+        const expr = try self.arena.allocator().create(LambdaExpression);
+        expr.* = .{ .apply = .{ .lexpr = try lexpr.toExpr(self.arena.allocator()), .rexpr = try rexpr.toExpr(self.arena.allocator()) } };
         return expr;
     }
 
-    pub fn lambda(self: *const LambdaBuilder, expr: ExprOrText) !*LambdaExpression {
+    pub fn lambda(self: *LambdaBuilder, expr: ExprOrText) !*LambdaExpression {
         debugPrintBuilder("lambda()\n", .{});
-        const returnExpr = try self.allocator.create(LambdaExpression);
-        returnExpr.* = .{ .lambda = .{ .expr = try expr.toExpr(self.allocator) } };
+        const returnExpr = try self.arena.allocator().create(LambdaExpression);
+        returnExpr.* = .{ .lambda = .{ .expr = try expr.toExpr(self.arena.allocator()) } };
         return returnExpr;
     }
 
-    pub fn variable(self: *const LambdaBuilder, value: VarValueOrText) !*LambdaExpression {
+    pub fn variable(self: *LambdaBuilder, value: VarValueOrText) !*LambdaExpression {
         debugPrintBuilder("variable()\n", .{});
-        const expr = try self.allocator.create(LambdaExpression);
-        expr.* = .{ .variable = .{ .value = try value.toVarValue(self.allocator) } };
+        const expr = try self.arena.allocator().create(LambdaExpression);
+        expr.* = .{ .variable = .{ .value = try value.toVarValue(self.arena.allocator()) } };
         return expr;
     }
 
-    pub fn expression(self: *const LambdaBuilder, expr: ExprOrText) !*LambdaExpression {
+    pub fn expression(self: *LambdaBuilder, expr: ExprOrText) !*LambdaExpression {
         debugPrintBuilder("expression()\n", .{});
-        const returnExpr = try expr.toExpr(self.allocator);
+        const returnExpr = try expr.toExpr(self.arena.allocator());
         return returnExpr;
     }
 };
