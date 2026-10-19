@@ -212,7 +212,15 @@ pub const LambdaInterpreter = struct {
             std.debug.print("\n", .{});
         }
 
+        const beforeCount: ?u32 = self.greedyTraverseCounter;
         const traverseResult = returnExpr.traverse(greedyReduceTraversal, self, 0);
+
+        // saturate subtract -| so we dont underflow, clamped at 0
+        if (self.greedyTraverseCounter != null and self.reduceTraverseCounter != null and beforeCount != null) {
+            self.greedyTraverseCounter.? -|= (beforeCount.? -| self.reduceTraverseCounter.?);
+
+            reductionDebugPrint("greedy, before {}, greedy counter {}, reduce counter {}\n", .{ beforeCount.?, self.greedyTraverseCounter.?, self.reduceTraverseCounter.? });
+        }
 
         if (traverseResult) |traverseResultVoid| {
             _ = traverseResultVoid;
@@ -250,14 +258,14 @@ pub const LambdaInterpreter = struct {
         var expression = try expr.deepClone(self.allocator);
 
         var reduces: u32 = 0;
-        if (greedy) self.greedyTraverseCounter = maxTraverses;
+        // if (greedy) self.greedyTraverseCounter = maxTraverses;
 
         while (true) {
             if (maxReducesMaybe) |maxReduces| if (reduces >= maxReduces) return error.MAX_REDUCES;
 
             const resultExpr =
                 if (greedy)
-                    self.greedyTraverseReduce(expression, self.greedyTraverseCounter)
+                    self.greedyTraverseReduce(expression, maxTraverses)
                 else
                     self.reduce(expression, maxTraverses);
 

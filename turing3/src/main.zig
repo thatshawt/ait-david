@@ -303,10 +303,17 @@ fn experiment3(input: []const u8, args: anytype) error{ Yield, Else }!void {
 //      if(halted) haltedHashmap.getPut(size, sizeValue++)
 //      finally totalsHashmap.getPut(size, sizeValue++)
 //})
+const exp5HashmapKey = struct {
+    size: u32, //
+    steps: u32,
+};
+//map<size -> map<steps -> haltedCount >>
+const exp5stepHaltedHashmapType = std.AutoHashMap(u32, u32);
+const exp5hashmapType = std.AutoHashMap(u32, exp5stepHaltedHashmapType);
 const exp5args = struct {
     allocator: std.mem.Allocator, //
-    hashmap: *std.AutoHashMap(u32, u32),
-    totalsHashmap: *std.AutoHashMap(u32, u32),
+    hashmap: *exp5hashmapType,
+    totalsHashmap: *exp5hashmapType, // size -> <steps -> total>
     maxSteps: u32,
 };
 fn exp5(input: []const u8, args: anytype) error{ Yield, Else }!void {
@@ -314,33 +321,58 @@ fn exp5(input: []const u8, args: anytype) error{ Yield, Else }!void {
 
     const size = T3.getSize(input, args5.allocator) catch return error.Else;
 
+    // const chosenSizew = 5;
+    // if (size != chosenSizew) return;
+
+    // var haltedCount: u32 = 0;
+    // var totalCount: u32 = 0;
     for (1..args5.maxSteps) |traverses| {
         const result = T3.caca(input, @intCast(traverses), args5.allocator) catch |err| lbl: {
             if (err == error.MAX_TRAVERSES) {
-                const returnThing: T3.SizeAndOutput = .{ .inputSize = size, .output = "" };
-                break :lbl returnThing;
+                // const returnThing: T3.SizeAndOutput = .{ .inputSize = size, .output = "" };
+                break :lbl null;
             } else {
                 return error.Else;
             }
         };
-        if (result.output.len > 0) { //halted
+        if (result) |_| { //halted
+            // std.debug.print("{s} halted {} steps\n", .{ resUnwrapped.output, traverses });
+            // haltedCount += 1;
+
             const thing = args5.hashmap.getOrPut(size) catch return error.Else;
-            if (thing.found_existing) {
-                thing.value_ptr.* += 1;
-            } else {
-                thing.value_ptr.* = 1;
+            if (!thing.found_existing) {
+                thing.value_ptr.* = exp5stepHaltedHashmapType.init(args5.allocator);
             }
+
+            const haltedCountRes = thing.value_ptr.*.getOrPut(@intCast(traverses)) catch return error.Else;
+            // haltedCountRes.value_ptr.* = haltedCount;
+            if (haltedCountRes.found_existing) {
+                haltedCountRes.value_ptr.* += 1;
+            } else {
+                haltedCountRes.value_ptr.* = 1;
+            }
+        } else {
+            // if (size == 5) {
+            //     std.debug.print("size {} NOT halted at {} steps\n", .{ size, traverses });
+            // }
         }
         const thing = args5.totalsHashmap.getOrPut(size) catch return error.Else;
-        if (thing.found_existing) {
-            thing.value_ptr.* += 1;
+        if (!thing.found_existing) {
+            thing.value_ptr.* = exp5stepHaltedHashmapType.init(args5.allocator);
+        }
+
+        // totalCount += 1;
+        const totalRes = thing.value_ptr.*.getOrPut(@intCast(traverses)) catch return error.Else;
+        // totalRes.value_ptr.* = totalCount;
+        if (totalRes.found_existing) {
+            totalRes.value_ptr.* += 1;
         } else {
-            thing.value_ptr.* = 1;
+            totalRes.value_ptr.* = 1;
         }
     }
 
-    // std.debug.print("\n{s} size {} =>, {s}", .{ input, result.inputSize, result.output });
-
+    // if (size == 5) //
+    //     std.debug.print("did a size 5\n", .{});
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -394,27 +426,38 @@ pub fn main(init: std.process.Init) !void {
         try streamBinaryStrsRange(a, b, &exp2_noteHaltedInputs, args2);
     }
 
-    //experiment 3, collecting frequencies of program sizes
+    // experiment 3, collecting frequencies of program sizes
     // {
     //     var a = try BigIntManaged.init(arena);
     //     var b = try BigIntManaged.init(arena);
-
     //     defer b.deinit();
     //     defer a.deinit();
-
     //     try a.set(0);
-    //     try b.set(2_000_000);
-
+    //     try b.set(100_000);
     //     var hashmap = std.AutoHashMap(u32, u32).init(arena);
     //     defer hashmap.deinit();
-
     //     try streamBinaryStrsRange(a, b, &experiment3, .{ .allocator = arena, .hashmap = &hashmap });
-
     //     var it = hashmap.iterator();
     //     std.debug.print("\n", .{});
     //     while (it.next()) |entry| {
     //         // if (entry.key_ptr.* > 100) continue;
     //         std.debug.print("{},{}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+    //     }
+    // }
+
+    // other experiemtn to see if T3.caca even works...
+    // {
+    //     for (1..100) |stepsUsize| {
+    //         const steps: u32 = @intCast(stepsUsize);
+
+    //         _ = T3.caca("1", steps, arena) catch |err| {
+    //             if (err == error.MAX_TRAVERSES) {
+    //                 std.debug.print("NOT halted\n", .{});
+    //             }
+    //             continue;
+    //         };
+
+    //         std.debug.print("halted\n", .{});
     //     }
     // }
 
@@ -425,33 +468,98 @@ pub fn main(init: std.process.Init) !void {
     //     }
     // }
 
-    // TODO work on this one, calculate the frequencies, print out a csv for the plots
-    // it has to be modified as well, the maxSteps should change per program size i think.
+    // TODO keep doing this thing
     //experiemnt 5
     {
-        var hashmap = std.AutoHashMap(u32, u32).init(arena);
+        var hashmap = exp5hashmapType.init(arena);
         defer hashmap.deinit();
 
-        var totalsHashmap = std.AutoHashMap(u32, u32).init(arena);
+        var totalsHashmap = exp5hashmapType.init(arena);
         defer totalsHashmap.deinit();
+
+        const maxSteps = 80;
 
         const args: exp5args = .{
             .allocator = arena, //
             .hashmap = &hashmap,
-            .maxSteps = 100,
             .totalsHashmap = &totalsHashmap,
+            .maxSteps = maxSteps,
         };
 
         var a = try BigIntManaged.init(arena);
         var b = try BigIntManaged.init(arena);
 
         try a.set(0);
-        try b.set(100);
+        try b.set(300);
 
         defer b.deinit();
         defer a.deinit();
 
         try streamBinaryStrsRange(a, b, &exp5, args);
+
+        var frequencyHashmap = std.AutoHashMap(u32, f64).init(arena);
+        defer frequencyHashmap.deinit();
+
+        // const chosenFreqSize = 5;
+        // const chosenFreqSize = 53;
+        const chosenFreqSize = 69;
+
+        var it = totalsHashmap.iterator();
+        std.debug.print("\n", .{});
+        while (it.next()) |entry| {
+            const size = entry.key_ptr.*;
+
+            // const totalCount = entry.value_ptr.*;
+
+            const stepHaltedHashmapMaybe = hashmap.get(size);
+            const stepTotalHashmapMaybe = totalsHashmap.get(size);
+
+            std.debug.print("\n\n size {} distribution:\n", .{size});
+            if (stepHaltedHashmapMaybe != null and stepTotalHashmapMaybe != null) {
+                const stepHaltedHashmap = stepHaltedHashmapMaybe.?;
+                const stepTotalHashmap = stepTotalHashmapMaybe.?;
+
+                // var haltedCounter: u32 = 0;
+                // const totalTotalCount = totalCount * maxSteps;
+                for (1..maxSteps) |stepsUsize| {
+                    const steps: u32 = @intCast(stepsUsize);
+
+                    const haltedCountMaybe = stepHaltedHashmap.get(steps);
+                    const totalMaybe = stepTotalHashmap.get(steps);
+
+                    var haltedFloat: f64 = 0;
+                    var totalFloat: f64 = 1;
+
+                    if (haltedCountMaybe != null and totalMaybe != null) {
+                        // haltedCounter += haltedCount;
+                        const haltedCount = haltedCountMaybe.?;
+                        const total = totalMaybe.?;
+
+                        haltedFloat = haltedCount;
+                        totalFloat = total;
+
+                        if (size == chosenFreqSize) //
+                            std.debug.print("{} halted out of {} in {} steps\n", .{ haltedCount, total, steps });
+                    }
+
+                    const percentHalted: f64 = haltedFloat / totalFloat;
+                    if (size == chosenFreqSize) try frequencyHashmap.put(steps, percentHalted);
+                }
+            }
+        }
+
+        std.debug.print("\n\n size {} distribution:\n", .{chosenFreqSize});
+        var lastPercentHalted: f64 = 0.0;
+        for (1..maxSteps) |steps| {
+            const percentHaltedMaybe: ?f64 = frequencyHashmap.get(@intCast(steps));
+
+            if (percentHaltedMaybe) |percentHalted| {
+                std.debug.print("{},{}\n", .{ steps, percentHalted });
+                lastPercentHalted = percentHalted;
+            } else {
+                std.debug.print("{},{}\n", .{ steps, lastPercentHalted });
+            }
+        }
     }
 
     // Accessing command line arguments:
