@@ -259,15 +259,22 @@ pub const LambdaInterpreter = struct {
 
         var reduces: u32 = 0;
         // if (greedy) self.greedyTraverseCounter = maxTraverses;
+        var traverseCounter = maxTraverses;
 
         while (true) {
             if (maxReducesMaybe) |maxReduces| if (reduces >= maxReduces) return error.MAX_REDUCES;
 
             const resultExpr =
                 if (greedy)
-                    self.greedyTraverseReduce(expression, maxTraverses)
+                    self.greedyTraverseReduce(expression, traverseCounter)
                 else
-                    self.reduce(expression, maxTraverses);
+                    self.reduce(expression, traverseCounter);
+
+            if (greedy) {
+                traverseCounter = self.greedyTraverseCounter;
+            } else {
+                traverseCounter = self.reduceTraverseCounter;
+            }
 
             if (resultExpr) |reducedExpr| {
                 if (doReductionDebugPrint) {

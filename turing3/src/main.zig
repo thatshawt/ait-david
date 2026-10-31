@@ -195,40 +195,59 @@ fn f128PowNasty(a: f128, b: f128) f128 {
     return c;
 }
 
-fn streamBinaryStrsRange(
-    // allocator: std.mem.Allocator, //
-    a: BigIntManaged, //
-    b: BigIntManaged, //
-    comptime foreach: *const fn ([]const u8, args: anytype) error{ Yield, Else }!void, //
-    args: anytype, //
-) !void {
-    var fmtBuffer: [400]u8 = undefined;
+// fn streamStepsRange(
+//     // allocator: std.mem.Allocator, //
+//     a: BigIntManaged,
+//     b: BigIntManaged,
+//     comptime foreach: *const fn (*BigIntManaged, []const u8, args: anytype) error{ Yield, Else }!void,
+//     args: anytype,
+// ) !void {
+//     var fmtBuffer: [400]u8 = undefined;
 
-    var i: BigIntManaged = try a.clone();
-    defer i.deinit();
+//     var i: BigIntManaged = try a.clone();
+//     defer i.deinit();
 
-    var onwards = true;
-    while (onwards) {
-        @memset(&fmtBuffer, 0);
+//     var progressI: BigIntManaged = try b.clone();
+//     defer progressI.deinit();
 
-        const binarySlice = try std.fmt.bufPrint(&fmtBuffer, "{b}", .{i});
+//     var r: BigIntManaged = try b.clone();
+//     defer r.deinit();
 
-        // std.debug.print("\n{s}", .{binarySlice});
+//     var ten: BigIntManaged = try b.clone();
+//     defer ten.deinit();
+//     try ten.set(10);
 
-        try foreach(binarySlice, args);
+//     try progressI.divFloor(&r, &b, &ten);
+//     try r.copy(progressI.toConst());
 
-        onwards = switch (i.order(b)) {
-            std.math.Order.eq => false,
-            std.math.Order.gt => false,
-            std.math.Order.lt => true,
-        };
-        if (onwards) {
-            try i.addScalar(&i, 1);
-        }
-    }
-}
+//     var onwards = true;
+//     var percent: u32 = 10;
+//     while (onwards) {
+//         if (progressI.eql(i)) {
+//             try progressI.add(&progressI, &r);
+//             std.debug.print("{d}% reached\n", .{percent});
+//             percent += 10;
+//         }
+//         @memset(&fmtBuffer, 0);
 
-fn exp1_noteOutputs(input: []const u8, args: anytype) error{ Yield, Else }!void {
+//         const binarySlice = try std.fmt.bufPrint(&fmtBuffer, "{b}", .{i});
+
+//         // std.debug.print("\n{s}", .{binarySlice});
+
+//         try foreach(&i, binarySlice, args);
+
+//         onwards = switch (i.order(b)) {
+//             std.math.Order.eq => false,
+//             std.math.Order.gt => false,
+//             std.math.Order.lt => true,
+//         };
+//         if (onwards) {
+//             try i.addScalar(&i, 1);
+//         }
+//     }
+// }
+
+fn exp1_noteOutputs(_: *BigIntManaged, input: []const u8, args: anytype) error{ Yield, Else }!void {
     // const input = "111";
     // std.debug.print("\ncaca thing:\n", .{});
     const result = T3.caca(input, 1000, args) catch return error.Else;
@@ -244,7 +263,7 @@ const exp2Args = struct {
     hashmap: *args2hashmap,
     traverses: u32,
 };
-fn exp2_noteHaltedInputs(input: []const u8, args: anytype) error{ Yield, Else }!void {
+fn exp2_noteHaltedInputs(_: *BigIntManaged, input: []const u8, args: anytype) error{ Yield, Else }!void {
     var theHashmap = @as(*args2hashmap, args.hashmap);
 
     var args2: exp2Args = args;
@@ -276,18 +295,32 @@ fn exp2_noteHaltedInputs(input: []const u8, args: anytype) error{ Yield, Else }!
     theHashmap.put(hashmapInput, true) catch return error.Else;
 }
 
-const experiment3args = struct {
+// size -> (firstSeenIndex, lastSeenIndex)
+const exp3indexHashmap = std.AutoHashMap(u32, struct {
+    firstSeenIndex: *BigIntManaged, //
+    lastSeenIndex: *BigIntManaged,
+});
+const exp3args = struct {
     allocator: std.mem.Allocator, //
     hashmap: *std.AutoHashMap(u32, u32),
+    indexHashmap: *exp3indexHashmap,
+    sizeFileWriter: *std.Io.Writer,
 };
-fn experiment3(input: []const u8, args: anytype) error{ Yield, Else }!void {
-    var theHashmap = @as(*std.AutoHashMap(u32, u32), args.hashmap);
+fn experiment3(index: *BigIntManaged, input: []const u8, argz: anytype) error{ Yield, Else }!void {
+    const args: exp3args = argz;
+
+    var theHashmap = args.hashmap;
 
     const size = T3.getSize(input, args.allocator) catch {
         return error.Else;
     };
 
-    // std.debug.print("\n{s} size {} =>, {s}", .{ input, result.inputSize, result.output });
+    // const indexInt = index.toInt(u32) catch unreachable;
+    // if (indexInt < 100_000) {
+    //     // std.debug.print("{d},{}\n", .{ indexInt, size });
+    //     args.sizeFileWriter.print("{d},{}\n", .{ indexInt, size }) catch unreachable;
+    //     args.sizeFileWriter.flush() catch unreachable;
+    // }
 
     const thing = theHashmap.getOrPut(size) catch return error.Else;
     if (thing.found_existing) {
@@ -295,47 +328,74 @@ fn experiment3(input: []const u8, args: anytype) error{ Yield, Else }!void {
     } else {
         thing.value_ptr.* = 1;
     }
+
+    const indexStructMaybe = args.indexHashmap.get(size);
+    if (indexStructMaybe) |indexStruct| {
+        indexStruct.lastSeenIndex.copy(index.toConst()) catch return error.Else;
+    } else {
+        const firstSeen = args.allocator.create(BigIntManaged) catch return error.Else;
+        const lastSeen = args.allocator.create(BigIntManaged) catch return error.Else;
+
+        firstSeen.* = BigIntManaged.init(args.allocator) catch return error.Else;
+        lastSeen.* = BigIntManaged.init(args.allocator) catch return error.Else;
+
+        firstSeen.copy(index.toConst()) catch return error.Else;
+        lastSeen.copy(index.toConst()) catch return error.Else;
+        args.indexHashmap.put(size, .{
+            .firstSeenIndex = firstSeen, //
+            .lastSeenIndex = lastSeen,
+        }) catch return error.Else;
+    }
 }
 
-//TODO make exp5
-//binaryStream(a,b, foreach = {
-//  for(1..maxSteps) T3.caca(binaryStr, steps) ->
-//      if(halted) haltedHashmap.getPut(size, sizeValue++)
-//      finally totalsHashmap.getPut(size, sizeValue++)
-//})
 const exp5HashmapKey = struct {
     size: u32, //
     steps: u32,
 };
+
+// const exp5SizeAndType = struct { size: u32, sType: T3.SizeTypeDivTen };
 //map<size -> map<steps -> haltedCount >>
 const exp5stepHaltedHashmapType = std.AutoHashMap(u32, u32);
 const exp5hashmapType = std.AutoHashMap(u32, exp5stepHaltedHashmapType);
+
+// const exp5sizeTypedHashmapType = std.AutoHashMap(exp5SizeAndType, exp5stepHaltedHashmapType);
+
+// const exp5AndType = struct { size: u32, sType: T3.SizeTypeDivTen };
+// const exp5sizeTypedTotalsHashmapType = std.AutoHashMap(exp5SizeAndType, exp5stepHaltedHashmapType);
 const exp5args = struct {
     allocator: std.mem.Allocator, //
     hashmap: *exp5hashmapType,
     totalsHashmap: *exp5hashmapType, // size -> <steps -> total>
     maxSteps: u32,
+    chosenSize: ?u32,
+    sizeFirstStepCache: *T3.binarySearchFirstHaltingStepForSizeCache,
+    // sizeTypedHashmap: *exp5sizeTypedHashmapType,
+    // sizeTypedTotalsHashmap: *exp5sizeTypedTotalsHashmapType,
 };
-fn exp5(input: []const u8, args: anytype) error{ Yield, Else }!void {
+fn exp5(_: *BigIntManaged, input: []const u8, args: anytype) error{ Yield, Else }!void {
     const args5: exp5args = args;
 
     const size = T3.getSize(input, args5.allocator) catch return error.Else;
 
     // const chosenSizew = 5;
-    // if (size != chosenSizew) return;
+    if (args5.chosenSize) |chosenSize| {
+        if (size != chosenSize) return;
+    }
+
+    var t3Arena = std.heap.ArenaAllocator.init(args5.allocator);
+    defer t3Arena.deinit();
 
     // var haltedCount: u32 = 0;
     // var totalCount: u32 = 0;
-    for (1..args5.maxSteps) |traverses| {
-        const result = T3.caca(input, @intCast(traverses), args5.allocator) catch |err| lbl: {
-            if (err == error.MAX_TRAVERSES) {
-                // const returnThing: T3.SizeAndOutput = .{ .inputSize = size, .output = "" };
-                break :lbl null;
-            } else {
-                return error.Else;
-            }
-        };
-        if (result) |_| { //halted
+    var haltedAlready = false;
+    // const returnThing: T3.SizeAndOutput = .{ .inputSize = size, .output = "" };
+    const startStep = (T3.binarySearchFirstHaltingStepForSize(size, args.sizeFirstStepCache, args5.allocator) catch return error.Else) orelse 1;
+    // const startStep = 1;
+    std.debug.print("startStep {}, endStep {}\n", .{ startStep, startStep + args5.maxSteps });
+    for (startStep..(startStep + args5.maxSteps)) |traverses| {
+        const result = if (haltedAlready) true else T3.cacaHalted(input, @intCast(traverses), t3Arena.allocator()) catch return error.Else;
+        if (result) { //halted
+            haltedAlready = true;
             // std.debug.print("{s} halted {} steps\n", .{ resUnwrapped.output, traverses });
             // haltedCount += 1;
 
@@ -393,7 +453,7 @@ pub fn main(init: std.process.Init) !void {
         try a.set(0);
         try b.set(20);
 
-        try streamBinaryStrsRange(a, b, &exp1_noteOutputs, arena);
+        try T3.streamBinaryStrsRange(a, b, &exp1_noteOutputs, arena, false);
     }
 
     {
@@ -423,25 +483,90 @@ pub fn main(init: std.process.Init) !void {
 
         // (input, size) => bool
 
-        try streamBinaryStrsRange(a, b, &exp2_noteHaltedInputs, args2);
+        try T3.streamBinaryStrsRange(a, b, &exp2_noteHaltedInputs, args2, false);
+
+        std.debug.print("\n", .{});
     }
 
     // experiment 3, collecting frequencies of program sizes
     // {
     //     var a = try BigIntManaged.init(arena);
     //     var b = try BigIntManaged.init(arena);
+
     //     defer b.deinit();
     //     defer a.deinit();
+
     //     try a.set(0);
-    //     try b.set(100_000);
+    //     try b.set(1_000_000);
+
     //     var hashmap = std.AutoHashMap(u32, u32).init(arena);
     //     defer hashmap.deinit();
-    //     try streamBinaryStrsRange(a, b, &experiment3, .{ .allocator = arena, .hashmap = &hashmap });
-    //     var it = hashmap.iterator();
+
+    //     var indexHashmap = exp3indexHashmap.init(arena);
+    //     defer indexHashmap.deinit();
+
+    //     const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizes.csv", .{});
+    //     defer sizeFile.close(init.io);
+
+    //     var sizeFileBuf: [4000]u8 = undefined;
+    //     var sizeFileWriter = sizeFile.writer(init.io, &sizeFileBuf);
+    //     const sizeFileWriterPtr = &sizeFileWriter.interface;
+    //     defer sizeFileWriter.flush() catch unreachable;
+
+    //     const args: exp3args = .{
+    //         .allocator = arena, //
+    //         .hashmap = &hashmap,
+    //         .indexHashmap = &indexHashmap,
+    //         .sizeFileWriter = sizeFileWriterPtr,
+    //     };
+
+    //     std.debug.print("index,size\n", .{});
+    //     try T3.streamBinaryStrsRange(a, b, &experiment3, args);
     //     std.debug.print("\n", .{});
+
+    //     var it = hashmap.iterator();
+    //     std.debug.print("\nsize frequencies", .{});
     //     while (it.next()) |entry| {
     //         // if (entry.key_ptr.* > 100) continue;
     //         std.debug.print("{},{}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+    //     }
+
+    //     // var it2 = indexHashmap.iterator();
+    //     // std.debug.print("\nsize->first seen distribution\n", .{});
+    //     // while (it2.next()) |entry| {
+    //     //     const value = entry.value_ptr.*;
+    //     //     // if (entry.key_ptr.* > 100) continue;
+    //     //     std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.firstSeenIndex.* });
+    //     //     // std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.lastSeenIndex.* });
+    //     // }
+
+    //     // var it3 = indexHashmap.iterator();
+    //     // std.debug.print("\nsize->last seen distribution\n", .{});
+    //     // while (it3.next()) |entry| {
+    //     //     const value = entry.value_ptr.*;
+    //     //     // if (entry.key_ptr.* > 100) continue;
+    //     //     // std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.firstSeenIndex.* });
+    //     //     std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.lastSeenIndex.* });
+    //     // }
+    // }
+
+    //experiment to see if lastSeenIndex and firstSeenIndex work
+    // {
+    //     var first = try BigIntManaged.init(arena);
+    //     var last = try BigIntManaged.init(arena);
+    //     var size = try BigIntManaged.init(arena);
+    //     defer size.deinit();
+    //     defer first.deinit();
+    //     defer last.deinit();
+
+    //     const maxSize = 200;
+    //     std.debug.print("\n", .{});
+    //     for (5..maxSize) |i| {
+    //         try size.set(i);
+
+    //         if (try T3.firstIndexSeenForProgramSize(&first, &size, arena) and try T3.lastIndexSeenForProgramSize(&last, &size, arena)) {
+    //             std.debug.print("size {} -> first {d}, last {d}\n", .{ i, first, last });
+    //         }
     //     }
     // }
 
@@ -468,8 +593,8 @@ pub fn main(init: std.process.Init) !void {
     //     }
     // }
 
-    // TODO keep doing this thing
     //experiemnt 5
+    var startT = std.Io.Clock.now(.awake, init.io);
     {
         var hashmap = exp5hashmapType.init(arena);
         defer hashmap.deinit();
@@ -477,32 +602,105 @@ pub fn main(init: std.process.Init) !void {
         var totalsHashmap = exp5hashmapType.init(arena);
         defer totalsHashmap.deinit();
 
-        const maxSteps = 80;
+        var sizeFirstCache = T3.binarySearchFirstHaltingStepForSizeCache.init(arena);
+        defer sizeFirstCache.deinit();
+
+        var a = try BigIntManaged.init(arena);
+        var b = try BigIntManaged.init(arena);
+        defer b.deinit();
+        defer a.deinit();
+
+        //curve 1 x length, 5,7     5,9
+        // const maxSteps = 9;
+        // // const chosenFreqSize = 5;
+        // try a.set(0);
+        // try b.set(1_000);
+
+        //curve 1 x length, 19,22     19,27
+        // const maxSteps = 250;
+        // const chosenFreqSize = 19;
+        // try a.set(0);
+        // try b.set(100_000);
+
+        //curve 1 x length, 25,25     25,39
+        // const maxSteps = 80;
+        // const chosenFreqSize = 25;
+        // try a.set(0);
+        // try b.set(100_000);
+
+        // curve 6 x length, 31,40       31,48
+        // const maxSteps = 80;
+        // const chosenFreqSize = 31;
+        // try a.set(0);
+        // try b.set(100_000);
+
+        // curve 43 x length, 55,40     55,84
+        // const maxSteps = 950;
+        // const chosenFreqSize = 55;
+        // try a.set(0);
+        // try b.set(200_000);
+
+        // const maxSteps = 950;
+        // const chosenFreqSize = 59;
+        // try a.set(0);
+        // try b.set(200_000);
+
+        // curve 62 x length, 73,48       73,111
+        // const maxSteps = 1250;
+        // const chosenFreqSize = 73;
+        // try a.set(0);
+        // try b.set(200_000);
+
+        // 78 curve x length, 87,53        87,132
+        // const maxSteps = 132;
+        // const chosenFreqSize = 87;
+        // try a.set(0);
+        // try b.set(200_000);
+
+        // 80 curve x length, 91,57        91,138
+        // const maxSteps = 138;
+        // const chosenFreqSize = 91;
+        // try a.set(0);
+        // try b.set(300_000);
+
+        // 91 curve x length, 97,55      97,147
+        // const maxSteps = 147;
+        // // const chosenFreqSize = 97;
+        // try a.set(0);
+        // try b.set(300_000);
+
+        // lastSteps = 1.5*size + 1.5
+
+        // const chosenFreqSize = null;
+
+        const chosenFreqSize = 39;
+        const maxSteps = 700;
+
+        var bigSize = try BigIntManaged.init(arena);
+        defer bigSize.deinit();
+
+        // if (chosenFreqSize != null) {
+        try bigSize.set(chosenFreqSize);
+
+        _ = try T3.firstIndexSeenForProgramSize(&a, &bigSize, arena);
+        _ = try T3.lastIndexSeenForProgramSize(&b, &bigSize, arena);
+        // }
 
         const args: exp5args = .{
             .allocator = arena, //
             .hashmap = &hashmap,
             .totalsHashmap = &totalsHashmap,
             .maxSteps = maxSteps,
+            .chosenSize = chosenFreqSize,
+            .sizeFirstStepCache = &sizeFirstCache,
         };
 
-        var a = try BigIntManaged.init(arena);
-        var b = try BigIntManaged.init(arena);
+        try T3.streamBinaryStrsRange(a, b, &exp5, args, true);
 
-        try a.set(0);
-        try b.set(300);
-
-        defer b.deinit();
-        defer a.deinit();
-
-        try streamBinaryStrsRange(a, b, &exp5, args);
-
-        var frequencyHashmap = std.AutoHashMap(u32, f64).init(arena);
+        // size -> (steps -> freq)
+        const freqHashmapType = std.AutoHashMap(u32, f64);
+        var frequencyHashmap = std.AutoHashMap(u32, *freqHashmapType).init(arena);
         defer frequencyHashmap.deinit();
-
-        // const chosenFreqSize = 5;
-        // const chosenFreqSize = 53;
-        const chosenFreqSize = 69;
 
         var it = totalsHashmap.iterator();
         std.debug.print("\n", .{});
@@ -521,7 +719,10 @@ pub fn main(init: std.process.Init) !void {
 
                 // var haltedCounter: u32 = 0;
                 // const totalTotalCount = totalCount * maxSteps;
-                for (1..maxSteps) |stepsUsize| {
+
+                const startStep = try T3.binarySearchFirstHaltingStepForSize(size, &sizeFirstCache, arena) orelse 1;
+                // const startStep = 1;
+                for (startStep..(startStep + maxSteps)) |stepsUsize| {
                     const steps: u32 = @intCast(stepsUsize);
 
                     const haltedCountMaybe = stepHaltedHashmap.get(steps);
@@ -543,24 +744,101 @@ pub fn main(init: std.process.Init) !void {
                     }
 
                     const percentHalted: f64 = haltedFloat / totalFloat;
-                    if (size == chosenFreqSize) try frequencyHashmap.put(steps, percentHalted);
+
+                    var frequencyHashmap2Maybe = frequencyHashmap.get(size);
+                    if (frequencyHashmap2Maybe) |_| {
+                        try frequencyHashmap2Maybe.?.put(steps, percentHalted);
+                    } else {
+                        const newHashmap = try arena.create(freqHashmapType);
+                        newHashmap.* = freqHashmapType.init(arena);
+
+                        try frequencyHashmap.put(size, newHashmap);
+
+                        try frequencyHashmap.get(size).?.put(steps, percentHalted);
+                    }
+                    // if (size == chosenFreqSize) //
                 }
             }
         }
 
-        std.debug.print("\n\n size {} distribution:\n", .{chosenFreqSize});
-        var lastPercentHalted: f64 = 0.0;
-        for (1..maxSteps) |steps| {
-            const percentHaltedMaybe: ?f64 = frequencyHashmap.get(@intCast(steps));
+        {
+            const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizeHaltingFrequencies.txt", .{});
+            defer sizeFile.close(init.io);
 
-            if (percentHaltedMaybe) |percentHalted| {
-                std.debug.print("{},{}\n", .{ steps, percentHalted });
-                lastPercentHalted = percentHalted;
-            } else {
-                std.debug.print("{},{}\n", .{ steps, lastPercentHalted });
+            var sizeFileBuf: [4000]u8 = undefined;
+            var sizeFileWriter = sizeFile.writer(init.io, &sizeFileBuf);
+            const sizeFileWriterPtr = &sizeFileWriter.interface;
+            defer sizeFileWriter.flush() catch unreachable;
+
+            var lastPercentHalted: f64 = 0.0;
+            var it2 = frequencyHashmap.iterator();
+            while (it2.next()) |entry| {
+                const size = entry.key_ptr.*;
+                try sizeFileWriterPtr.print("\n\nsize {}:\n", .{size});
+                const freqMap = entry.value_ptr.*;
+                const startStep = try T3.binarySearchFirstHaltingStepForSize(size, &sizeFirstCache, arena) orelse 1;
+                for (startStep..(startStep + maxSteps)) |steps| {
+                    const percentHaltedMaybe: ?f64 = freqMap.get(@intCast(steps));
+
+                    if (percentHaltedMaybe) |percentHalted| {
+                        try sizeFileWriterPtr.print("{},{}\n", .{ steps, percentHalted });
+                        lastPercentHalted = percentHalted;
+                    } else {
+                        try sizeFileWriterPtr.print("{},{}\n", .{ steps, lastPercentHalted });
+                    }
+                }
             }
         }
+        std.debug.print("\n", .{});
     }
+    const endT = std.Io.Clock.now(.awake, init.io);
+    std.debug.print("exp5 took {} seconds\n", .{startT.durationTo(endT).toSeconds()});
+
+    // TODO consolidate exp6 into a function like "T3.binarySearchFirstHaltingStepForSize(size) -> ?u32"
+    // we are going to want to use this back in experiemnt5 so instead of starting at 0 we start at the
+    // first step that gives us halting machines.
+
+    // TODO we make a new experiment that tries to estimate the number of programs better and use that to calculate
+    // if we are capturing enough machines to call it "good enough" sampling.
+
+    // TODO experiment5 should be modified so it tries to take N data points and not all the steps from A to B.
+
+    // question? when do we stop sampling????
+
+    //experiejmnt 6,
+    var startT6 = std.Io.Clock.now(.awake, init.io);
+    {
+        const startSize = 0;
+        const lastSize = 55;
+        for (startSize..lastSize) |chosenSizeUsize| {
+            const haltedStepMaybe = try T3.binarySearchFirstHaltingStepForSize(@intCast(chosenSizeUsize), null, arena);
+            if (haltedStepMaybe) |haltedStep| {
+                std.debug.print("{},{}\n", .{ chosenSizeUsize, haltedStep });
+            }
+        }
+        std.debug.print("\n", .{});
+    }
+    const endT6 = std.Io.Clock.now(.awake, init.io);
+    std.debug.print("exp6 took {} seconds\n", .{startT6.durationTo(endT6).toSeconds()});
+
+    //experiejmnt 7, binary search 99% halting step
+    var startT7 = std.Io.Clock.now(.awake, init.io);
+    {
+        const startSize = 0;
+        const lastSize = 55;
+        for (startSize..lastSize) |chosenSizeUsize| {
+            const haltedStepMaybe = try T3.binarySearch99PercentHaltingStepForSize(@intCast(chosenSizeUsize), null, arena);
+            if (haltedStepMaybe) |haltedStep| {
+                std.debug.print("{},{}\n", .{ chosenSizeUsize, haltedStep });
+            }
+        }
+        std.debug.print("\n", .{});
+    }
+    const endT7 = std.Io.Clock.now(.awake, init.io);
+    std.debug.print("exp6 took {} seconds\n", .{startT7.durationTo(endT7).toSeconds()});
+
+    //TODO see "new 12" and make a experiment that reproduces it faster than 30 min, and also find more size data points.
+    // see previous experiments, skip the machinesn sizes that have halted already idk bruv
 
     // Accessing command line arguments:
     const args = try init.minimal.args.toSlice(arena);
