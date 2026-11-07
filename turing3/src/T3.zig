@@ -21,19 +21,29 @@ fn debugPrint(comptime fmt: []const u8, args: anytype) void {
 pub const SizeAndOutput = struct { inputSize: u32, output: []const u8 };
 
 pub const SizeTypeDivTen = enum {
-    MINUS_FIVE, //
+    MINUS_ONE, //
+    MINUS_THREE,
+    MINUS_FIVE,
+    MINUS_SEVEN,
     MINUS_NINE,
-    MINUS_THIRTEEN,
-    MINUS_SEVENTEEN,
-    MINUS_TWENTYONE,
 };
 
 pub fn sizeGetTypeDivTen(size: u32) ?SizeTypeDivTen {
+    if (size >= 1 and (size - 1) % 10 == 0) return SizeTypeDivTen.MINUS_ONE;
+    if (size >= 3 and (size - 3) % 10 == 0) return SizeTypeDivTen.MINUS_THREE;
     if (size >= 5 and (size - 5) % 10 == 0) return SizeTypeDivTen.MINUS_FIVE;
+    if (size >= 7 and (size - 7) % 10 == 0) return SizeTypeDivTen.MINUS_SEVEN;
     if (size >= 9 and (size - 9) % 10 == 0) return SizeTypeDivTen.MINUS_NINE;
-    if (size >= 13 and (size - 13) % 10 == 0) return SizeTypeDivTen.MINUS_THIRTEEN;
-    if (size >= 17 and (size - 17) % 10 == 0) return SizeTypeDivTen.MINUS_SEVENTEEN;
-    if (size >= 21 and (size - 21) % 10 == 0) return SizeTypeDivTen.MINUS_TWENTYONE;
+    return null;
+}
+
+pub const SizeTypeDivFour = enum {
+    MINUS_ONE, //
+    MINUS_THREE,
+};
+pub fn sizeGetTypeDivFour(size: u32) ?SizeTypeDivFour {
+    if (size >= 1 and (size - 1) % 4 == 0) return SizeTypeDivFour.MINUS_ONE;
+    if (size >= 3 and (size - 3) % 4 == 0) return SizeTypeDivFour.MINUS_THREE;
     return null;
 }
 
@@ -298,6 +308,10 @@ const exp6args = struct {
     chosenSteps: u32,
     chosenSize: ?u32,
     yieldOnFirstHalt: bool = false,
+
+    prng: ?*std.Random.DefaultPrng = null,
+    percentIgnore: ?f64 = null,
+    sizeStartIgnore: ?u32 = null,
 };
 //TODO make exp6 or something, exp5 works by going from 0 to the step that leads to halting,
 // exp6 works by finding the start(no halting) and end steps(all halting) and picks a number of data points in between.
@@ -307,10 +321,19 @@ fn exp6(_: *BigIntManaged, input: []const u8, argz: anytype) error{ Yield, Else 
 
     const size = getSize(input, args.allocator) catch return error.Else;
 
+    if (args.chosenSize) |chosenSize| if (size != chosenSize) return;
+
+    if (args.percentIgnore != null and args.prng != null) {
+        const random = args.prng.?.random().float(f64);
+        if (args.sizeStartIgnore != null) {
+            if (args.sizeStartIgnore.? <= size and random <= args.percentIgnore.?) return;
+        } else {
+            if (random <= args.percentIgnore.?) return;
+        }
+    }
+
     const haltedStepMaybe = args.haltedStepHashmap.get(size);
     if (args.yieldOnFirstHalt) if (haltedStepMaybe) |_| return;
-
-    if (args.chosenSize) |chosenSize| if (size != chosenSize) return;
 
     var t3Arena = std.heap.ArenaAllocator.init(args.allocator);
     defer t3Arena.deinit();
@@ -369,11 +392,16 @@ fn exp6(_: *BigIntManaged, input: []const u8, argz: anytype) error{ Yield, Else 
 
 pub const binarySearchFirstHaltingStepForSizeCache = std.AutoHashMap(u32, u32);
 
+// idk 40 seems good
+const minSizeForSampling = 40;
+
 /// find the first step at which a size halts
 pub fn binarySearchFirstHaltingStepForSize(
     sizez: u32, //
     cacheMaybe: ?*binarySearchFirstHaltingStepForSizeCache,
     allocator: std.mem.Allocator,
+    percentIgnore: ?f64, // percent chance to ignore a machine, e.g 0.95 to ignore ~95% of machines
+    randomSeed: ?u64, //  for reproducability
 ) !?u32 {
     if (cacheMaybe) |cache| {
         const cachedRes = cache.get(sizez);
@@ -419,39 +447,39 @@ pub fn binarySearchFirstHaltingStepForSize(
         var currentStep: u32 = 1;
 
         //TODO might not really need this... idk it could be useful small speedup idk
-        const sizeTypeMaybe = sizeGetTypeDivTen(chosenSize);
-        if (sizeTypeMaybe) |sizeType| {
-            // std.debug.print("size type found\n", .{});
-            const sizeTypedHaltingHashmapMaybe = sizeTypedHashmap.get(sizeType);
-            if (sizeTypedHaltingHashmapMaybe) |sizeTypedHaltingHashmap| {
-                // std.debug.print("sizeTypedHashmap found\n", .{});
-                var currentBestSize: u32 = 0;
-                var currentBestStep: u32 = 1;
-                var it = sizeTypedHaltingHashmap.iterator();
+        // const sizeTypeMaybe = sizeGetTypeDivTen(chosenSize);
+        // if (sizeTypeMaybe) |sizeType| {
+        //     // std.debug.print("size type found\n", .{});
+        //     const sizeTypedHaltingHashmapMaybe = sizeTypedHashmap.get(sizeType);
+        //     if (sizeTypedHaltingHashmapMaybe) |sizeTypedHaltingHashmap| {
+        //         // std.debug.print("sizeTypedHashmap found\n", .{});
+        //         var currentBestSize: u32 = 0;
+        //         var currentBestStep: u32 = 1;
+        //         var it = sizeTypedHaltingHashmap.iterator();
 
-                while (it.next()) |entry| {
-                    const cmpSize = entry.key_ptr.*;
-                    const cmpSteps = entry.value_ptr.*;
+        //         while (it.next()) |entry| {
+        //             const cmpSize = entry.key_ptr.*;
+        //             const cmpSteps = entry.value_ptr.*;
 
-                    // std.debug.print("cmping {},{}\n", .{ cmpSize, cmpSteps });
+        //             // std.debug.print("cmping {},{}\n", .{ cmpSize, cmpSteps });
 
-                    if (cmpSize > chosenSize) {
-                        continue;
-                    } else if (cmpSize == chosenSize) {
-                        currentBestStep = cmpSteps;
-                        break;
-                    } else {
-                        const difference = chosenSize - cmpSize;
-                        if (difference < (chosenSize - currentBestSize)) {
-                            currentBestSize = cmpSize;
-                            currentBestStep = cmpSteps;
-                        }
-                    }
-                }
+        //             if (cmpSize > chosenSize) {
+        //                 continue;
+        //             } else if (cmpSize == chosenSize) {
+        //                 currentBestStep = cmpSteps;
+        //                 break;
+        //             } else {
+        //                 const difference = chosenSize - cmpSize;
+        //                 if (difference < (chosenSize - currentBestSize)) {
+        //                     currentBestSize = cmpSize;
+        //                     currentBestStep = cmpSteps;
+        //                 }
+        //             }
+        //         }
 
-                currentStep = currentBestStep;
-            }
-        }
+        //         currentStep = currentBestStep;
+        //     }
+        // }
 
         var start: u32 = currentStep;
         var end: u32 = currentStep * 2;
@@ -463,6 +491,8 @@ pub fn binarySearchFirstHaltingStepForSize(
         while (findingNonZeroStep) {
             // std.debug.print("size {}, trying {} steps, S {}, M {}, E {}\n", .{ chosenSize, currentStep, start, middle, end });
 
+            var prng: std.Random.DefaultPrng = .init(randomSeed orelse 42);
+
             const args: exp6args = .{
                 .allocator = allocator, //
                 .hashmap = &hashmap,
@@ -472,6 +502,9 @@ pub fn binarySearchFirstHaltingStepForSize(
                 .chosenSize = chosenSize,
                 .chosenSteps = currentStep,
                 .yieldOnFirstHalt = true, // we are only looking for the first halting, dont keep going after finding it
+                .prng = if (percentIgnore != null) &prng else null,
+                .percentIgnore = percentIgnore, //TODO, idea: start at 0.80 and get 2x closer to 0.0 each step ???? dubious perchance
+                .sizeStartIgnore = minSizeForSampling, //for safety
             };
             streamBinaryStrsRange(first, last, &exp6, args, false) catch |err| {
                 if (err == error.Else) {
@@ -527,11 +560,14 @@ pub fn binarySearchFirstHaltingStepForSize(
     return null;
 }
 
-/// find the step at which 99% size halts
-pub fn binarySearch99PercentHaltingStepForSize(
+/// find the step at which N% of size halts
+pub fn sampledBinarySearchNPercentHaltingStepForSize(
     sizez: u32, //
+    percentHalted: f64,
     cacheMaybe: ?*binarySearchFirstHaltingStepForSizeCache,
     allocator: std.mem.Allocator,
+    percentIgnore: ?f64, // percent chance to ignore a machine, e.g 0.95 to ignore ~95% of machines
+    randomSeed: ?u64, //  for reproducability
 ) !?u32 {
     if (cacheMaybe) |cache| {
         const cachedRes = cache.get(sizez);
@@ -576,39 +612,16 @@ pub fn binarySearch99PercentHaltingStepForSize(
 
         var currentStep: u32 = 20;
 
-        //TODO might not really need this... idk it could be useful small speedup idk
-        // const sizeTypeMaybe = sizeGetTypeDivTen(chosenSize);
-        // if (sizeTypeMaybe) |sizeType| {
-        //     // std.debug.print("size type found\n", .{});
-        //     const sizeTypedHaltingHashmapMaybe = sizeTypedHashmap.get(sizeType);
-        //     if (sizeTypedHaltingHashmapMaybe) |sizeTypedHaltingHashmap| {
-        //         // std.debug.print("sizeTypedHashmap found\n", .{});
-        //         var currentBestSize: u32 = 0;
-        //         var currentBestStep: u32 = 1;
-        //         var it = sizeTypedHaltingHashmap.iterator();
-
-        //         while (it.next()) |entry| {
-        //             const cmpSize = entry.key_ptr.*;
-        //             const cmpSteps = entry.value_ptr.*;
-
-        //             // std.debug.print("cmping {},{}\n", .{ cmpSize, cmpSteps });
-
-        //             if (cmpSize > chosenSize) {
-        //                 continue;
-        //             } else if (cmpSize == chosenSize) {
-        //                 currentBestStep = cmpSteps;
-        //                 break;
-        //             } else {
-        //                 const difference = chosenSize - cmpSize;
-        //                 if (difference < (chosenSize - currentBestSize)) {
-        //                     currentBestSize = cmpSize;
-        //                     currentBestStep = cmpSteps;
-        //                 }
-        //             }
-        //         }
-
-        //         currentStep = currentBestStep;
-        //     }
+        // dont think this is a good idea
+        // if (percentIgnore == null and sizez >= minSizeForGuessing) {
+        //     currentStep = try binarySearchNPercentHaltingStepForSize(
+        //         sizez, //
+        //         percentHalted,
+        //         cacheMaybe,
+        //         allocator,
+        //         0.8,
+        //         randomSeed orelse 42,
+        //     ) orelse 20;
         // }
 
         var start: u32 = currentStep;
@@ -621,6 +634,8 @@ pub fn binarySearch99PercentHaltingStepForSize(
         while (findingNonZeroStep) {
             // std.debug.print("size {}, trying {} steps, S {}, M {}, E {}\n", .{ chosenSize, currentStep, start, middle, end });
 
+            var prng: std.Random.DefaultPrng = .init(randomSeed orelse 42);
+
             const args: exp6args = .{
                 .allocator = allocator, //
                 .hashmap = &hashmap,
@@ -629,6 +644,9 @@ pub fn binarySearch99PercentHaltingStepForSize(
                 .sizeTypedHashmap = &sizeTypedHashmap,
                 .chosenSize = chosenSize,
                 .chosenSteps = currentStep,
+                .prng = if (percentIgnore != null) &prng else null,
+                .percentIgnore = percentIgnore, //TODO, idea: start at 0.80 and get 2x closer to 0.0 each step ???? dubious perchance
+                .sizeStartIgnore = minSizeForSampling, //for safety
             };
             streamBinaryStrsRange(first, last, &exp6, args, false) catch |err| {
                 if (err == error.Else) {
@@ -651,7 +669,7 @@ pub fn binarySearch99PercentHaltingStepForSize(
 
                     // std.debug.print("{} halted, {} total, {}% halted\n", .{ halted, total, freqHalted * 100 });
 
-                    const greater99 = freqHalted >= 0.99;
+                    const greater99 = freqHalted >= percentHalted;
                     if (greater99) halted99M = currentStep;
                 }
             }
