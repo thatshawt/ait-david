@@ -469,35 +469,80 @@ const freqHashmapTypeType = std.AutoHashMap(u32, *freqHashmapType);
 const exp5FitnessContext = struct {
     hashmap: *freqHashmapTypeType,
     chosenSize: u32,
+    // startStep: u32,
 };
 
 // y = 1/(1 + e^(-a * (x - b)))
 // a is between 0 and 1
 // b is just greater than 0
 fn exp5model(x: f64, a: f64, b: f64) f64 {
-    const eF: f64 = std.math.e;
-    return 1.0 / (1.0 + std.math.pow(f64, eF, (-a * (x - b))));
+    // const eF: f64 = std.math.e;
+    // return 1.0 / (1.0 + std.math.pow(f64, eF, (-a * (x - b))));
+
+    const eBF = BigFloat.init(std.math.e);
+    const oneBF = BigFloat.init(1);
+    const xBF = BigFloat.init(x);
+    const aBF = BigFloat.init(a);
+    const bBF = BigFloat.init(b);
+
+    const result = oneBF.div(oneBF.add(eBF.pow(aBF.neg().mul(xBF.sub(bBF)))));
+
+    return result.toFloat(f64);
 }
 
 var exp5FitnessGlobalContext: exp5FitnessContext = undefined;
 
-//RMSE
+//RMSE MAE
 pub fn exp5fitness(genome: []BigFloat) f64 {
     var sum: f64 = 0.0;
-    var n: u32 = 0;
+    var n: f64 = 0;
+
+    var minDiff = [2]f64{ 99999999999, 0.0 };
+    var maxDiff = [2]f64{ -1.0, 0.0 };
 
     var iter = exp5FitnessGlobalContext.hashmap.get(exp5FitnessGlobalContext.chosenSize).?.iterator();
+
+    const a = genome[0].toFloat(f64);
+    const b = genome[1].toFloat(f64);
     while (iter.next()) |entry| {
         const x: f64 = entry.key_ptr.*;
         const actual_y: f64 = entry.value_ptr.*;
 
-        const predicted_y: f64 = exp5model(x, genome[0].toFloat(f64), genome[1].toFloat(f64));
+        // if (!std.math.isFinite(a) or !std.math.isFinite(b)) {
+        //     std.debug.print("a or b is not finite!?\n", .{});
+        // }
+
+        const predicted_y: f64 = exp5model(x, a, b);
         const diff: f64 = actual_y - predicted_y;
-        sum += diff * diff;
-        // sum += @abs(diff);
+
+        if (x < minDiff[0]) minDiff = [2]f64{ x, @abs(diff) };
+        if (x > maxDiff[0]) maxDiff = [2]f64{ x, @abs(diff) };
+
+        // if (!std.math.isFinite(predicted_y) or !std.math.isFinite(diff)) {
+        //     std.debug.print("predicted_y or diff is not finite!?\n", .{});
+        // }
+        sum += diff * diff; //RMSE
+        // sum += @abs(diff); //MAE
         n += 1;
     }
-    return -@sqrt(sum / @as(f64, n));
+    // if (!std.math.isFinite(sum)) {
+    //     std.debug.print("sum is not finite!?\n", .{});
+    // }
+
+    // penalize getting the last and first points off by a bit
+    var penaltySum: f64 = (maxDiff[1] + minDiff[1]) * n * 0.5;
+    // if (exp5FitnessGlobalContext.chosenSize == 43) //
+    //     std.debug.print("min {},{} max {},{} penalty {}\n", .{ minDiff[0], minDiff[1], maxDiff[0], maxDiff[1], penaltySum });
+
+    // no cheating
+    if (a > 0.01 or b < 0) penaltySum += 100;
+
+    const result = -@sqrt((sum + penaltySum) / n); //RMSE
+    // const result = -sum / n; //MAE
+    // if (!std.math.isFinite(result)) {
+    //     std.debug.print("fitness is not finite!?\n", .{});
+    // }
+    return result;
     // return -sum;
 }
 
@@ -507,142 +552,142 @@ pub fn main(init: std.process.Init) !void {
     // This is appropriate for anything that lives as long as the process.
     const arena: std.mem.Allocator = init.arena.allocator();
 
-    try doStuff(arena);
+    // try doStuff(arena);
 
-    {
-        var a = try BigIntManaged.init(arena);
-        var b = try BigIntManaged.init(arena);
+    // {
+    //     var a = try BigIntManaged.init(arena);
+    //     var b = try BigIntManaged.init(arena);
 
-        defer b.deinit();
-        defer a.deinit();
+    //     defer b.deinit();
+    //     defer a.deinit();
 
-        try a.set(0);
-        try b.set(20);
+    //     try a.set(0);
+    //     try b.set(20);
 
-        try T3.streamBinaryStrsRange(a, b, &exp1_noteOutputs, arena, false);
-    }
+    //     try T3.streamBinaryStrsRange(a, b, &exp1_noteOutputs, arena, false);
+    // }
 
-    {
-        _ = T3.getStepsCapture5Sigma(0.25, 5000);
-    }
+    // {
+    //     _ = T3.getStepsCapture5Sigma(0.25, 5000);
+    // }
 
-    {
-        var a = try BigIntManaged.init(arena);
-        var b = try BigIntManaged.init(arena);
+    // {
+    //     var a = try BigIntManaged.init(arena);
+    //     var b = try BigIntManaged.init(arena);
 
-        defer b.deinit();
-        defer a.deinit();
+    //     defer b.deinit();
+    //     defer a.deinit();
 
-        try a.set(0);
-        try b.set(20);
+    //     try a.set(0);
+    //     try b.set(20);
 
-        // const InputAndSize = struct { input: []const u8, size: u32 };
-        var hashmap = args2hashmap.init(arena);
-        var args2: exp2Args = .{
-            .allocator = arena, //
-            .hashmap = &hashmap,
-            .arena = std.heap.ArenaAllocator.init(arena),
-            .traverses = 2000,
-        };
-        defer args2.arena.deinit();
-        defer args2.hashmap.deinit();
+    //     // const InputAndSize = struct { input: []const u8, size: u32 };
+    //     var hashmap = args2hashmap.init(arena);
+    //     var args2: exp2Args = .{
+    //         .allocator = arena, //
+    //         .hashmap = &hashmap,
+    //         .arena = std.heap.ArenaAllocator.init(arena),
+    //         .traverses = 2000,
+    //     };
+    //     defer args2.arena.deinit();
+    //     defer args2.hashmap.deinit();
 
-        // (input, size) => bool
+    //     // (input, size) => bool
 
-        try T3.streamBinaryStrsRange(a, b, &exp2_noteHaltedInputs, args2, false);
+    //     try T3.streamBinaryStrsRange(a, b, &exp2_noteHaltedInputs, args2, false);
 
-        std.debug.print("\n", .{});
-    }
+    //     std.debug.print("\n", .{});
+    // }
 
     // experiment 3, printing density of sizes
     // this could be improved by iterating the indexes just once and not having a chosenSize
-    var startT3 = now(.awake, init.io);
-    {
-        const lastSize = 50;
+    // var startT3 = now(.awake, init.io);
+    // {
+    //     const lastSize = 50;
 
-        const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizes.csv", .{});
-        defer sizeFile.close(init.io);
+    //     const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizes.csv", .{});
+    //     defer sizeFile.close(init.io);
 
-        var sizeFileBuf: [4000]u8 = undefined;
-        var sizeFileWriter = sizeFile.writer(init.io, &sizeFileBuf);
-        const sizeFileWriterPtr = &sizeFileWriter.interface;
-        defer sizeFileWriter.flush() catch unreachable;
+    //     var sizeFileBuf: [4000]u8 = undefined;
+    //     var sizeFileWriter = sizeFile.writer(init.io, &sizeFileBuf);
+    //     const sizeFileWriterPtr = &sizeFileWriter.interface;
+    //     defer sizeFileWriter.flush() catch unreachable;
 
-        var a = try BigIntManaged.init(arena);
-        var b = try BigIntManaged.init(arena);
-        var c = try BigIntManaged.init(arena);
-        defer a.deinit();
-        defer b.deinit();
-        defer c.deinit();
+    //     var a = try BigIntManaged.init(arena);
+    //     var b = try BigIntManaged.init(arena);
+    //     var c = try BigIntManaged.init(arena);
+    //     defer a.deinit();
+    //     defer b.deinit();
+    //     defer c.deinit();
 
-        for (0..lastSize) |sizeU| {
-            const sizez: u32 = @intCast(sizeU);
+    //     for (0..lastSize) |sizeU| {
+    //         const sizez: u32 = @intCast(sizeU);
 
-            try c.set(sizez);
-            _ = try T3.firstIndexSeenForProgramSize(&a, &c, arena);
-            _ = try T3.lastIndexSeenForProgramSize(&b, &c, arena);
+    //         try c.set(sizez);
+    //         _ = try T3.firstIndexSeenForProgramSize(&a, &c, arena);
+    //         _ = try T3.lastIndexSeenForProgramSize(&b, &c, arena);
 
-            var hashmap = std.AutoHashMap(u32, u32).init(arena);
-            defer hashmap.deinit();
+    //         var hashmap = std.AutoHashMap(u32, u32).init(arena);
+    //         defer hashmap.deinit();
 
-            var indexHashmap = exp3indexHashmap.init(arena);
-            defer indexHashmap.deinit();
+    //         var indexHashmap = exp3indexHashmap.init(arena);
+    //         defer indexHashmap.deinit();
 
-            const args: exp3args = .{
-                .allocator = arena, //
-                .hashmap = &hashmap,
-                .indexHashmap = &indexHashmap,
-                .sizeFileWriter = sizeFileWriterPtr,
-                .chosenSize = sizez,
-            };
+    //         const args: exp3args = .{
+    //             .allocator = arena, //
+    //             .hashmap = &hashmap,
+    //             .indexHashmap = &indexHashmap,
+    //             .sizeFileWriter = sizeFileWriterPtr,
+    //             .chosenSize = sizez,
+    //         };
 
-            // std.debug.print("index,size\n", .{});
-            try T3.streamBinaryStrsRange(a, b, &experiment3, args, false);
-            // std.debug.print("\n", .{});
+    //         // std.debug.print("index,size\n", .{});
+    //         try T3.streamBinaryStrsRange(a, b, &experiment3, args, false);
+    //         // std.debug.print("\n", .{});
 
-            const freq = hashmap.get(sizez);
+    //         const freq = hashmap.get(sizez);
 
-            if (freq != null) {
-                try c.sub(&b, &a);
+    //         if (freq != null) {
+    //             try c.sub(&b, &a);
 
-                const indexLength128 = try c.toInt(u128) + 1;
+    //             const indexLength128 = try c.toInt(u128) + 1;
 
-                const indexLenBF = BigFloat.init(indexLength128);
-                const freqBF = BigFloat.init(freq.?);
-                const densityBF = freqBF.div(indexLenBF);
-                // std.debug.print("{},{f} a {d}, b {d},freq:{}, indexLengthBF {f}, indexlengtrh128 {}\n", //
-                //     .{ sizez, densityBF, a, b, freq.?, indexLenBF, indexLength128 });
+    //             const indexLenBF = BigFloat.init(indexLength128);
+    //             const freqBF = BigFloat.init(freq.?);
+    //             const densityBF = freqBF.div(indexLenBF);
+    //             // std.debug.print("{},{f} a {d}, b {d},freq:{}, indexLengthBF {f}, indexlengtrh128 {}\n", //
+    //             //     .{ sizez, densityBF, a, b, freq.?, indexLenBF, indexLength128 });
 
-                std.debug.print("{},{f}\n", .{ sizez, densityBF });
-            }
+    //             std.debug.print("{},{f}\n", .{ sizez, densityBF });
+    //         }
 
-            // var it = hashmap.iterator();
-            // std.debug.print("\nsize frequencies", .{});
-            // while (it.next()) |entry| {
-            //     // if (entry.key_ptr.* > 100) continue;
-            //     std.debug.print("{},{}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
-            // }
-        }
+    //         // var it = hashmap.iterator();
+    //         // std.debug.print("\nsize frequencies", .{});
+    //         // while (it.next()) |entry| {
+    //         //     // if (entry.key_ptr.* > 100) continue;
+    //         //     std.debug.print("{},{}\n", .{ entry.key_ptr.*, entry.value_ptr.* });
+    //         // }
+    //     }
 
-        // var it2 = indexHashmap.iterator();
-        // std.debug.print("\nsize->first seen distribution\n", .{});
-        // while (it2.next()) |entry| {
-        //     const value = entry.value_ptr.*;
-        //     // if (entry.key_ptr.* > 100) continue;
-        //     std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.firstSeenIndex.* });
-        //     // std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.lastSeenIndex.* });
-        // }
+    //     // var it2 = indexHashmap.iterator();
+    //     // std.debug.print("\nsize->first seen distribution\n", .{});
+    //     // while (it2.next()) |entry| {
+    //     //     const value = entry.value_ptr.*;
+    //     //     // if (entry.key_ptr.* > 100) continue;
+    //     //     std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.firstSeenIndex.* });
+    //     //     // std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.lastSeenIndex.* });
+    //     // }
 
-        // var it3 = indexHashmap.iterator();
-        // std.debug.print("\nsize->last seen distribution\n", .{});
-        // while (it3.next()) |entry| {
-        //     const value = entry.value_ptr.*;
-        //     // if (entry.key_ptr.* > 100) continue;
-        //     // std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.firstSeenIndex.* });
-        //     std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.lastSeenIndex.* });
-        // }
-    }
-    std.debug.print("exp3 took {} seconds\n", .{startT3.durationTo(now(.awake, init.io)).toSeconds()});
+    //     // var it3 = indexHashmap.iterator();
+    //     // std.debug.print("\nsize->last seen distribution\n", .{});
+    //     // while (it3.next()) |entry| {
+    //     //     const value = entry.value_ptr.*;
+    //     //     // if (entry.key_ptr.* > 100) continue;
+    //     //     // std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.firstSeenIndex.* });
+    //     //     std.debug.print("{},{d}\n", .{ entry.key_ptr.*, value.lastSeenIndex.* });
+    //     // }
+    // }
+    // std.debug.print("exp3 took {} seconds\n", .{startT3.durationTo(now(.awake, init.io)).toSeconds()});
 
     //experiment to see if lastSeenIndex and firstSeenIndex work
     // {
@@ -713,197 +758,213 @@ pub fn main(init: std.process.Init) !void {
     //experiemnt 5, cumulative percent halted distribution for a size, x=steps y=cumulativePercentHalted
     var startT = now(.awake, init.io);
     {
-        var hashmap = exp5hashmapType.init(arena);
-        defer hashmap.deinit();
-
-        var totalsHashmap = exp5hashmapType.init(arena);
-        defer totalsHashmap.deinit();
-
-        var sizeFirstCache = T3.binarySearchFirstHaltingStepForSizeCache.init(arena);
-        defer sizeFirstCache.deinit();
-
-        var a = try BigIntManaged.init(arena);
-        var b = try BigIntManaged.init(arena);
-        defer b.deinit();
-        defer a.deinit();
-
-        const chosenFreqSize = 51;
-        const percentHaltedEnding = 0.999999;
+        const firstStepExp5 = 33;
+        const lastStepExp5 = 59;
+        const percentHaltedEnding = 0.9999;
         const percentIgnore = 0.0;
-        const dataPoints = 20;
 
-        const sizeStartIgnore = null;
+        for ((firstStepExp5 - 1) / 2 + 1..(lastStepExp5 - 1) / 2 + 1) |i| {
+            const chosenFreqSize: u32 = 2 * @as(u32, @intCast(i)) + 1;
+            if (T3.sizeGetTypeDivTen(chosenFreqSize) == null) continue;
+            var hashmap = exp5hashmapType.init(arena);
+            defer hashmap.deinit();
 
-        const randomSeed = 42;
+            var totalsHashmap = exp5hashmapType.init(arena);
+            defer totalsHashmap.deinit();
 
-        const startStep = try T3.binarySearchFirstHaltingStepForSize(chosenFreqSize, &sizeFirstCache, arena, percentIgnore, randomSeed) orelse 1;
-        const lastStep = (try T3.sampledBinarySearchNPercentHaltingStepForSize(chosenFreqSize, percentHaltedEnding, null, arena, percentIgnore, randomSeed) orelse startStep + 500) + 1;
+            var sizeFirstCache = T3.binarySearchFirstHaltingStepForSizeCache.init(arena);
+            defer sizeFirstCache.deinit();
 
-        var bigSize = try BigIntManaged.init(arena);
-        defer bigSize.deinit();
+            var a = try BigIntManaged.init(arena);
+            var b = try BigIntManaged.init(arena);
+            defer b.deinit();
+            defer a.deinit();
 
-        // if (chosenFreqSize != null) {
-        try bigSize.set(chosenFreqSize);
+            // const chosenFreqSize = 53;
 
-        _ = try T3.firstIndexSeenForProgramSize(&a, &bigSize, arena);
-        _ = try T3.lastIndexSeenForProgramSize(&b, &bigSize, arena);
-        // }
+            // const dataPoints = 20;
+            //TODO add middlePoints and endStartPoints to help stabilize fitting
+            // do this if TODO fails: make a step "schedule" where 80% points are at the ends and 20% is in the "middle"
 
-        var prng: std.Random.DefaultPrng = .init(42);
+            // const sizeStartIgnore = null;
 
-        const args: exp5args = .{
-            .allocator = arena, //
-            .hashmap = &hashmap,
-            .totalsHashmap = &totalsHashmap,
-            // .maxSteps = maxSteps,
-            .startStep = startStep,
-            .lastStep = lastStep,
-            .dataPoints = dataPoints,
-            .chosenSize = chosenFreqSize,
-            .sizeFirstStepCache = &sizeFirstCache,
-            .prng = &prng,
-            .percentIgnore = percentIgnore,
-            .sizeStartIgnore = sizeStartIgnore,
-        };
+            const randomSeed = 42;
 
-        try T3.streamBinaryStrsRange(a, b, &exp5, args, true);
+            const startStep = try T3.binarySearchFirstHaltingStepForSize(chosenFreqSize, &sizeFirstCache, arena, percentIgnore, randomSeed, &hashmap, &totalsHashmap) orelse 1;
+            const lastStep = (try T3.sampledBinarySearchNPercentHaltingStepForSize(chosenFreqSize, percentHaltedEnding, null, arena, percentIgnore, randomSeed, &hashmap, &totalsHashmap) orelse startStep + 500) + 1;
 
-        // size -> (steps -> freq)
-        var frequencyHashmap = freqHashmapTypeType.init(arena);
-        defer frequencyHashmap.deinit();
+            var bigSize = try BigIntManaged.init(arena);
+            defer bigSize.deinit();
 
-        var it = totalsHashmap.iterator();
-        std.debug.print("\n", .{});
-        //populate frequency hashmap
-        while (it.next()) |entry| {
-            const size = entry.key_ptr.*;
+            // if (chosenFreqSize != null) {
+            try bigSize.set(chosenFreqSize);
 
-            // const totalCount = entry.value_ptr.*;
+            _ = try T3.firstIndexSeenForProgramSize(&a, &bigSize, arena);
+            _ = try T3.lastIndexSeenForProgramSize(&b, &bigSize, arena);
+            // }
 
-            const stepHaltedHashmapMaybe = hashmap.get(size);
-            const stepTotalHashmapMaybe = totalsHashmap.get(size);
+            // var prng: std.Random.DefaultPrng = .init(42);
+            // const args: exp5args = .{
+            //     .allocator = arena, //
+            //     .hashmap = &hashmap,
+            //     .totalsHashmap = &totalsHashmap,
+            //     // .maxSteps = maxSteps,
+            //     .startStep = startStep,
+            //     .lastStep = lastStep,
+            //     .dataPoints = dataPoints,
+            //     .chosenSize = chosenFreqSize,
+            //     .sizeFirstStepCache = &sizeFirstCache,
+            //     .prng = &prng,
+            //     .percentIgnore = percentIgnore,
+            //     .sizeStartIgnore = sizeStartIgnore,
+            // };
+            // try T3.streamBinaryStrsRange(a, b, &exp5, args, false);
 
-            // std.debug.print("\n\n size {} distribution:\n", .{size});
-            if (stepHaltedHashmapMaybe != null and stepTotalHashmapMaybe != null) {
-                const stepHaltedHashmap = stepHaltedHashmapMaybe.?;
-                const stepTotalHashmap = stepTotalHashmapMaybe.?;
+            // size -> (steps -> freq)
+            var frequencyHashmap = freqHashmapTypeType.init(arena);
+            defer frequencyHashmap.deinit();
 
-                // var haltedCounter: u32 = 0;
-                // const totalTotalCount = totalCount * maxSteps;
-
-                // const startStep = 1;
-                for (startStep..lastStep) |stepsUsize| {
-                    const steps: u32 = @intCast(stepsUsize);
-
-                    const haltedCountMaybe = stepHaltedHashmap.get(steps);
-                    const totalMaybe = stepTotalHashmap.get(steps);
-
-                    var haltedFloat: f64 = 0;
-                    var totalFloat: f64 = 1;
-
-                    if (haltedCountMaybe != null and totalMaybe != null) {
-                        // haltedCounter += haltedCount;
-                        const haltedCount = haltedCountMaybe.?;
-                        const total = totalMaybe.?;
-
-                        haltedFloat = haltedCount;
-                        totalFloat = total;
-
-                        // if (size == chosenFreqSize) //
-                        //     std.debug.print("{} halted out of {} in {} steps\n", .{ haltedCount, total, steps });
-
-                        const percentHalted: f64 = haltedFloat / totalFloat;
-
-                        var frequencyHashmap2Maybe = frequencyHashmap.get(size);
-                        if (frequencyHashmap2Maybe) |_| {
-                            try frequencyHashmap2Maybe.?.put(steps, percentHalted);
-                        } else {
-                            const newHashmap = try arena.create(freqHashmapType);
-                            newHashmap.* = freqHashmapType.init(arena);
-
-                            try frequencyHashmap.put(size, newHashmap);
-
-                            try frequencyHashmap.get(size).?.put(steps, percentHalted);
-                        }
-                        // if (size == chosenFreqSize) //
-                    }
-                }
-            }
-        }
-
-        //save to file
-        {
-            const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizeHaltingFrequencies.txt", .{});
-            defer sizeFile.close(init.io);
-
-            var sizeFileBuf: [4000]u8 = undefined;
-            var sizeFileWriter = sizeFile.writer(init.io, &sizeFileBuf);
-            const sizeFileWriterPtr = &sizeFileWriter.interface;
-            defer sizeFileWriter.flush() catch unreachable;
-
-            var lastPercentHalted: f64 = 0.0;
-            var it2 = frequencyHashmap.iterator();
-            while (it2.next()) |entry| {
+            var it = totalsHashmap.iterator();
+            // std.debug.print("\n", .{});
+            //populate frequency hashmap
+            while (it.next()) |entry| {
                 const size = entry.key_ptr.*;
-                try sizeFileWriterPtr.print("\n\nsize {}:\n", .{size});
-                const freqMap = entry.value_ptr.*;
-                // const startStep = try T3.binarySearchFirstHaltingStepForSize(size, &sizeFirstCache, arena, percentIgnore, null) orelse 1;
-                for (startStep..lastStep) |steps| {
-                    const percentHaltedMaybe: ?f64 = freqMap.get(@intCast(steps));
 
-                    if (percentHaltedMaybe) |percentHalted| {
-                        try sizeFileWriterPtr.print("{},{}\n", .{ steps, percentHalted });
-                        lastPercentHalted = percentHalted;
-                    } else {
-                        // try sizeFileWriterPtr.print("{},{}\n", .{ steps, lastPercentHalted });
+                // const totalCount = entry.value_ptr.*;
+
+                const stepHaltedHashmapMaybe = hashmap.get(size);
+                const stepTotalHashmapMaybe = totalsHashmap.get(size);
+
+                // std.debug.print("\n\n size {} distribution:\n", .{size});
+                if (stepHaltedHashmapMaybe != null and stepTotalHashmapMaybe != null) {
+                    const stepHaltedHashmap = stepHaltedHashmapMaybe.?;
+                    const stepTotalHashmap = stepTotalHashmapMaybe.?;
+
+                    // var haltedCounter: u32 = 0;
+                    // const totalTotalCount = totalCount * maxSteps;
+
+                    // const startStep = 1;
+                    for (startStep..lastStep) |stepsUsize| {
+                        const steps: u32 = @intCast(stepsUsize);
+
+                        const haltedCountMaybe = stepHaltedHashmap.get(steps);
+                        const totalMaybe = stepTotalHashmap.get(steps);
+
+                        var haltedFloat: f64 = 0;
+                        var totalFloat: f64 = 1;
+
+                        if (haltedCountMaybe != null and totalMaybe != null) {
+                            // haltedCounter += haltedCount;
+                            const haltedCount = haltedCountMaybe.?;
+                            const total = totalMaybe.?;
+
+                            haltedFloat = haltedCount;
+                            totalFloat = total;
+
+                            // if (size == chosenFreqSize) //
+                            //     std.debug.print("{} halted out of {} in {} steps\n", .{ haltedCount, total, steps });
+
+                            const percentHalted: f64 = haltedFloat / totalFloat;
+
+                            var frequencyHashmap2Maybe = frequencyHashmap.get(size);
+                            if (frequencyHashmap2Maybe) |_| {
+                                try frequencyHashmap2Maybe.?.put(steps, percentHalted);
+                            } else {
+                                const newHashmap = try arena.create(freqHashmapType);
+                                newHashmap.* = freqHashmapType.init(arena);
+
+                                try frequencyHashmap.put(size, newHashmap);
+
+                                try frequencyHashmap.get(size).?.put(steps, percentHalted);
+                            }
+                            // if (size == chosenFreqSize) //
+                        }
                     }
                 }
             }
+
+            //save to file
+            var hundredPercentHaltingStep: ?u32 = null;
+            {
+                const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizeHaltingFrequencies.txt", .{});
+                defer sizeFile.close(init.io);
+
+                var sizeFileBuf: [4000]u8 = undefined;
+                var sizeFileWriter = sizeFile.writer(init.io, &sizeFileBuf);
+                const sizeFileWriterPtr = &sizeFileWriter.interface;
+                defer sizeFileWriter.flush() catch unreachable;
+
+                // var lastPercentHalted: f64 = 0.0;
+                var it2 = frequencyHashmap.iterator();
+                while (it2.next()) |entry| {
+                    const size = entry.key_ptr.*;
+                    try sizeFileWriterPtr.print("\n\nsize {}:\n", .{size});
+                    const freqMap = entry.value_ptr.*;
+                    // const startStep = try T3.binarySearchFirstHaltingStepForSize(size, &sizeFirstCache, arena, percentIgnore, null) orelse 1;
+                    for (startStep..lastStep) |steps| {
+                        const percentHaltedMaybe: ?f64 = freqMap.get(@intCast(steps));
+
+                        if (percentHaltedMaybe) |percentHalted| {
+                            try sizeFileWriterPtr.print("{},{}\n", .{ steps, percentHalted });
+                            if (percentHalted == 1.0) {
+                                hundredPercentHaltingStep = @intCast(steps);
+                            }
+                            // lastPercentHalted = percentHalted;
+                        } else {
+                            // try sizeFileWriterPtr.print("{},{}\n", .{ steps, lastPercentHalted });
+                        }
+                    }
+                }
+            }
+
+            // fit model to data
+            std.debug.print("size: {}\n", .{chosenFreqSize});
+            {
+                const genomeSize = 2;
+                const mutateChance = 0.05;
+                const crossoverChance = 0.33;
+                const iterations = 1000;
+                const populationSize = 100;
+                const selectionTopPercent = 0.2;
+                // const randomSeed = 42;
+
+                exp5FitnessGlobalContext = .{ .chosenSize = chosenFreqSize, .hashmap = &frequencyHashmap };
+                const fitnessFunc = exp5fitness;
+
+                var geneticThing = BFGenetic.BFVectorEvolutionContext(genomeSize, fitnessFunc, mutateChance, crossoverChance, iterations, populationSize, selectionTopPercent, randomSeed){};
+
+                geneticThing.epoch();
+
+                const topIndividual = geneticThing.getPopulation()[0];
+
+                std.debug.print("\ttop fitness individual: a {f}, b {f}, fitness {}\n", .{ //
+                    topIndividual.genome[0],
+                    topIndividual.genome[1],
+                    topIndividual.fitness,
+                });
+
+                //calculate steps to get desired percent halting machines
+                // const desiredHaltingPercent = 0.9999;
+
+                const desiredProbBF = BigFloat.init(percentHaltedEnding);
+                const varA = topIndividual.genome[0];
+                const varB = topIndividual.genome[1];
+                const oneBF = BigFloat.init(1);
+                const eF = BigFloat.init(std.math.e);
+
+                const endingSteps = (varA.mul(varB).sub(BigFloat.log2(oneBF.div(desiredProbBF).sub(oneBF)).div(BigFloat.log2(eF)))).div(varA);
+
+                const endingStepsInt: u32 = if (chosenFreqSize < 40 and hundredPercentHaltingStep != null) //
+                    @intFromFloat(@as(f64, @floatFromInt(hundredPercentHaltingStep.?)) * 1.3) // increase 30% i suppose
+                else
+                    @intFromFloat(endingSteps.toFloat(f64));
+                // const endingStepsInt: u32 = std.math.lossyCast(u32, endingSteps.toFloat(f64));
+
+                std.debug.print("\tsteps to achieve {}% halting is ~{}\n", .{ percentHaltedEnding * 100, endingStepsInt });
+            }
+
+            // std.debug.print("\n", .{});
         }
-
-        // fit model to data
-        std.debug.print("fitting model\n", .{});
-        {
-            const genomeSize = 2;
-            const mutateChance = 0.05;
-            const crossoverChance = 0.33;
-            const iterations = 1000;
-            const populationSize = 100;
-            const selectionTopPercent = 0.2;
-            // const randomSeed = 42;
-
-            exp5FitnessGlobalContext = .{ .chosenSize = chosenFreqSize, .hashmap = &frequencyHashmap };
-            const fitnessFunc = exp5fitness;
-
-            var geneticThing = BFGenetic.BFVectorEvolutionContext(genomeSize, fitnessFunc, mutateChance, crossoverChance, iterations, populationSize, selectionTopPercent, randomSeed){};
-
-            geneticThing.epoch();
-
-            const topIndividual = geneticThing.getPopulation()[0];
-
-            std.debug.print("top fitness individual: a {f}, b {f}, fitness {}\n", .{ //
-                topIndividual.genome[0],
-                topIndividual.genome[1],
-                topIndividual.fitness,
-            });
-
-            //calculate steps to get desired percent halting machines
-            const desiredHaltingPercent = 0.9999;
-
-            const desiredProbBF = BigFloat.init(desiredHaltingPercent);
-            const varA = topIndividual.genome[0];
-            const varB = topIndividual.genome[1];
-            const oneBF = BigFloat.init(1);
-            const eF = BigFloat.init(std.math.e);
-
-            const endingSteps = (varA.mul(varB).sub(BigFloat.log2(oneBF.div(desiredProbBF).sub(oneBF)).div(BigFloat.log2(eF)))).div(varA);
-
-            const endingStepsInt: u32 = @intFromFloat(endingSteps.toFloat(f64));
-
-            std.debug.print("steps to achieve {}% halting is ~{}\n", .{ desiredHaltingPercent * 100, endingStepsInt });
-        }
-
-        std.debug.print("\n", .{});
     }
     std.debug.print("exp5 took {} seconds\n", .{startT.durationTo(now(.awake, init.io)).toSeconds()});
 

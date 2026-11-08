@@ -43,7 +43,7 @@ pub fn BFVectorEvolutionContext(
                             gene.* = gene.mul(BigFloat.init(num));
                         },
                         2 => {
-                            const num = self.randFloatRange(0.001, 2);
+                            const num = self.randFloatRange(0, 2);
                             gene.* = gene.pow(BigFloat.init(num));
                         },
                         else => unreachable,
@@ -94,17 +94,6 @@ pub fn BFVectorEvolutionContext(
                 }
             }
             for (0..iterations) |_| {
-                //fitness evalutation
-                for (0..self.population.len) |populationI| {
-                    const fitness: *f64 = &self.population[populationI].fitness;
-                    const genome: []BigFloat = &self.population[populationI].genome;
-
-                    fitness.* = fitnessFunc(genome);
-                }
-
-                //sort by fitness
-                std.mem.sort(Individual, &self.population, {}, fitnessCmpDesc);
-
                 //selection
                 const cutoffI: u32 = (populationSize * selectionTopPercent);
 
@@ -130,6 +119,17 @@ pub fn BFVectorEvolutionContext(
 
                     self.mutate(genome);
                 }
+
+                //fitness evalutation
+                for (0..self.population.len) |populationI| {
+                    const fitness: *f64 = &self.population[populationI].fitness;
+                    const genome: []BigFloat = &self.population[populationI].genome;
+
+                    fitness.* = fitnessFunc(genome);
+                }
+
+                //sort by fitness
+                std.mem.sort(Individual, &self.population, {}, fitnessCmpDesc);
             }
         }
     };

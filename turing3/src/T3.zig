@@ -21,29 +21,29 @@ fn debugPrint(comptime fmt: []const u8, args: anytype) void {
 pub const SizeAndOutput = struct { inputSize: u32, output: []const u8 };
 
 pub const SizeTypeDivTen = enum {
-    MINUS_ONE, //
-    MINUS_THREE,
+    MINUS_TWENTYONE, //
+    MINUS_THIRTEEN,
     MINUS_FIVE,
-    MINUS_SEVEN,
+    MINUS_SEVENTEEN,
     MINUS_NINE,
 };
 
 pub fn sizeGetTypeDivTen(size: u32) ?SizeTypeDivTen {
-    if (size >= 1 and (size - 1) % 10 == 0) return SizeTypeDivTen.MINUS_ONE;
-    if (size >= 3 and (size - 3) % 10 == 0) return SizeTypeDivTen.MINUS_THREE;
+    if (size >= 21 and (size - 21) % 10 == 0) return SizeTypeDivTen.MINUS_TWENTYONE;
+    if (size >= 13 and (size - 13) % 10 == 0) return SizeTypeDivTen.MINUS_THIRTEEN;
     if (size >= 5 and (size - 5) % 10 == 0) return SizeTypeDivTen.MINUS_FIVE;
-    if (size >= 7 and (size - 7) % 10 == 0) return SizeTypeDivTen.MINUS_SEVEN;
+    if (size >= 17 and (size - 17) % 10 == 0) return SizeTypeDivTen.MINUS_SEVENTEEN;
     if (size >= 9 and (size - 9) % 10 == 0) return SizeTypeDivTen.MINUS_NINE;
     return null;
 }
 
 pub const SizeTypeDivFour = enum {
-    MINUS_ONE, //
-    MINUS_THREE,
+    MINUS_TWENTYONE, //
+    MINUS_THIRTEEN,
 };
 pub fn sizeGetTypeDivFour(size: u32) ?SizeTypeDivFour {
-    if (size >= 1 and (size - 1) % 4 == 0) return SizeTypeDivFour.MINUS_ONE;
-    if (size >= 3 and (size - 3) % 4 == 0) return SizeTypeDivFour.MINUS_THREE;
+    if (size >= 21 and (size - 21) % 4 == 0) return SizeTypeDivFour.MINUS_TWENTYONE;
+    if (size >= 13 and (size - 13) % 4 == 0) return SizeTypeDivFour.MINUS_THIRTEEN;
     return null;
 }
 
@@ -373,8 +373,6 @@ fn exp6(_: *BigIntManaged, input: []const u8, argz: anytype) error{ Yield, Else 
         } else {
             haltedCountRes.value_ptr.* = 1;
         }
-
-        if (args.yieldOnFirstHalt) return error.Yield;
     } else {}
     const thing = args.totalsHashmap.getOrPut(size) catch return error.Else;
     if (!thing.found_existing) {
@@ -387,6 +385,9 @@ fn exp6(_: *BigIntManaged, input: []const u8, argz: anytype) error{ Yield, Else 
     } else {
         totalRes.value_ptr.* = 1;
     }
+
+    // const haltedStepMaybe = args.haltedStepHashmap.get(size);
+    if (halted and args.yieldOnFirstHalt) return error.Yield;
     // }
 }
 
@@ -402,6 +403,8 @@ pub fn binarySearchFirstHaltingStepForSize(
     allocator: std.mem.Allocator,
     percentIgnore: ?f64, // percent chance to ignore a machine, e.g 0.95 to ignore ~95% of machines
     randomSeed: ?u64, //  for reproducability
+    hashmapInput: ?*exp6hashmapType,
+    totalsMapInput: ?*exp6hashmapType,
 ) !?u32 {
     if (cacheMaybe) |cache| {
         const cachedRes = cache.get(sizez);
@@ -419,11 +422,11 @@ pub fn binarySearchFirstHaltingStepForSize(
     defer first.deinit();
     defer last.deinit();
 
-    var hashmap = exp6hashmapType.init(allocator);
-    defer hashmap.deinit();
+    var hashmapInternal = exp6hashmapType.init(allocator);
+    defer hashmapInternal.deinit();
 
-    var totalsHashmap = exp6hashmapType.init(allocator);
-    defer totalsHashmap.deinit();
+    var totalsMapInternal = exp6hashmapType.init(allocator);
+    defer totalsMapInternal.deinit();
 
     var haltedStepHashmap = std.AutoHashMap(u32, u32).init(allocator);
     defer haltedStepHashmap.deinit();
@@ -495,13 +498,13 @@ pub fn binarySearchFirstHaltingStepForSize(
 
             const args: exp6args = .{
                 .allocator = allocator, //
-                .hashmap = &hashmap,
-                .totalsHashmap = &totalsHashmap,
+                .hashmap = if (hashmapInput) |the| the else &hashmapInternal,
+                .totalsHashmap = if (totalsMapInput) |the| the else &totalsMapInternal,
                 .haltedStepHashmap = &haltedStepHashmap,
                 .sizeTypedHashmap = &sizeTypedHashmap,
                 .chosenSize = chosenSize,
                 .chosenSteps = currentStep,
-                .yieldOnFirstHalt = true, // we are only looking for the first halting, dont keep going after finding it
+                .yieldOnFirstHalt = false, // we are only looking for the first halting, dont keep going after finding it
                 .prng = if (percentIgnore != null) &prng else null,
                 .percentIgnore = percentIgnore, //TODO, idea: start at 0.80 and get 2x closer to 0.0 each step ???? dubious perchance
                 .sizeStartIgnore = minSizeForSampling, //for safety
@@ -568,6 +571,8 @@ pub fn sampledBinarySearchNPercentHaltingStepForSize(
     allocator: std.mem.Allocator,
     percentIgnore: ?f64, // percent chance to ignore a machine, e.g 0.95 to ignore ~95% of machines
     randomSeed: ?u64, //  for reproducability
+    hashmapInput: ?*exp6hashmapType,
+    totalsMapInput: ?*exp6hashmapType,
 ) !?u32 {
     if (cacheMaybe) |cache| {
         const cachedRes = cache.get(sizez);
@@ -585,11 +590,11 @@ pub fn sampledBinarySearchNPercentHaltingStepForSize(
     defer first.deinit();
     defer last.deinit();
 
-    var hashmap = exp6hashmapType.init(allocator);
-    defer hashmap.deinit();
+    var hashmapInternal = exp6hashmapType.init(allocator);
+    defer hashmapInternal.deinit();
 
-    var totalsHashmap = exp6hashmapType.init(allocator);
-    defer totalsHashmap.deinit();
+    var totalsMapInternal = exp6hashmapType.init(allocator);
+    defer totalsMapInternal.deinit();
 
     var haltedStepHashmap = std.AutoHashMap(u32, u32).init(allocator);
     defer haltedStepHashmap.deinit();
@@ -638,8 +643,8 @@ pub fn sampledBinarySearchNPercentHaltingStepForSize(
 
             const args: exp6args = .{
                 .allocator = allocator, //
-                .hashmap = &hashmap,
-                .totalsHashmap = &totalsHashmap,
+                .hashmap = if (hashmapInput) |the| the else &hashmapInternal,
+                .totalsHashmap = if (totalsMapInput) |the| the else &totalsMapInternal,
                 .haltedStepHashmap = &haltedStepHashmap,
                 .sizeTypedHashmap = &sizeTypedHashmap,
                 .chosenSize = chosenSize,
