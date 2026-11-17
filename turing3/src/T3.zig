@@ -10,8 +10,15 @@ const JotParserMake = @import("JotParser.zig").JotParserMake;
 const blcPrintExpression = @import("Blc.zig").blcPrintExpression;
 const loadBlcExpressionToSlice = @import("Blc.zig").loadBlcExpressionToSlice;
 
+const mixedRadixLoadExprToSlice = @import("MixedRadixTerms.zig").mixedRadixLoadExprToSlice;
+const ArithmeticCoder = @import("BigIntArithmeticCoding.zig").BigIntRangeCoder;
+
 const BigFloat = @import("BFP").BigFloat(.{ .Significand = f64, .Exponent = i64 });
 const BigIntManaged = std.math.big.int.Managed;
+
+const BFGenetic = @import("BFVectorGeneticEvolution.zig");
+
+const T3 = @This();
 
 const debugPrintON = false;
 fn debugPrint(comptime fmt: []const u8, args: anytype) void {
@@ -242,7 +249,7 @@ pub fn streamBinaryStrsRange(
     args: anytype,
     progressPrint: bool,
 ) !void {
-    var fmtBuffer: [400]u8 = undefined;
+    var fmtBuffer: [1024]u8 = undefined;
 
     var i: BigIntManaged = try a.clone();
     defer i.deinit();
@@ -286,6 +293,116 @@ pub fn streamBinaryStrsRange(
         if (onwards) {
             try i.addScalar(&i, 1);
         }
+    }
+}
+
+pub fn randomBigIntRange(r: *BigIntManaged, a: *const BigIntManaged, b: *const BigIntManaged, rng: *std.Random.DefaultPrng) !void {
+    // std.debug.assert(a.order(b) != .gt); // Ensure a <= b
+
+    var rangeLength = try a.clone();
+    var temp = try a.clone();
+    var temp2 = try a.clone();
+    var rngMaxValue = try a.clone();
+
+    defer {
+        rangeLength.deinit();
+        temp.deinit();
+        temp2.deinit();
+        rngMaxValue.deinit();
+    }
+
+    try rangeLength.sub(b, a);
+    rangeLength.abs();
+
+    const rangeBits: u32 = @intCast(rangeLength.bitCountTwosComp());
+
+    const rangeLength_U64s: u32 =
+        if (rangeBits % 64 != 0) rangeBits / 64 + 1 else rangeBits / 64;
+
+    try temp.set(2);
+    try rngMaxValue.pow(&temp, rangeLength_U64s * 64);
+    // try temp.set(1);
+    try rngMaxValue.addScalar(&rngMaxValue, -1);
+
+    //load random u64's
+    try r.set(0);
+    for (0..rangeLength_U64s) |_| {
+        try r.shiftLeft(r, 64); // make space for the next u64
+
+        try temp.set(rng.next());
+        try r.bitOr(r, &temp); //load the random bytes
+    }
+
+    //scale it down to match the rangeLength
+    try temp.divFloor(&temp2, &rngMaxValue, &rangeLength);
+    try r.divFloor(&temp2, r, &temp);
+
+    //add a to keep it in range
+    try r.add(r, a);
+    // if (!a.isPositive()) {
+    //     try temp.set(1);
+    //     try r.add(r, &temp);
+    // }
+}
+
+//TODO do this
+pub fn streamUniqueRandomBinaryStrsRange(
+    // allocator: std.mem.Allocator, //
+    a: BigIntManaged,
+    b: BigIntManaged,
+    // percentFromRange: f64,
+    comptime foreach: *const fn (*BigIntManaged, []const u8, args: anytype) error{ Yield, Else }!void,
+    args: anytype,
+    progressPrint: bool,
+) !void {
+    var fmtBuffer: [1024]u8 = undefined;
+
+    var i: BigIntManaged = try a.clone();
+
+    var progressI: BigIntManaged = try b.clone();
+
+    var r: BigIntManaged = try b.clone();
+
+    var ten: BigIntManaged = try b.clone();
+    try ten.set(10);
+
+    defer {
+        i.deinit();
+        progressI.deinit();
+        r.deinit();
+        ten.deinit();
+    }
+
+    if (progressPrint) {
+        try progressI.divFloor(&r, &b, &ten);
+        try r.copy(progressI.toConst());
+    }
+
+    var onwards = true;
+    var percent: u32 = 10;
+    while (onwards) {
+        if (progressPrint and progressI.eql(i)) {
+            try progressI.add(&progressI, &r);
+            std.debug.print("{d}% reached\n", .{percent});
+            percent += 10;
+        }
+        @memset(&fmtBuffer, 0);
+
+        if (onwards) {
+            try i.addScalar(&i, 1);
+        }
+
+        const binarySlice = try std.fmt.bufPrint(&fmtBuffer, "{b}", .{i});
+
+        // std.debug.print("\n{s}", .{binarySlice});
+
+        try foreach(&i, binarySlice, args);
+
+        onwards = switch (i.order(b)) {
+            std.math.Order.eq => false,
+            std.math.Order.gt => false,
+            std.math.Order.lt => true,
+        };
     }
 }
 
@@ -728,6 +845,306 @@ pub fn sampledBinarySearchNPercentHaltingStepForSize(
     return null;
 }
 
+pub const exp5HashmapKey = struct {
+    size: u32, //
+    steps: u32,
+};
+// const exp5SizeAndType = struct { size: u32, sType: T3.SizeTypeDivTen };
+//map<size -> map<steps -> haltedCount >>
+pub const exp5stepHaltedHashmapType = std.AutoHashMap(u32, u32);
+pub const exp5hashmapType = std.AutoHashMap(u32, exp5stepHaltedHashmapType);
+
+//TODO rename these to with exp5 in front in front
+pub const freqHashmapType = std.AutoHashMap(u32, f64);
+pub const freqHashmapTypeType = std.AutoHashMap(u32, *freqHashmapType);
+
+const exp5FitnessContext = struct {
+    hashmap: *freqHashmapTypeType,
+    chosenSize: u32,
+    // startStep: u32,
+};
+var exp5FitnessGlobalContext: exp5FitnessContext = undefined;
+
+// y = 1/(1 + e^(-a * (x - b)))
+// a is between 0 and 1
+// b is just greater than 0
+fn exp5model(x: f64, a: f64, b: f64) f64 {
+    // const eF: f64 = std.math.e;
+    // return 1.0 / (1.0 + std.math.pow(f64, eF, (-a * (x - b))));
+
+    const eBF = BigFloat.init(std.math.e);
+    const oneBF = BigFloat.init(1);
+    const xBF = BigFloat.init(x);
+    const aBF = BigFloat.init(a);
+    const bBF = BigFloat.init(b);
+
+    const result = oneBF.div(oneBF.add(eBF.pow(aBF.neg().mul(xBF.sub(bBF)))));
+
+    return result.toFloat(f64);
+}
+
+//RMSE MAE
+fn exp5fitness(genome: []BigFloat) f64 {
+    var sum: f64 = 0.0;
+    var n: f64 = 0;
+
+    var minDiff = [2]f64{ 99999999999, 0.0 };
+    var maxDiff = [2]f64{ -1.0, 0.0 };
+
+    var iter = exp5FitnessGlobalContext.hashmap.get(exp5FitnessGlobalContext.chosenSize).?.iterator();
+
+    const a = genome[0].toFloat(f64);
+    const b = genome[1].toFloat(f64);
+    while (iter.next()) |entry| {
+        const x: f64 = entry.key_ptr.*;
+        const actual_y: f64 = entry.value_ptr.*;
+
+        // if (!std.math.isFinite(a) or !std.math.isFinite(b)) {
+        //     std.debug.print("a or b is not finite!?\n", .{});
+        // }
+
+        const predicted_y: f64 = exp5model(x, a, b);
+        const diff: f64 = actual_y - predicted_y;
+
+        if (x < minDiff[0]) minDiff = [2]f64{ x, @abs(diff) };
+        if (x > maxDiff[0]) maxDiff = [2]f64{ x, @abs(diff) };
+
+        // if (!std.math.isFinite(predicted_y) or !std.math.isFinite(diff)) {
+        //     std.debug.print("predicted_y or diff is not finite!?\n", .{});
+        // }
+        sum += diff * diff; //RMSE
+        // sum += @abs(diff); //MAE
+        n += 1;
+    }
+    // if (!std.math.isFinite(sum)) {
+    //     std.debug.print("sum is not finite!?\n", .{});
+    // }
+
+    // penalize getting the last and first points off by a bit
+    var penaltySum: f64 = (maxDiff[1] + minDiff[1]) * n * 0.5;
+    // if (exp5FitnessGlobalContext.chosenSize == 43) //
+    //     std.debug.print("min {},{} max {},{} penalty {}\n", .{ minDiff[0], minDiff[1], maxDiff[0], maxDiff[1], penaltySum });
+
+    // no cheating
+    if (a > 1.0 or b < 0) penaltySum += 100;
+
+    const result = -@sqrt((sum + penaltySum) / n); //RMSE
+    // const result = -sum / n; //MAE
+    // if (!std.math.isFinite(result)) {
+    //     std.debug.print("fitness is not finite!?\n", .{});
+    // }
+    return result;
+    // return -sum;
+}
+
+pub fn sampleEstimateHaltingNStep(chosenFreqSize: u32, percentHaltedEnding: f64, percentIgnore: f64, randomSeed: comptime_int, allocator: std.mem.Allocator, io: std.Io) !?u32 {
+    if (T3.sizeGetTypeDivTen(chosenFreqSize) == null) return null;
+
+    // const percentIgnore = 0.0;
+
+    var hashmap = exp5hashmapType.init(allocator);
+    defer hashmap.deinit();
+
+    var totalsHashmap = exp5hashmapType.init(allocator);
+    defer totalsHashmap.deinit();
+
+    var sizeFirstCache = T3.binarySearchFirstHaltingStepForSizeCache.init(allocator);
+    defer sizeFirstCache.deinit();
+
+    var a = try BigIntManaged.init(allocator);
+    var b = try BigIntManaged.init(allocator);
+    defer b.deinit();
+    defer a.deinit();
+
+    // const chosenFreqSize = 53;
+
+    // const dataPoints = 20;
+    // const sizeStartIgnore = null;
+
+    //TODO make a streamBinaryStrsRange2 so it is optimized for percentIgnore
+    // this is to be used to make binarySearchFirstHaltingStepForSize and sampledBinarySearchNPercentHaltingStepForSize faster
+
+    const startStep = try T3.binarySearchFirstHaltingStepForSize(chosenFreqSize, &sizeFirstCache, allocator, percentIgnore, randomSeed, &hashmap, &totalsHashmap) orelse 1;
+    const lastStep = (try T3.sampledBinarySearchNPercentHaltingStepForSize(chosenFreqSize, percentHaltedEnding, null, allocator, percentIgnore, randomSeed, &hashmap, &totalsHashmap) orelse startStep + 500) + 1;
+
+    var bigSize = try BigIntManaged.init(allocator);
+    defer bigSize.deinit();
+
+    // if (chosenFreqSize != null) {
+    try bigSize.set(chosenFreqSize);
+
+    _ = try T3.firstIndexSeenForProgramSize(&a, &bigSize, allocator);
+    _ = try T3.lastIndexSeenForProgramSize(&b, &bigSize, allocator);
+    // }
+
+    // var prng: std.Random.DefaultPrng = .init(42);
+    // const args: exp5args = .{
+    //     .allocator = allocator, //
+    //     .hashmap = &hashmap,
+    //     .totalsHashmap = &totalsHashmap,
+    //     // .maxSteps = maxSteps,
+    //     .startStep = startStep,
+    //     .lastStep = lastStep,
+    //     .dataPoints = dataPoints,
+    //     .chosenSize = chosenFreqSize,
+    //     .sizeFirstStepCache = &sizeFirstCache,
+    //     .prng = &prng,
+    //     .percentIgnore = percentIgnore,
+    //     .sizeStartIgnore = sizeStartIgnore,
+    // };
+    // try T3.streamBinaryStrsRange(a, b, &exp5, args, false);
+
+    // size -> (steps -> freq)
+    var frequencyHashmap = freqHashmapTypeType.init(allocator);
+    defer frequencyHashmap.deinit();
+
+    var it = totalsHashmap.iterator();
+    // std.debug.print("\n", .{});
+    //populate frequency hashmap
+    while (it.next()) |entry| {
+        const size = entry.key_ptr.*;
+
+        // const totalCount = entry.value_ptr.*;
+
+        const stepHaltedHashmapMaybe = hashmap.get(size);
+        const stepTotalHashmapMaybe = totalsHashmap.get(size);
+
+        // std.debug.print("\n\n size {} distribution:\n", .{size});
+        if (stepHaltedHashmapMaybe != null and stepTotalHashmapMaybe != null) {
+            const stepHaltedHashmap = stepHaltedHashmapMaybe.?;
+            const stepTotalHashmap = stepTotalHashmapMaybe.?;
+
+            // var haltedCounter: u32 = 0;
+            // const totalTotalCount = totalCount * maxSteps;
+
+            // const startStep = 1;
+            for (startStep..lastStep) |stepsUsize| {
+                const steps: u32 = @intCast(stepsUsize);
+
+                const haltedCountMaybe = stepHaltedHashmap.get(steps);
+                const totalMaybe = stepTotalHashmap.get(steps);
+
+                var haltedFloat: f64 = 0;
+                var totalFloat: f64 = 1;
+
+                if (haltedCountMaybe != null and totalMaybe != null) {
+                    // haltedCounter += haltedCount;
+                    const haltedCount = haltedCountMaybe.?;
+                    const total = totalMaybe.?;
+
+                    haltedFloat = haltedCount;
+                    totalFloat = total;
+
+                    // if (size == chosenFreqSize) //
+                    //     std.debug.print("{} halted out of {} in {} steps\n", .{ haltedCount, total, steps });
+
+                    const percentHalted: f64 = haltedFloat / totalFloat;
+
+                    var frequencyHashmap2Maybe = frequencyHashmap.get(size);
+                    if (frequencyHashmap2Maybe) |_| {
+                        try frequencyHashmap2Maybe.?.put(steps, percentHalted);
+                    } else {
+                        const newHashmap = try allocator.create(freqHashmapType);
+                        newHashmap.* = freqHashmapType.init(allocator);
+
+                        try frequencyHashmap.put(size, newHashmap);
+
+                        try frequencyHashmap.get(size).?.put(steps, percentHalted);
+                    }
+                    // if (size == chosenFreqSize) //
+                }
+            }
+        }
+    }
+
+    //TODO what do i do with this
+    //save to file
+    var hundredPercentHaltingStep: ?u32 = null;
+    {
+        const sizeFile = try std.Io.Dir.cwd().createFile(io, "sizeHaltingFrequencies.txt", .{});
+        defer sizeFile.close(io);
+
+        var sizeFileBuf: [4000]u8 = undefined;
+        var sizeFileWriter = sizeFile.writer(io, &sizeFileBuf);
+        const sizeFileWriterPtr = &sizeFileWriter.interface;
+        defer sizeFileWriter.flush() catch unreachable;
+
+        // var lastPercentHalted: f64 = 0.0;
+        var it2 = frequencyHashmap.iterator();
+        while (it2.next()) |entry| {
+            const size = entry.key_ptr.*;
+            try sizeFileWriterPtr.print("\n\nsize {}:\n", .{size});
+            const freqMap = entry.value_ptr.*;
+            // const startStep = try T3.binarySearchFirstHaltingStepForSize(size, &sizeFirstCache, allocator, percentIgnore, null) orelse 1;
+            for (startStep..lastStep) |steps| {
+                const percentHaltedMaybe: ?f64 = freqMap.get(@intCast(steps));
+
+                if (percentHaltedMaybe) |percentHalted| {
+                    try sizeFileWriterPtr.print("{},{}\n", .{ steps, percentHalted });
+                    if (percentHalted == 1.0) {
+                        hundredPercentHaltingStep = @intCast(steps);
+                    }
+                    // lastPercentHalted = percentHalted;
+                } else {
+                    // try sizeFileWriterPtr.print("{},{}\n", .{ steps, lastPercentHalted });
+                }
+            }
+        }
+    }
+
+    // fit model to data
+    debugPrint("size: {}\n", .{chosenFreqSize});
+    {
+        const genomeSize = 2;
+        const mutateChance = 0.05;
+        const crossoverChance = 0.33;
+        const iterations = 1000;
+        const populationSize = 100;
+        const selectionTopPercent = 0.2;
+        // const randomSeed = 42;
+
+        exp5FitnessGlobalContext = .{ .chosenSize = chosenFreqSize, .hashmap = &frequencyHashmap };
+        const fitnessFunc = exp5fitness;
+
+        var geneticThing = BFGenetic.BFVectorEvolutionContext(genomeSize, fitnessFunc, mutateChance, crossoverChance, iterations, populationSize, selectionTopPercent, randomSeed){};
+
+        geneticThing.epoch();
+
+        const topIndividual = geneticThing.getPopulation()[0];
+
+        debugPrint("\ttop fitness individual: a {f}, b {f}, fitness {}\n", .{ //
+            topIndividual.genome[0],
+            topIndividual.genome[1],
+            topIndividual.fitness,
+        });
+
+        //calculate steps to get desired percent halting machines
+        // const desiredHaltingPercent = 0.9999;
+
+        const desiredProbBF = BigFloat.init(percentHaltedEnding);
+        const varA = topIndividual.genome[0];
+        const varB = topIndividual.genome[1];
+        const oneBF = BigFloat.init(1);
+        const eF = BigFloat.init(std.math.e);
+
+        const endingSteps = (varA.mul(varB).sub(BigFloat.log2(oneBF.div(desiredProbBF).sub(oneBF)).div(BigFloat.log2(eF)))).div(varA);
+
+        const endingStepsInt: u32 = if (chosenFreqSize < 40 and hundredPercentHaltingStep != null) //
+            @intFromFloat(@as(f64, @floatFromInt(hundredPercentHaltingStep.?)) * 1.3) // increase 30% i suppose
+        else
+            @intFromFloat(endingSteps.toFloat(f64));
+        // const endingStepsInt: u32 = std.math.lossyCast(u32, endingSteps.toFloat(f64));
+
+        debugPrint("\tsteps to achieve {}% halting is ~{}\n", .{ percentHaltedEnding * 100, endingStepsInt });
+
+        return endingStepsInt;
+    }
+
+    return null;
+    // std.debug.print("\n", .{});
+
+}
+
 // binary str -> jot parse -> reduce -> binary str
 pub fn caca(binarySlice: []const u8, maxTraverses: ?u32, allocator: std.mem.Allocator) !SizeAndOutput {
     var interpreter = LambdaInterpreter.init(allocator);
@@ -741,11 +1158,44 @@ pub fn caca(binarySlice: []const u8, maxTraverses: ?u32, allocator: std.mem.Allo
     if (interpreter.reduceUntilCantReduce(jotExpr, maxTraverses, null, true)) |reducedExpr| {
         debugPrint("\n\t=reduce> ", .{});
         if (debugPrintON) reducedExpr.traversePrint();
-        const blcSliceString2 = try loadBlcExpressionToSlice(reducedExpr, allocator);
+        // const blcSliceString2 = try loadBlcExpressionToSlice(reducedExpr, allocator);
+        // const blcSliceString2 = try mixedRadixLoadExprToSlice(reducedExpr, allocator);
+        const blcSliceString2 = try ArithmeticCoder.encode(reducedExpr, allocator);
+
         debugPrint("\n\t=blc> ", .{});
         debugPrint("\"{s}\"", .{blcSliceString2});
         return .{ .inputSize = jotExpr.size(), .output = blcSliceString2 };
     } else |err| switch (err) {
+        else => {
+            debugPrint("\n\t=reduce> {}", .{err});
+            return err;
+        },
+    }
+}
+
+// binary str -> jot parse -> reduce -> binary str
+pub fn caca2(binarySlice: []const u8, maxTraverses: ?u32, allocator: std.mem.Allocator) !?SizeAndOutput {
+    var interpreter = LambdaInterpreter.init(allocator);
+    var jotParser: JotParser = JotParserMake(allocator);
+    defer jotParser.deinit();
+
+    debugPrint("\t\"{s}\"\n\t=jotParse> ", .{binarySlice});
+    const jotExpr = try jotParser.parse(binarySlice);
+    if (debugPrintON) jotExpr.traversePrint();
+
+    if (interpreter.reduceUntilCantReduce(jotExpr, maxTraverses, null, true)) |reducedExpr| {
+        debugPrint("\n\t=reduce> ", .{});
+        if (debugPrintON) reducedExpr.traversePrint();
+        // const blcSliceString2 = try loadBlcExpressionToSlice(reducedExpr, allocator);
+        // const blcSliceString2 = try mixedRadixLoadExprToSlice(reducedExpr, allocator);
+        const blcSliceString2 = try ArithmeticCoder.encode(reducedExpr, allocator);
+        debugPrint("\n\t=blc> ", .{});
+        debugPrint("\"{s}\"", .{blcSliceString2});
+        return .{ .inputSize = jotExpr.size(), .output = blcSliceString2 };
+    } else |err| switch (err) {
+        error.MAX_TRAVERSES => {
+            return null;
+        },
         else => {
             debugPrint("\n\t=reduce> {}", .{err});
             return err;
@@ -765,7 +1215,10 @@ pub fn cacaHalted(binarySlice: []const u8, maxTraverses: ?u32, allocator: std.me
     if (interpreter.reduceUntilCantReduce(jotExpr, maxTraverses, null, true)) |reducedExpr| {
         debugPrint("\n\t=reduce> ", .{});
         if (debugPrintON) reducedExpr.traversePrint();
-        const blcSliceString2 = try loadBlcExpressionToSlice(reducedExpr, allocator);
+        // const blcSliceString2 = try loadBlcExpressionToSlice(reducedExpr, allocator);
+        // const blcSliceString2 = try mixedRadixLoadExprToSlice(reducedExpr, allocator);
+        const blcSliceString2 = try ArithmeticCoder.encode(reducedExpr, allocator);
+
         debugPrint("\n\t=blc> ", .{});
         debugPrint("\"{s}\"", .{blcSliceString2});
         // return .{ .inputSize = jotExpr.size(), .output = blcSliceString2 };

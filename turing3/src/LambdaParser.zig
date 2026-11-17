@@ -73,6 +73,29 @@ pub const LambdaExpression = union(enum) {
         }
     }
 
+    pub fn traversePost(
+        self: *LambdaExpression, //
+        comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{Yield}!void, //
+        args: anytype, //
+        lambdaHeight: u32, //
+    ) error{Yield}!void {
+        switch (self.*) {
+            .lambda => |lambdaExpr| {
+                traverseDebugPrint("hit lambda\n", .{});
+                try lambdaExpr.expr.traversePost(foreach, args, lambdaHeight + 1);
+            },
+            .variable => {
+                //nothing i guess
+            },
+            .apply => |applyExpr| {
+                traverseDebugPrint("hit application\n", .{});
+                try applyExpr.lexpr.traversePost(foreach, args, lambdaHeight);
+                try applyExpr.rexpr.traversePost(foreach, args, lambdaHeight);
+            },
+        }
+        try foreach(self, args, lambdaHeight);
+    }
+
     pub fn traversePrint(self: *const LambdaExpression) void {
         switch (self.*) {
             .lambda => |lambdaExpr| {
