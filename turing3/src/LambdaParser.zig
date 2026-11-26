@@ -50,10 +50,10 @@ pub const LambdaExpression = union(enum) {
 
     pub fn traverse(
         self: *LambdaExpression, //
-        comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{Yield}!bool, //
+        comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{ Yield, OutOfMemory }!bool, //
         args: anytype, //
         lambdaHeight: u32, //
-    ) error{Yield}!void {
+    ) error{ Yield, OutOfMemory }!void {
         const goFurther = try foreach(self, args, lambdaHeight);
         if (goFurther) {
             switch (self.*) {
@@ -75,10 +75,10 @@ pub const LambdaExpression = union(enum) {
 
     pub fn traversePost(
         self: *LambdaExpression, //
-        comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{Yield}!void, //
+        comptime foreach: *const fn (*LambdaExpression, anytype, u32) error{ Yield, OutOfMemory }!void, //
         args: anytype, //
         lambdaHeight: u32, //
-    ) error{Yield}!void {
+    ) error{ Yield, OutOfMemory }!void {
         switch (self.*) {
             .lambda => |lambdaExpr| {
                 traverseDebugPrint("hit lambda\n", .{});

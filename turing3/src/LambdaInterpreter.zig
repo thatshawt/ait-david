@@ -70,7 +70,7 @@ pub const LambdaInterpreter = struct {
     // TODO: when reducing we need to NOT modify the expressing we are traversing in...
     // probably send the modifications to another copy expression or smth...
     // the problem is that after modifying the expression, the traversal might visit the modified expression wich leads to endless looping if there is a variable that matches the height...
-    fn replaceVarsWithExprClone(foreachExpr: *LambdaExpression, interp: anytype, lambdaHeight: u32) error{Yield}!bool {
+    fn replaceVarsWithExprClone(foreachExpr: *LambdaExpression, interp: anytype, lambdaHeight: u32) error{ Yield, OutOfMemory }!bool {
         // const interp: LambdaInterpreter = @as(arg, LambdaInterpreter);
         if (interp.reduceTraverseCounter) |traverseCount| {
             if (traverseCount <= 0) {
@@ -97,7 +97,7 @@ pub const LambdaInterpreter = struct {
                             std.debug.print("\n", .{});
                         }
 
-                        foreachExpr.* = (replaceExpr.deepClone(interp.allocator) catch unreachable).*;
+                        foreachExpr.* = (try replaceExpr.deepClone(interp.allocator)).*;
 
                         interp.incrStartHeight = lambdaHeight - 1;
                         try foreachExpr.traverse(incrementFreeVarsTraverse, interp, 0);
@@ -246,6 +246,7 @@ pub const LambdaInterpreter = struct {
                     return error.MAX_TRAVERSES;
                 }
             },
+            error.OutOfMemory => return error.OutOfMemory,
         }
     }
 

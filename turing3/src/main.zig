@@ -95,6 +95,64 @@ fn doStuff(allocator: std.mem.Allocator) !void {
         },
     }
 
+    // var formatBuff: [100]u8 = undefined;
+
+    // var stdout_writer = std.Io.File.writer(std.Io.File.stdout(), std.Io, stdoutBuff);
+
+    //testing randomBigIntRange
+    // {
+    //     var rng = std.Random.DefaultPrng.init(42);
+    //     var randomVal = try BigIntManaged.init(allocator);
+    //     var first = try BigIntManaged.initSet(allocator, -10);
+    //     var last = try BigIntManaged.initSet(allocator, 10);
+    //     defer {
+    //         randomVal.deinit();
+    //         first.deinit();
+    //         last.deinit();
+    //     }
+    //     for (0..100) |_| {
+    //         try T3.randomBigIntRange(&randomVal, &first, &last, &rng);
+    //         std.debug.print("{d} ", .{randomVal});
+    //     }
+    //     std.debug.print("\n", .{});
+    // }
+
+    //big integer percent test
+    // {
+    //     var result = try BigIntManaged.init(allocator);
+    //     defer result.deinit();
+
+    //     var number = try BigIntManaged.initSet(allocator, 123);
+    //     defer number.deinit();
+    //     const percent: f64 = 0.511;
+    //     const precision: u32 = 3;
+
+    //     try T3.bigIntPercent(&result, &number, precision, percent, allocator);
+
+    //     std.debug.print("%{} of {d} is {d}\n", .{ percent, number, result });
+    // }
+
+    // unique random number test
+    // {
+    //     var randomVal = try BigIntManaged.init(allocator);
+    //     var first = try BigIntManaged.initSet(allocator, 10);
+    //     var last = try BigIntManaged.initSet(allocator, 31);
+    //     var rng: T3.FeistelCipher = undefined;
+    //     try rng.init(allocator, &first, &last, 42);
+    //     defer {
+    //         randomVal.deinit();
+    //         first.deinit();
+    //         last.deinit();
+    //         rng.deinit();
+    //     }
+    //     for (0..25) |_| {
+    //         try rng.loadNext(&randomVal);
+    //         std.debug.print("{d} ", .{randomVal});
+    //     }
+    //     std.debug.print("\n", .{});
+    //     return;
+    // }
+
     // cantor pair
     var cantorResult = try BigIntManaged.init(allocator);
     defer cantorResult.deinit();
@@ -103,28 +161,6 @@ fn doStuff(allocator: std.mem.Allocator) !void {
     var b = try BigIntManaged.init(allocator);
     defer a.deinit();
     defer b.deinit();
-
-    // var formatBuff: [100]u8 = undefined;
-
-    // var stdout_writer = std.Io.File.writer(std.Io.File.stdout(), std.Io, stdoutBuff);
-
-    //testing randomBigIntRange
-    {
-        var rng = std.Random.DefaultPrng.init(42);
-        var randomVal = try BigIntManaged.init(allocator);
-        var first = try BigIntManaged.initSet(allocator, -10);
-        var last = try BigIntManaged.initSet(allocator, 10);
-        defer {
-            randomVal.deinit();
-            first.deinit();
-            last.deinit();
-        }
-        for (0..100) |_| {
-            try T3.randomBigIntRange(&randomVal, &first, &last, &rng);
-            std.debug.print("{d} ", .{randomVal});
-        }
-        std.debug.print("\n", .{});
-    }
 
     const aMax = 5;
     const bMax = 5;
@@ -473,6 +509,7 @@ const exp8OutputFreqMapType = std.StringHashMap(BigIntManaged);
 // const exp8TotalsMapType = std.AutoHashMap(, );
 const exp8args = struct {
     allocator: std.mem.Allocator, //
+    interpreterAllocator: *std.heap.FixedBufferAllocator,
 
     chosenSize: ?u32 = null,
     traverses: u32,
@@ -498,15 +535,21 @@ fn exp8(_: *BigIntManaged, input: []const u8, argsz: anytype) error{ Yield, Else
         if (random <= args.percentIgnore.?) return;
     }
 
+    args.interpreterAllocator.reset();
+
     // run the machine
-    const sizeAndOutput = T3.caca2(input, args.traverses, args.allocator) catch return error.Else;
+    const sizeAndOutput = T3.caca2(input, args.traverses, args.interpreterAllocator.allocator()) catch return error.Else;
 
     // did not halt
     if (sizeAndOutput == null) {
         return;
     }
 
-    const getResult = args.outputFreqMap.getOrPut(sizeAndOutput.?.output) catch return error.Else;
+    // allocate an output with args.allocator, not args.interpreterAllocator which resets very often
+    const stableOutput = args.allocator.alloc(u8, sizeAndOutput.?.output.len) catch return error.Else;
+    @memcpy(stableOutput, sizeAndOutput.?.output);
+
+    const getResult = args.outputFreqMap.getOrPut(stableOutput) catch return error.Else;
     if (getResult.found_existing) {
         getResult.value_ptr.*.add(getResult.value_ptr, &exp8GlobalConstBigOne.?) catch return error.Else;
     } else {
@@ -520,7 +563,7 @@ pub fn main(init: std.process.Init) !void {
     // This is appropriate for anything that lives as long as the process.
     const arena: std.mem.Allocator = init.arena.allocator();
 
-    try doStuff(arena);
+    // try doStuff(arena);
 
     // {
     //     var a = try BigIntManaged.init(arena);
@@ -724,37 +767,45 @@ pub fn main(init: std.process.Init) !void {
     std.debug.print("genetic experiment1 took {} seconds\n", .{startTg1.durationTo(now(.awake, init.io)).toSeconds()});
 
     //experiemnt 5, cumulative percent halted distribution for a size, x=steps y=cumulativePercentHalted
-    var startT = now(.awake, init.io);
-    {
-        const percentHaltedEnding = 0.9999;
-        // const percentIgnore = 0.0; //this might stay 0.0 for now
-        const randomSeed = 42;
+    // var startT = now(.awake, init.io);
+    // {
+    //     const percentHaltedEnding = 0.9999;
+    //     const percentIgnore = 0.0; //this might stay 0.0 for now
+    //     const randomSeed = 42;
 
-        const firstStepExp5 = 41;
-        const lastStepExp5 = 49;
+    //     const firstStepExp5 = 41;
+    //     const lastStepExp5 = 45;
 
-        for ((firstStepExp5 - 1) / 2..(lastStepExp5 - 1) / 2 + 1) |i| {
-            const chosenFreqSize: u32 = 2 * @as(u32, @intCast(i)) + 1;
-            if (T3.sizeGetTypeDivTen(chosenFreqSize) == null) continue;
+    //     for ((firstStepExp5 - 1) / 2..(lastStepExp5 - 1) / 2 + 1) |i| {
+    //         const chosenFreqSize: u32 = 2 * @as(u32, @intCast(i)) + 1;
+    //         if (T3.sizeGetTypeDivTen(chosenFreqSize) == null) continue;
 
-            const haltingStep = try T3.sampleEstimateHaltingNStep(chosenFreqSize, percentHaltedEnding, 0.0, randomSeed, arena, init.io);
-            if (haltingStep != null) {
-                std.debug.print("size {}: steps to achieve {}% halting is ~{}\n", .{ chosenFreqSize, percentHaltedEnding * 100, haltingStep.? });
-            }
-        }
-    }
-    std.debug.print("exp5 took {} seconds\n", .{startT.durationTo(now(.awake, init.io)).toSeconds()});
+    //         const haltingStep = try T3.sampleEstimateHaltingNStep(chosenFreqSize, percentHaltedEnding, percentIgnore, randomSeed, arena, init.io);
+    //         if (haltingStep != null) {
+    //             std.debug.print("size {}: steps to achieve {}% halting is ~{}\n", .{ chosenFreqSize, percentHaltedEnding * 100, haltingStep.? });
+    //         }
+    //     }
+    // }
+    // std.debug.print("exp5 took {} seconds\n", .{startT.durationTo(now(.awake, init.io)).toSeconds()});
 
-    //experiejmnt 6,
+    // experiejmnt 6,
     // var startT6 = now(.awake, init.io);
     // {
-    //     const startSize = 0;
-    //     const lastSize = 55;
-    //     const percentIgnore = 0.0;
+    //     const startSize = 51;
+    //     const lastSize = 65;
+    //     const percentIgnore = 0.8;
+    //     const randomSeed: u64 = 42;
+    //     const percentHalting = 0.9999;
+    //     const maxInterpreterMemoryBytes = 1024 * 1024 * 100; // 100Mb
+
     //     for (startSize..lastSize) |chosenSizeUsize| {
-    //         const haltedStepMaybe = try T3.binarySearchFirstHaltingStepForSize(@intCast(chosenSizeUsize), null, arena, percentIgnore, null);
-    //         if (haltedStepMaybe) |haltedStep| {
-    //             std.debug.print("{},{}\n", .{ chosenSizeUsize, haltedStep });
+    //         // const chosenSize = 85;
+    //         const chosenSize: u32 = @intCast(chosenSizeUsize);
+
+    //         const stepAndMem = try T3.estimateStepAndMemoryForSizeNPercentHalting(chosenSize, percentHalting, percentIgnore, randomSeed, maxInterpreterMemoryBytes, arena);
+
+    //         if (stepAndMem != null) {
+    //             std.debug.print("{},{},{}\n", .{ chosenSizeUsize, stepAndMem.?.step, stepAndMem.?.mem });
     //         }
     //     }
     //     std.debug.print("\n", .{});
@@ -798,15 +849,23 @@ pub fn main(init: std.process.Init) !void {
     //experiment 8,
     var startT8 = now(.awake, init.io);
     {
-        const chosenSize = 75;
-        const percentHaltedEnding = 0.9999;
+        const chosenSize = 85;
+        const percentHalting = 0.9999;
         const randomSeed = 42;
-        const percentIgnoreSample = 0.9;
-        const percentIgnoreEnumeration = 0.9;
+        const percentIgnoreSample = 0.8;
+        const percentIgnoreEnumeration = 0.0;
 
-        const haltingStep = try T3.sampleEstimateHaltingNStep(chosenSize, percentHaltedEnding, percentIgnoreSample, randomSeed, arena, init.io);
+        const maxInterpreterMemoryBytes = 1024 * 1024 * 500; // 500Mb
+        // const sizeFile = try std.Io.Dir.cwd().createFile(init.io, "sizeHaltingFrequencies.txt", .{});
 
-        const traverses = haltingStep.?;
+        // const haltingStep = try T3.sampleEstimateHaltingNStep(chosenSize, percentHalting, percentIgnoreSample, randomSeed, arena, maxInterpreterMemoryBytes, init.io, sizeFile);
+
+        const stepAndMem = try T3.estimateStepAndMemoryForSizeNPercentHalting(chosenSize, percentHalting, percentIgnoreSample, randomSeed, maxInterpreterMemoryBytes, arena);
+
+        if (stepAndMem == null) {
+            std.debug.print("could not determine steps and mem!\n", .{});
+            return;
+        }
 
         var freqMap: exp8OutputFreqMapType = exp8OutputFreqMapType.init(arena);
         var first = try BigIntManaged.init(arena);
@@ -827,16 +886,25 @@ pub fn main(init: std.process.Init) !void {
 
         var prng = std.Random.DefaultPrng.init(randomSeed);
 
-        const args: exp8args = .{
+        const interprerBuffer = try arena.alloc(u8, stepAndMem.?.mem);
+        defer arena.free(interprerBuffer);
+        var interpreterAllocator = std.heap.FixedBufferAllocator.init(interprerBuffer);
+
+        var args: exp8args = .{
             .allocator = arena,
-            .traverses = traverses,
+            .interpreterAllocator = &interpreterAllocator,
+            .traverses = stepAndMem.?.step,
             // .chosenSize = chosenSize,
             .outputFreqMap = &freqMap,
             .percentIgnore = percentIgnoreEnumeration,
             .prng = &prng,
         };
-        std.debug.print("{} traverses, indedices:{d},{d}\n", .{ traverses, first, last });
-        try T3.streamBinaryStrsRange(first, last, exp8, args, false);
+        std.debug.print("{} steps, {} mem, indedices:{d},{d}\n", .{ stepAndMem.?.step, stepAndMem.?.mem, first, last });
+
+        args.percentIgnore = 0.0;
+        try T3.streamUniqueRandomBinaryStrsRange(arena, first, last, 1.0 - percentIgnoreEnumeration, randomSeed, exp8, args, false);
+
+        // try T3.streamBinaryStrsRange(first, last, exp8, args, false);
 
         // var it = freqMap.iterator();
         // while (it.next()) |entry| {
@@ -870,12 +938,16 @@ pub fn main(init: std.process.Init) !void {
             }
         }.lessThan);
 
+        var totalSum = try BigIntManaged.initSet(arena, 0);
+        defer totalSum.deinit();
+
         // 4. Print the sorted entries
         for (entries) |entry| {
             std.debug.print("{s},{d}\n", .{ entry.key, entry.value });
+            try totalSum.add(&totalSum, &entry.value);
         }
 
-        std.debug.print("\n", .{});
+        std.debug.print("total machines {d}\n", .{totalSum});
     }
     std.debug.print("exp8 took {} seconds\n", .{startT8.durationTo(now(.awake, init.io)).toSeconds()});
 
